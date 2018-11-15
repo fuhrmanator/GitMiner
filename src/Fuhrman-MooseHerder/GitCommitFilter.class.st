@@ -24,8 +24,9 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	handle := LGitRepository on: location.
 	handle open.
 	revwalk := LGitRevwalk of: handle.
-	revwalk pushRange: range.
-
+	range = ''
+		ifFalse: [revwalk pushRange: range]
+		ifTrue: [revwalk pushHead].
 
 	"Get commit ids that have:
   - no added files (only changed files)
