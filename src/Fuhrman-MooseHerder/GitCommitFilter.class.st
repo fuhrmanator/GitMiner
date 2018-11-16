@@ -8,7 +8,7 @@ Class {
 GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
-	| location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
+	| i nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
 	"Get project name from URL, accounting for cases where it ends in .git"
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
@@ -25,8 +25,8 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	handle open.
 	revwalk := LGitRevwalk of: handle.
 	range = ''
-		ifFalse: [revwalk pushRange: range]
-		ifTrue: [revwalk pushHead].
+		ifFalse: [ revwalk pushRange: range ]
+		ifTrue: [ revwalk pushHead ].
 
 	"Get commit ids that have:
   - no added files (only changed files)
@@ -34,8 +34,25 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
   - at least one .java file."
 	newerCommit := nil.
 	commitDataList := LinkedList new.
+
+	"Walk through just to count commits"
+	nCommits := 0.
+	revwalk do: [ :commit | nCommits := nCommits + 1 ]. 
+
+	"Revwalk reset didn't work, so we start over"
+	revwalk := LGitRevwalk of: handle.
+	range = ''
+		ifFalse: [ revwalk pushRange: range ]
+		ifTrue: [ revwalk pushHead ].
+
+	i := 0.
+	[ :job | 
 	revwalk
 		do: [ :commit | 
+			i := i + 1.
+			job
+				progress: (i / nCommits);
+				title: 'Analysing revision ' , commit name.
 			newerCommit = nil
 				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
 					addedFiles := Set new.
@@ -51,7 +68,7 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 							(Character space join: addedFiles).
 							difference numberOfDeltas.
 							atLeastOneJavaFile} ].
-			newerCommit := commit ].
+			newerCommit := commit ] ] asJob run.
 	self writeCommitResults: commitDataList to: projectName , '.csv'
 ]
 
@@ -66,5 +83,5 @@ GitCommitFilter class >> writeCommitResults: commitDataList to: fileName [
 			(NeoCSVWriter on: csvStream)
 				nextPut: #('Commit_id' 'Added_files' 'n_commited_files' 'has_java');
 				addFields: #(first second third fourth);
-				nextPutAll: commitDataList ]
+				nextPutAll: commitDataList ].
 ]
