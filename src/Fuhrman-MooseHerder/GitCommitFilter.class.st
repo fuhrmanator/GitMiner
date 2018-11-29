@@ -12,7 +12,7 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	"Get project name from URL, accounting for cases where it ends in .git"
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
-		ifTrue: [ projectName := projectName copyFrom: 1 to: projectName size - '.git' size - 1 ].
+		ifTrue: [ projectName := projectName allButLast: '.git' size ].
 	location := ('c:/tmp/tempClonesPharo/' , projectName) asFileReference.
 
 	"Clone repo locally if not already there"
@@ -69,7 +69,7 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 							difference numberOfDeltas.
 							atLeastOneJavaFile} ].
 			newerCommit := commit ] ] asJob run.
-	self writeCommitResults: commitDataList to: projectName , '.csv'
+	self writeCommitResults: commitDataList to: projectName , '_commits.csv'
 ]
 
 { #category : #writing }
