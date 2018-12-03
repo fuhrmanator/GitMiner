@@ -8,7 +8,7 @@ Class {
 GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
-	| i nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
+	| revisionNumber nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
 	"Get project name from URL, accounting for cases where it ends in .git"
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
@@ -45,13 +45,13 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 		ifFalse: [ revwalk pushRange: range ]
 		ifTrue: [ revwalk pushHead ].
 
-	i := 0.
+	revisionNumber := 0.
 	[ :job | 
 	revwalk
 		do: [ :commit | 
-			i := i + 1.
+			revisionNumber := revisionNumber + 1.
 			job
-				progress: (i / nCommits);
+				progress: (revisionNumber / nCommits);
 				title: 'Analysing revision ' , commit name.
 			newerCommit = nil
 				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
@@ -65,9 +65,11 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 					commitDataList
 						add:
 							{newerCommit name.
+							nCommits - revisionNumber + 1. "Revwalk goes from latest to earliest"
 							(Character space join: addedFiles).
 							difference numberOfDeltas.
-							atLeastOneJavaFile} ].
+							atLeastOneJavaFile.
+							(Character space join: difference files)} ].
 			newerCommit := commit ] ] asJob run.
 	self writeCommitResults: commitDataList to: projectName , '_commits.csv'
 ]
@@ -79,9 +81,9 @@ GitCommitFilter class >> writeCommitResults: commitDataList to: fileName [
 	FileStream
 		forceNewFileNamed: fileName
 		do: [ :csvStream | 
-			"{newerCommit . addedFiles . difference numberOfDeltas . atLeastOneJavaFile}"
+			"{newerCommit . addedFiles . difference numberOfDeltas . atLeastOneJavaFile . committedFiles}"
 			(NeoCSVWriter on: csvStream)
-				nextPut: #('Commit_id' 'Added_files' 'n_commited_files' 'has_java');
-				addFields: #(first second third fourth);
+				nextPut: #('Commit_id' 'Revision_num' 'Added_files' 'n_commited_files' 'has_java' 'committed_files');
+				addFields: #(first second third fourth fifth sixth);
 				nextPutAll: commitDataList ].
 ]
