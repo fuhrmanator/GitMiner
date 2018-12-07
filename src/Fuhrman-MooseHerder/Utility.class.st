@@ -152,6 +152,11 @@ selectedCommitFiles do: [ :file |
 ]
 
 { #category : #'file service' }
+Utility class >> generateLogicalCouplingPairsWithR: inputPath [ 
+	^ LibC uniqueInstance system: '"c:\Program Files\R\R-3.5.1\bin\RScript.exe" c:\chgevo\R\GenerateLogicalPairsFromTransactions.R ', inputPath, ' 2> /tmp/R.errors.txt'.
+]
+
+{ #category : #'file service' }
 Utility class >> generateMSEFilesForEachUID: uidFileSuffix [
 "For each *_UIDs.csv file, generate a Moose MSE "
 
@@ -224,7 +229,7 @@ uidFiles do: [ :file |
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'file service' }
 Utility class >> generateSelectedCommitFiles: commitFileExtension [
 "Selects commits from *_commits.csv files and writes out a list of UIDs that match (in a *_UIDs.csv file)"
 
