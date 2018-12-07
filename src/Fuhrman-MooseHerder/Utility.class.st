@@ -185,3 +185,53 @@ uidFiles do: [ :file |
 
 
 ]
+
+{ #category : #'as yet unclassified' }
+Utility class >> generateSelectedCommitFiles: commitFileExtension [
+"Selects commits from *_commits.csv files and writes out a list of UIDs that match (in a *_UIDs.csv file)"
+
+| working commitFiles |
+working := FileSystem disk workingDirectory.
+
+"working := 'G:\My Drive\Congé sabbatique 2018-2019\Activités INRIA\Change Evolution Interface Clients\Pharo image' asFileReference."
+
+commitFiles := working allChildrenMatching: commitFileExtension.
+
+commitFiles do: [ :file | 
+	| csvInputStream csvRecords selectedCommits commitID revisionNumber addedFiles countCommittedFiles hasJava committedFiles |
+ 
+	"Parse the CSV and gather the UIDs for commits that match criteria"
+	csvInputStream := file readStream.
+	csvRecords := (NeoCSVReader on:  csvInputStream) 
+		separator: $,;
+		skipHeader;
+		addField; "Commit_id"
+		addField; "Revision_number"
+		addField; "set of Added_files"
+		addIntegerField; "n_committed_files"
+		addField; "has_java"
+		addField; "committed_files"
+		upToEnd.
+
+	"Transcript show: csvRecords; cr."
+
+	selectedCommits := csvRecords select: [ :each | 
+"		commitID := each first. 
+		revisionNumber := each second. "
+		addedFiles := each third. 
+		countCommittedFiles := each fourth. 
+		hasJava := each fifth. 
+"		committedFiles := each sixth." 
+		(addedFiles = nil "no added files") and: (countCommittedFiles <= 10 and: hasJava = 'true')].
+
+	"Write out the list of UIDs for the selected commits"
+	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_UIDs.csv'."
+	FileStream
+		forceNewFileNamed: (file basenameWithoutExtension) , '_UIDs.csv'
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
+				addFields: #(first second sixth);
+				nextPutAll: selectedCommits ].
+] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
+]
