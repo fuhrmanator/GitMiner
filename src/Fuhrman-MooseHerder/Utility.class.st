@@ -8,6 +8,44 @@ Class {
 }
 
 { #category : #'file service' }
+Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [ 
+"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
+
+| working csvInputStream csvRecords i |
+
+working := FileSystem disk workingDirectory.
+csvInputStream := (working / projectsFile) readStream.
+csvRecords := (NeoCSVReader on:  csvInputStream) 
+   separator: $,;
+   skipHeader; "ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"
+   addIntegerField;
+   addField;
+   addIntegerField;
+   addIntegerField;
+   addIntegerField;
+   addIntegerField;
+   addIntegerField;
+   addField; 
+   addField; "GitHub url"
+   upToEnd.
+
+
+i := 0.
+[:job |
+		csvRecords do: [:each | 
+			| githubUrl |
+			i := i + 1.
+			job 
+				progress: i / (csvRecords size);
+				title: 'Generating CSV files for commits: ', each second.
+			githubUrl := each last.
+			githubUrl = 'NA' 
+				ifFalse: [ GitCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] .
+		]
+] asJob run.
+]
+
+{ #category : #'file service' }
 Utility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
 
