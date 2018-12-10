@@ -157,6 +157,59 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 ]
 
 { #category : #'file service' }
+Utility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
+	"For each *_UIDs.csv file, generate a Moose MSE for the HEAD of repo"
+
+	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath |
+	destPath := '/tmp/data_mining'.
+	gitErrors := '/tmp/errors_git'.
+	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
+	working := FileSystem disk workingDirectory.
+	uidFiles := working allChildrenMatching: '*' , uidFileSuffix.
+
+	"Create a new sub dir for the repos MSE dirs"
+	(working / 'MSE') ensureCreateDirectory.
+	uidFiles
+		do: [ :file | 
+			| repoName uidFileName uid command result |
+			"Create a new sub dir for the repos MSE files"
+			uidFileName := file basename.
+			repoName := uidFileName allButLast: uidFileSuffix size.
+			repoPath := '/tmp/tempClonesPharo/' , repoName.
+			uid := 'HEAD'.
+			revPath := destPath , '/' , repoName , '_master/' , uid.
+			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , uid
+				, ' -- . 2>' , gitErrors.
+			revPath asFileReference ensureCreateDirectory.
+			"self logCr: 'About to create directory: ', revPath ."
+			OSEnvironment current setEnv: 'GIT_INDEX_FILE' value: revPath , '/.git'.
+			result := LibC uniqueInstance system: command.
+			"self logCr: 'About to execute command: ', command. result := 0."
+			result = 0
+				ifFalse: [ gitErrors asFileReference ]
+				ifTrue: [ | mseFile mseDestination |
+					"Make an MSE file"
+					command := 'cd ' , revPath , ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>'
+						, jdt2FamixErrors.
+					result := LibC uniqueInstance system: command.
+					"self logCr: 'About to execute command: ', command. result := 0."
+					result = 0
+						ifFalse: [ jdt2FamixErrors asFileReference ]
+						ifTrue: [ "Move the file out of the directory"
+							mseFile := (revPath , '/' , uid , '.mse') asFileReference.
+							mseDestination := (destPath , '/' , repoName , '_master/' , uid , '.mse')
+								asFileReference.
+							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
+							mseFile exists
+								ifTrue: [ mseDestination exists
+										ifTrue: [ mseDestination delete ].
+									mseFile moveTo: mseDestination ] ].
+					"Clean up the directories and files"
+					revPath asFileReference deleteAll ] ]
+		displayingProgress: [ :file | 'Generating MSE file for HEAD of: ' , file basename ]
+]
+
+{ #category : #'file service' }
 Utility class >> generateMSEFilesForEachUID: uidFileSuffix [
 "For each *_UIDs.csv file, generate a Moose MSE "
 
