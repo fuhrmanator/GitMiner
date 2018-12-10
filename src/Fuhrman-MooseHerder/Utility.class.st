@@ -90,6 +90,33 @@ Utility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 ]
 
 { #category : #'file service' }
+Utility class >> generateClientImplementationPairs: extension [
+	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
+
+	| mseDirRoot mseDirs |
+	mseDirRoot := FileLocator C / 'tmp' / 'data_mining'.
+	mseDirs := mseDirRoot directories.
+	mseDirs
+		do: [ :dir | 
+			| mseFiles results projectName |
+			projectName := dir basename asString allButLast: '_master' size.
+			mseFiles := dir allChildrenMatching: '*.mse'.
+			mseFiles
+				do: [ :mseFile | 
+					results := InterfaceMiner mineClientImplementationPairs: mseFile readStream withPrefix: ''.
+					"results size = 0 ifTrue: 0halt." "-> no interfaces will yield this"
+					"Save results to .CSV"
+					FileStream
+						forceNewFileNamed: projectName , '_', mseFile basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'
+						do: [ :csvStream | 
+							(NeoCSVWriter on: csvStream)
+								nextPut: #('Client' 'Interface' 'Implementation' 'Protected');
+								addFields: #(first second third fourth);
+								nextPutAll: results ] ] ]
+		displayingProgress: [ :dir | 'Processing directory ' , dir fullName , '...' ]
+]
+
+{ #category : #'file service' }
 Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnding [
 	"take files ending with '_commits_UIDs.csv' and create the logical coupling candidate pairs and transaction files"
 

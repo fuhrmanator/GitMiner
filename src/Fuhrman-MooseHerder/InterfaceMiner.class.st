@@ -71,9 +71,9 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 						do: [ :imp | 
 							listOfResults
 								add:
-									{client.
-									interface.
-									imp.
+									{client mooseName .
+									interface mooseName.
+									imp mooseName.
 									true	"protected"} ] ].
 			"Generate the unprotected client-implementation pairs"
 			localUnprotectedClients
@@ -82,9 +82,9 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 						do: [ :imp | 
 							listOfResults
 								add:
-									{client.
-									interface.
-									imp.
+									{client mooseName .
+									interface mooseName.
+									imp mooseName.
 									false	"unprotected"} ] ] ].
 	^ listOfResults
 ]
