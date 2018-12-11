@@ -110,8 +110,8 @@ Utility class >> generateClientImplementationPairs: extension [
 						forceNewFileNamed: projectName , '_', mseFile basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'
 						do: [ :csvStream | 
 							(NeoCSVWriter on: csvStream)
-								nextPut: #('Client' 'Interface' 'Implementation' 'Protected');
-								addFields: #(first second third fourth);
+								nextPut: #('Client' 'ClientFile' 'Interface' 'Implementation' 'ImplementationFile' 'Protected');
+								addFields: #(first second third fourth fifth sixth);
 								nextPutAll: results ] ] ]
 		displayingProgress: [ :dir | 'Processing directory ' , dir fullName , '...' ]
 ]
