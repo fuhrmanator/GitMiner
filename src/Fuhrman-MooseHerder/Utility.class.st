@@ -16,19 +16,19 @@ Utility class >> calculateCouplingIntersections [
 	trimCurlyBraces := [ :string | string allButFirst allButLast ].
 	logicalCouplingFiles := FileLocator workingDirectory / 'arules'
 		allChildrenMatching: '*' , arulesExtension.
-	Transcript
+"	Transcript
 		show: 'Processing files: ';
 		cr.
 	Transcript
 		show: (' ' join: logicalCouplingFiles);
-		cr.
+		cr."
 	logicalCouplingFiles
 		do: [ :logicalCouplingFile | 
 			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
 			basename := logicalCouplingFile basename allButLast: arulesExtension size.
 			clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
 			Transcript
-				show: logicalCouplingFile asString , ' and ' , clientImpFile asString;
+				show: basename;
 				cr.
 			"Read in CSV of logical coupling"
 			lcInputStream := logicalCouplingFile readStream.
