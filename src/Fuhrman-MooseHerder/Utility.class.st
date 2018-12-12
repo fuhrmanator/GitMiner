@@ -9,14 +9,14 @@ Class {
 
 { #category : #'file service' }
 Utility class >> calculateCouplingIntersections [
-	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString |
+	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString results |
 	arulesExtension := '_apriori_rules.csv'.
 	clientImpExtension := '_HEAD_ClientImpPairs.csv'.
 	linkString := '->'.
 	trimCurlyBraces := [ :string | string allButFirst allButLast ].
-	logicalCouplingFiles := FileLocator workingDirectory / 'arules'
-		allChildrenMatching: '*' , arulesExtension.
-"	Transcript
+	results := OrderedCollection new.
+	logicalCouplingFiles := FileLocator workingDirectory / 'arules' allChildrenMatching: '*' , arulesExtension.
+	"	Transcript
 		show: 'Processing files: ';
 		cr.
 	Transcript
@@ -27,9 +27,9 @@ Utility class >> calculateCouplingIntersections [
 			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
 			basename := logicalCouplingFile basename allButLast: arulesExtension size.
 			clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
-			Transcript
+			"Transcript
 				show: basename;
-				cr.
+				cr."
 			"Read in CSV of logical coupling"
 			lcInputStream := logicalCouplingFile readStream.
 			lcRecords := (NeoCSVReader on: lcInputStream)
@@ -73,41 +73,54 @@ Utility class >> calculateCouplingIntersections [
 					upToEnd.
 
 			"Create a set of logical coupling"
-			logicalCouplingSet := (lcRecords collect: [ :each | each second , linkString , each third ])
-				asSet.
-			Transcript
-				show: 'Logical coupling set size: ' , (logicalCouplingSet size) asString;
-				cr.
-
+			logicalCouplingSet := (lcRecords collect: [ :each | each second , linkString , each third ]) asSet.
+			"Transcript
+				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
+				cr."
 			protectedCouplingSet := (scRecords
 				collect: [ :each | 
 					each sixth
 						ifTrue: each second , linkString , each fifth ]) asSet.
-			Transcript
-				show: 'Protected coupling set size: ' , (protectedCouplingSet size) asString;
-				cr.
-				
+			"Transcript
+				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
+				cr."
 			unprotectedCouplingSet := (scRecords
 				collect: [ :each | 
 					each sixth
 						ifFalse: each second , linkString , each fifth ]) asSet.
-			Transcript
-				show: 'Unprotected coupling set size: ' , (unprotectedCouplingSet size) asString;
-				cr.
-
+			"Transcript
+				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
+				cr."
 			logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
 			logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
-			Transcript
-				show: 'Intersection of logical coupling and protected coupling set size:' , (logicalProtectedIntersection size) asString;
-				cr.
+			"Transcript
+				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
+				cr."
 			"						, (' ' join: logicalProtectedIntersection); cr."
-			Transcript
+			"Transcript
 				show:
 					'Intersection of logical coupling and unprotected coupling set size: '
-						, (logicalUnprotectedIntersection size) asString;
-				cr
-			"						, (' ' join: logicalUnprotectedIntersection); cr" ]
-		displayingProgress: [ :file | 'Processing project ' , file basenameWithoutExtension ]
+						, logicalUnprotectedIntersection size asString;
+				cr."
+			"						, (' ' join: logicalUnprotectedIntersection); cr"
+			results
+				add:
+					{basename.
+					logicalCouplingSet size.
+					protectedCouplingSet size.
+					unprotectedCouplingSet size.
+					logicalProtectedIntersection size.
+					logicalUnprotectedIntersection size} ]
+		displayingProgress: [ :file | 'Processing project ' , file basenameWithoutExtension ].
+	"Save results to .CSV"
+	FileStream
+		forceNewFileNamed: 'Logical_and_Structural_Dependency_results.csv'
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|');
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ results
 ]
 
 { #category : #'file service' }
