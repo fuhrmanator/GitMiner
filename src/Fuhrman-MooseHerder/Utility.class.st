@@ -8,6 +8,88 @@ Class {
 }
 
 { #category : #'file service' }
+Utility class >> calculateCouplingIntersections [
+	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString |
+	arulesExtension := '_apriori_rules.csv'.
+	clientImpExtension := '_HEAD_ClientImpPairs.csv'.
+	linkString := '->'.
+	trimCurlyBraces := [ :string | string allButFirst allButLast ].
+	logicalCouplingFiles := FileLocator workingDirectory / 'arules'
+		allChildrenMatching: '*' , arulesExtension.
+	self crLog: 'Processing files: ' , (' ' join: logicalCouplingFiles).
+	logicalCouplingFiles
+		do: [ :logicalCouplingFile | 
+			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
+			basename := logicalCouplingFile basename allButLast: arulesExtension size.
+			clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
+			self crLog: logicalCouplingFile asString , ' and ' , clientImpFile asString.
+			"Read in CSV of logical coupling"
+			lcInputStream := logicalCouplingFile readStream.
+			lcRecords := (NeoCSVReader on: lcInputStream)
+				separator: $,;
+				skipHeader;
+				"ruleNumber LHS RHS support confidence lift count"
+					addIntegerField;
+				"ruleNumber"
+					addFieldConverter: trimCurlyBraces;
+				"{LHS} - note R puts {...} around the string"
+					addFieldConverter: trimCurlyBraces;
+				"{RHS}"
+					addFloatField;
+				"support"
+					addFloatField;
+				"confidence"
+					addFloatField;
+				"lift"
+					addIntegerField;
+				"count"
+					upToEnd.
+
+			"Read in CSV of structural coupling (client-implementation)"
+			scInputStream := clientImpFile readStream.
+			scRecords := (NeoCSVReader on: scInputStream)
+				separator: $,;
+				skipHeader;
+				"Client ClientFile Interface Implementation ImplementationFile Protected"
+					addField;
+				"Client (Moose name)"
+					addField;
+				"ClientFile (file name)"
+					addField;
+				"Interface"
+					addField;
+				"Implementation (Moose name)"
+					addField;
+				"ImplementationFile (file name)"
+					addFieldConverter: [ :string | string = 'true' ];
+				"Protected"
+					upToEnd.
+
+			"Create a set of logical coupling"
+			logicalCouplingSet := (lcRecords collect: [ :each | each second , linkString , each third ])
+				asSet.
+			protectedCouplingSet := (scRecords
+				collect: [ :each | 
+					each sixth
+						ifTrue: each second , linkString , each fifth ]) asSet.
+			unprotectedCouplingSet := (scRecords
+				collect: [ :each | 
+					each sixth
+						ifFalse: each second , linkString , each fifth ]) asSet.
+			logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
+			logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
+			self
+				crLog:
+					'Intersection of logical coupling and protected coupling: '
+						, (' ' join: logicalProtectedIntersection).
+			self
+				crLog:
+					'Intersection of logical coupling and unprotected coupling: '
+						, (' ' join: logicalUnprotectedIntersection) ]
+		displayingProgress: [ :file | 'Processing project ' , file basenameWithoutExtension ]
+]
+
+{ #category : #'file service' }
 Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [ 
 "For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
 
