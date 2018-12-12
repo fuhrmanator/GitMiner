@@ -16,13 +16,20 @@ Utility class >> calculateCouplingIntersections [
 	trimCurlyBraces := [ :string | string allButFirst allButLast ].
 	logicalCouplingFiles := FileLocator workingDirectory / 'arules'
 		allChildrenMatching: '*' , arulesExtension.
-	self crLog: 'Processing files: ' , (' ' join: logicalCouplingFiles).
+	Transcript
+		show: 'Processing files: ';
+		cr.
+	Transcript
+		show: (' ' join: logicalCouplingFiles);
+		cr.
 	logicalCouplingFiles
 		do: [ :logicalCouplingFile | 
 			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
 			basename := logicalCouplingFile basename allButLast: arulesExtension size.
 			clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
-			self crLog: logicalCouplingFile asString , ' and ' , clientImpFile asString.
+			Transcript
+				show: logicalCouplingFile asString , ' and ' , clientImpFile asString;
+				cr.
 			"Read in CSV of logical coupling"
 			lcInputStream := logicalCouplingFile readStream.
 			lcRecords := (NeoCSVReader on: lcInputStream)
@@ -68,24 +75,38 @@ Utility class >> calculateCouplingIntersections [
 			"Create a set of logical coupling"
 			logicalCouplingSet := (lcRecords collect: [ :each | each second , linkString , each third ])
 				asSet.
+			Transcript
+				show: 'Logical coupling set size: ' , (logicalCouplingSet size) asString;
+				cr.
+
 			protectedCouplingSet := (scRecords
 				collect: [ :each | 
 					each sixth
 						ifTrue: each second , linkString , each fifth ]) asSet.
+			Transcript
+				show: 'Protected coupling set size: ' , (protectedCouplingSet size) asString;
+				cr.
+				
 			unprotectedCouplingSet := (scRecords
 				collect: [ :each | 
 					each sixth
 						ifFalse: each second , linkString , each fifth ]) asSet.
+			Transcript
+				show: 'Unprotected coupling set size: ' , (unprotectedCouplingSet size) asString;
+				cr.
+
 			logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
 			logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
-			self
-				crLog:
-					'Intersection of logical coupling and protected coupling: '
-						, (' ' join: logicalProtectedIntersection).
-			self
-				crLog:
-					'Intersection of logical coupling and unprotected coupling: '
-						, (' ' join: logicalUnprotectedIntersection) ]
+			Transcript
+				show: 'Intersection of logical coupling and protected coupling set size:' , (logicalProtectedIntersection size) asString;
+				cr.
+			"						, (' ' join: logicalProtectedIntersection); cr."
+			Transcript
+				show:
+					'Intersection of logical coupling and unprotected coupling set size: '
+						, (logicalUnprotectedIntersection size) asString;
+				cr
+			"						, (' ' join: logicalUnprotectedIntersection); cr" ]
 		displayingProgress: [ :file | 'Processing project ' , file basenameWithoutExtension ]
 ]
 
