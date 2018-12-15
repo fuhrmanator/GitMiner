@@ -8,6 +8,96 @@ Class {
 }
 
 { #category : #'file service' }
+Utility class >> applyRenamingsToTransactions: projectsFile [
+	"comment stating purpose of message"
+
+	| working  projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream transactionRecords clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp renamedTransactionRecords perlProgram concatRecords |
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
+	transactionsExtension := '_commits_UIDs_transactions.csv'.
+	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
+	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
+	renameHistoryOutput := '/tmp/_renamings_temp'.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	gitErrors := '/tmp/_git_errors'.
+	perlProgram := '/tmp/hist2renamecsv.perl'.
+	perlErrors := '/tmp/_perl_errors'.
+	working := FileSystem disk workingDirectory.
+	csvInputStream := (working / projectsFile) readStream.
+	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
+
+	projectRecords
+		do: [ 	projectName := projectRecords second.
+			file := (projectName , transactionsExtension) asFileReference.
+			csvInputStream := file readStream.
+			transactionRecords := Utility loadCommitTransactions: csvInputStream.
+
+			"Load clients and implementations"
+			"Read in CSV of structural coupling (client-implementation)"
+			file := (projectName , clientImplementationPairsExtension) asFileReference.
+			csvInputStream := file readStream.
+			clientImplementationPairsRecords := Utility loadClientImplementationPairs: csvInputStream.
+			"Client file name is second column"
+			clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+			"Implementation file name is fifth column"
+			implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+			classesToCheckRenamings := clientsTemp union: implementationsTemp.
+
+			classesToCheckRenamings
+				do: [ :class | 
+					| projectRepoDir command result renamings dirs csvPath |
+					"Generate git history"
+					projectRepoDir := tempRepoRoot , projectName.
+					command := 'cd ' , projectRepoDir , ' && git log --follow -p -- ' , class , '>' , renameHistoryOutput , ' 2>' , gitErrors.
+					result := LibC uniqueInstance system: command.
+					result = 0
+						ifFalse: [ 0 halt ]
+						ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
+							command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+							result := LibC uniqueInstance system: command.
+							result = 0
+								ifFalse: [ 0 halt ]
+								ifTrue: [ "Load CSV of renamed names"
+									dirs := renameHistoryCSV splitOn: $/.
+									csvPath := FileLocator C.
+									dirs
+										do: [ :dir | 
+											dir = ''
+												ifFalse: [ csvPath := csvPath / dir ] ].
+									csvInputStream := csvPath readStream.
+									renamings := Utility loadRenamings: csvInputStream.
+
+									"For each transaction, replace any instance of a 'from' renaming with the current name"
+									renamedTransactionRecords := OrderedCollection new.
+									transactionRecords
+										do: [ :tRecord | 
+											| copyTRecord i |
+											"make copy of transaction record and add it to the new set"
+											copyTRecord := tRecord copy asArray.
+											renamedTransactionRecords add: copyTRecord.
+											i := 0.
+											tRecord
+												do: [ :classToMaybeRename | 
+													i := i + 1.
+													"skip the UID"
+													i > 1
+														ifTrue: [ renamings
+																do: [ :renamingRecord | 
+																	| fromRename percent |
+																	percent := renamingRecord second.
+																	fromRename := renamingRecord fourth.
+																	fromRename = classToMaybeRename
+																		ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
+									"Update for next class to check for renamings"
+									transactionRecords := renamedTransactionRecords ] ] ].
+
+			"Save new transactions"
+			"Concatenate items, since we can't use NeoCSV to write them"
+			concatRecords := OrderedCollection new.
+			renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ].
+			Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] displayingProgress: [ :projectRecord | 'Applying renamings to project: ', projectRecord second ]
+]
+
+{ #category : #'file service' }
 Utility class >> calculateCouplingIntersections [
 	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString results |
 	arulesExtension := '_apriori_rules.csv'.
@@ -15,7 +105,8 @@ Utility class >> calculateCouplingIntersections [
 	linkString := '->'.
 	trimCurlyBraces := [ :string | string allButFirst allButLast ].
 	results := OrderedCollection new.
-	logicalCouplingFiles := FileLocator workingDirectory / 'arules' allChildrenMatching: '*' , arulesExtension.
+	logicalCouplingFiles := FileLocator workingDirectory / 'arules'
+		allChildrenMatching: '*' , arulesExtension.
 	"	Transcript
 		show: 'Processing files: ';
 		cr.
@@ -25,8 +116,10 @@ Utility class >> calculateCouplingIntersections [
 	logicalCouplingFiles
 		do: [ :logicalCouplingFile | 
 			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
-			basename := logicalCouplingFile basename allButLast: arulesExtension size.
-			clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
+			basename := logicalCouplingFile basename
+				allButLast: arulesExtension size.
+			clientImpFile := FileLocator workingDirectory
+				/ (basename , clientImpExtension).
 			"Transcript
 				show: basename;
 				cr."
@@ -54,26 +147,11 @@ Utility class >> calculateCouplingIntersections [
 
 			"Read in CSV of structural coupling (client-implementation)"
 			scInputStream := clientImpFile readStream.
-			scRecords := (NeoCSVReader on: scInputStream)
-				separator: $,;
-				skipHeader;
-				"Client ClientFile Interface Implementation ImplementationFile Protected"
-					addField;
-				"Client (Moose name)"
-					addField;
-				"ClientFile (file name)"
-					addField;
-				"Interface"
-					addField;
-				"Implementation (Moose name)"
-					addField;
-				"ImplementationFile (file name)"
-					addFieldConverter: [ :string | string = 'true' ];
-				"Protected"
-					upToEnd.
+			scRecords := self loadClientImplementationPairs: scInputStream.
 
 			"Create a set of logical coupling"
-			logicalCouplingSet := (lcRecords collect: [ :each | each second , linkString , each third ]) asSet.
+			logicalCouplingSet := (lcRecords
+				collect: [ :each | each second , linkString , each third ]) asSet.
 			"Transcript
 				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
 				cr."
@@ -91,8 +169,10 @@ Utility class >> calculateCouplingIntersections [
 			"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
-			logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
-			logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
+			logicalProtectedIntersection := logicalCouplingSet
+				intersection: protectedCouplingSet.
+			logicalUnprotectedIntersection := logicalCouplingSet
+				intersection: unprotectedCouplingSet.
 			"Transcript
 				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
 				cr."
@@ -117,48 +197,34 @@ Utility class >> calculateCouplingIntersections [
 		forceNewFileNamed: 'Logical_and_Structural_Dependency_results.csv'
 		do: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
-				nextPut: #('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|');
+				nextPut:
+					#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|');
 				addFields: #(first second third fourth fifth sixth);
 				nextPutAll: results ].
 	^ results
 ]
 
 { #category : #'file service' }
-Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [ 
-"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
+Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
+	"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
 
-| working csvInputStream csvRecords i |
-
-working := FileSystem disk workingDirectory.
-csvInputStream := (working / projectsFile) readStream.
-csvRecords := (NeoCSVReader on:  csvInputStream) 
-   separator: $,;
-   skipHeader; "ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"
-   addIntegerField;
-   addField;
-   addIntegerField;
-   addIntegerField;
-   addIntegerField;
-   addIntegerField;
-   addIntegerField;
-   addField; 
-   addField; "GitHub url"
-   upToEnd.
-
-
-i := 0.
-[:job |
-		csvRecords do: [:each | 
+	| working csvInputStream csvRecords i |
+	working := FileSystem disk workingDirectory.
+	csvInputStream := (working / projectsFile) readStream.
+	csvRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
+	i := 0.
+	[ :job | 
+	csvRecords
+		do: [ :each | 
 			| githubUrl |
 			i := i + 1.
-			job 
-				progress: i / (csvRecords size);
-				title: 'Generating CSV files for commits: ', each second.
+			job
+				progress: i / csvRecords size;
+				title: 'Generating CSV files for commits: ' , each second.
 			githubUrl := each last.
-			githubUrl = 'NA' 
-				ifFalse: [ GitCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] .
-		]
-] asJob run.
+			githubUrl = 'NA'
+				ifFalse: [ GitCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] ] ]
+		asJob run
 ]
 
 { #category : #'file service' }
@@ -237,61 +303,74 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 	"take files ending with '_commits_UIDs.csv' and create the logical coupling candidate pairs and transaction files"
 
 	| working selectedCommitFiles |
-working := FileSystem disk workingDirectory. 
-selectedCommitFiles := working allChildrenMatching: ('*', fileEnding).
-
-selectedCommitFiles do: [ :file | 
-	| csvInputStream csvRecords logicalCouplingRecords project transactionRecords | 
-	"Parse the CSV and gather the UIDs for commits that match criteria"
-	project := file basename allButLast: fileEnding size.
-	csvInputStream := file readStream.
-	csvRecords := (NeoCSVReader on:  csvInputStream) 
-		separator: $,;
-		skipHeader;
-		addField; "Commit_id"
-		addField; "Revision_number"
-		addField; "committed_files"
-		upToEnd.
-
-	logicalCouplingRecords := OrderedCollection new.
-	transactionRecords := OrderedCollection new. "Transaction data: ID, item, item, ..."
-	"Write out the logical coupling of java classes for the selected commits"
-	"It's pairs of classes in the committed_files set"
-	csvRecords do: [ :rec | | committedFiles committedClasses classPairs uid revNum |
-		uid := rec first.
-		revNum := rec second.
-		committedFiles := rec third splitOn: Character space. 
-		committedClasses := committedFiles select: [ :each | each endsWith: '.java' ].
-		transactionRecords addFirst: uid , ',' , ($, join: committedClasses). "ID, item, item, ..."
-		"Note: this won't create entries for commits with only one java file."
-		classPairs := committedClasses combinations select: [ :each | each size = 2 ].
-		classPairs do: [ :pair | | sortedPair |
-			sortedPair := pair asSortedCollection.
-			"Add the pair twice - logical coupling could be either direction"
-			logicalCouplingRecords addFirst: { project . pair first . pair second . uid . revNum }.
-			logicalCouplingRecords addFirst: { project . pair second . pair first . uid . revNum }
-			 ]
-	].
-	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-	FileStream
-		forceNewFileNamed: (file basenameWithoutExtension) , '_logicalcoupling.csv'
-		do: [ :csvStream | 
-			(NeoCSVWriter on: csvStream)
-				nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
-				addFields: #(first second third fourth fifth);
-				nextPutAll: logicalCouplingRecords  ].
-	"Generates a 'transactions' (basket) style file for arules in R"
-	FileStream
-		forceNewFileNamed: (file basenameWithoutExtension) , '_transactions.csv'
-		do: [ :stream |
-         transactionRecords do: [ :rec |
-             stream
-                 ascii; "data is text, not binary"
-                 nextPutAll: rec;
-                 cr ] ].
-
-] displayingProgress: [ :file | 'Generating data to calculate logical coupling for ', file basename allButLast: fileEnding size ]
-
+	working := FileSystem disk workingDirectory.
+	selectedCommitFiles := working allChildrenMatching: '*' , fileEnding.
+	selectedCommitFiles
+		do: [ :file | 
+			| csvInputStream csvRecords logicalCouplingRecords project transactionRecords outFileName |
+			"Parse the CSV and gather the UIDs for commits that match criteria"
+			project := file basename allButLast: fileEnding size.
+			csvInputStream := file readStream.
+			csvRecords := (NeoCSVReader on: csvInputStream)
+				separator: $,;
+				skipHeader;
+				addField;
+				"Commit_id"
+					addField;
+				"Revision_number"
+					addField;
+				"committed_files"
+					upToEnd.
+			logicalCouplingRecords := OrderedCollection new.
+			transactionRecords := OrderedCollection new.	"Transaction data: ID, item, item, ..."
+			"Write out the logical coupling of java classes for the selected commits"
+			"It's pairs of classes in the committed_files set"
+			csvRecords
+				do: [ :rec | 
+					| committedFiles committedClasses classPairs uid revNum |
+					uid := rec first.
+					revNum := rec second.
+					committedFiles := rec third splitOn: Character space.
+					committedClasses := committedFiles
+						select: [ :each | each endsWith: '.java' ].
+					transactionRecords
+						addFirst: uid , ',' , ($, join: committedClasses).	"ID, item, item, ..."
+					"Note: this won't create entries for commits with only one java file."
+					classPairs := committedClasses combinations
+						select: [ :each | each size = 2 ].
+					classPairs
+						do: [ :pair | 
+							| sortedPair |
+							sortedPair := pair asSortedCollection.
+							"Add the pair twice - logical coupling could be either direction"
+							logicalCouplingRecords
+								addFirst:
+									{project.
+									pair first.
+									pair second.
+									uid.
+									revNum}.
+							logicalCouplingRecords
+								addFirst:
+									{project.
+									pair second.
+									pair first.
+									uid.
+									revNum} ] ].
+			"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
+			FileStream
+				forceNewFileNamed: file basenameWithoutExtension , '_logicalcoupling.csv'
+				do: [ :csvStream | 
+					(NeoCSVWriter on: csvStream)
+						nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
+						addFields: #(first second third fourth fifth);
+						nextPutAll: logicalCouplingRecords ].
+			"Generates a 'transactions' (basket) style file for arules in R"
+			outFileName := file basenameWithoutExtension , '_transactions.csv'.
+			self writeCommitTransactions: transactionRecords to: outFileName]
+		displayingProgress: [ :file | 
+			'Generating data to calculate logical coupling for ' , file basename
+				allButLast: fileEnding size ]
 ]
 
 { #category : #'file service' }
@@ -473,4 +552,123 @@ commitFiles do: [ :file |
 				addFields: #(first second sixth);
 				nextPutAll: selectedCommits ].
 ] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
+]
+
+{ #category : #'file service' }
+Utility class >> loadClientImplementationPairs: scInputStream [
+	| scRecords |
+	scRecords := (NeoCSVReader on: scInputStream)
+		separator: $,;
+		skipHeader;
+		"Client ClientFile Interface Implementation ImplementationFile Protected"
+			addField;
+		"Client (Moose name)"
+			addField;
+		"ClientFile (file name)"
+			addField;
+		"Interface"
+			addField;
+		"Implementation (Moose name)"
+			addField;
+		"ImplementationFile (file name)"
+			addFieldConverter: [ :string | string = 'true' ];
+		"Protected"
+			upToEnd.
+	^ scRecords
+]
+
+{ #category : #'file service' }
+Utility class >> loadCommitTransactions: csvInputStream [
+	"Load commit transactions. Note NeoCSVReader doesn't support variable records, so we declare spots for many entries, and remove them after."
+
+	| transactionRecords |
+	transactionRecords := (NeoCSVReader on: csvInputStream)
+		separator: $,;
+		"Commit UID"
+			addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		addField;
+		upToEnd.
+
+	"Get rid of the nil elements in the transactions"
+	transactionRecords := transactionRecords
+		collect: [ :transaction | 
+			| holder |
+			holder := transaction asCollection select: #isNotNil ].
+	^ transactionRecords
+]
+
+{ #category : #'file service' }
+Utility class >> loadProjectsList: csvInputStream [
+	| csvRecords |
+	csvRecords := (NeoCSVReader on: csvInputStream)
+		separator: $,;
+		skipHeader;
+		"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"
+			addIntegerField;
+		addField;
+		addIntegerField;
+		addIntegerField;
+		addIntegerField;
+		addIntegerField;
+		addIntegerField;
+		addField;
+		addField;
+		"GitHub url"
+			upToEnd.
+	^ csvRecords
+]
+
+{ #category : #'file service' }
+Utility class >> loadRenamings: csvInputStream [ 
+	| records |
+	records := (NeoCSVReader on: csvInputStream)
+		separator: $,;
+		"UID"
+		addField;
+		"percentage"
+		addIntegerField; 
+		"operation (copy or rename)"
+		addField;
+		"from name"
+		addField;
+		"to name"
+		addField;		
+		upToEnd.
+		^ records
+]
+
+{ #category : #writing }
+Utility class >> writeCommitTransactions: transactionRecords to: outFileName [
+	"Write out single column (with embedded commas!)"
+	^ FileStream
+		forceNewFileNamed: outFileName
+		do: [ :stream | 
+			transactionRecords
+				do: [ :rec |
+					stream
+						"data is text, not binary"
+						ascii;
+							nextPutAll: rec;
+						cr ] ]
 ]
