@@ -11,7 +11,7 @@ Class {
 Utility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
 
-	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream transactionRecords clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp renamedTransactionRecords perlProgram concatRecords |
+	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp perlProgram concatRecords |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_UIDs_transactions.csv'.
 	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
@@ -26,14 +26,14 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
 	projectRecords
 		do: [ :projectRecord | 
-			| githubUrl |
+			| githubUrl transactionRecordsOriginal transactionRecords renamedTransactionRecords |
 			githubUrl := projectRecord last.
 			githubUrl = 'NA'
 				ifFalse: [ projectName := projectRecord second.
 					file := (projectName , transactionsExtension) asFileReference.
 					csvInputStream := file readStream.
-					transactionRecords := Utility loadCommitTransactions: csvInputStream.
-
+					transactionRecordsOriginal  := Utility loadCommitTransactions: csvInputStream.
+					transactionRecords := transactionRecordsOriginal copy.
 					"Load clients and implementations"
 					"Read in CSV of structural coupling (client-implementation)"
 					file := (projectName , clientImplementationPairsExtension) asFileReference.
@@ -94,7 +94,10 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 
 					"Save new transactions"
 					"Concatenate items, since we can't use NeoCSV to write them"
-					concatRecords := OrderedCollection new.
+					concatRecords := OrderedCollection new. 
+					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
+					classesToCheckRenamings size = 0 ifTrue:[ renamedTransactionRecords  := transactionRecordsOriginal ].
+					
 					renamedTransactionRecords ifNotNil: [ renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ]].
 					Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ]
 				 ]
