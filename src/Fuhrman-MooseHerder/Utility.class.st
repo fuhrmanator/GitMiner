@@ -11,7 +11,7 @@ Class {
 Utility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
 
-	| working  projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream transactionRecords clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp renamedTransactionRecords perlProgram concatRecords |
+	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream transactionRecords clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp renamedTransactionRecords perlProgram concatRecords |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_UIDs_transactions.csv'.
 	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
@@ -24,77 +24,81 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 	working := FileSystem disk workingDirectory.
 	csvInputStream := (working / projectsFile) readStream.
 	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
-
 	projectRecords
-		do: [ 	projectName := projectRecords second.
-			file := (projectName , transactionsExtension) asFileReference.
-			csvInputStream := file readStream.
-			transactionRecords := Utility loadCommitTransactions: csvInputStream.
+		do: [ :projectRecord | 
+			| githubUrl |
+			githubUrl := projectRecord last.
+			githubUrl = 'NA'
+				ifFalse: [ projectName := projectRecord second.
+					file := (projectName , transactionsExtension) asFileReference.
+					csvInputStream := file readStream.
+					transactionRecords := Utility loadCommitTransactions: csvInputStream.
 
-			"Load clients and implementations"
-			"Read in CSV of structural coupling (client-implementation)"
-			file := (projectName , clientImplementationPairsExtension) asFileReference.
-			csvInputStream := file readStream.
-			clientImplementationPairsRecords := Utility loadClientImplementationPairs: csvInputStream.
-			"Client file name is second column"
-			clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
-			"Implementation file name is fifth column"
-			implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
-			classesToCheckRenamings := clientsTemp union: implementationsTemp.
-
-			classesToCheckRenamings
-				do: [ :class | 
-					| projectRepoDir command result renamings dirs csvPath |
-					"Generate git history"
-					projectRepoDir := tempRepoRoot , projectName.
-					command := 'cd ' , projectRepoDir , ' && git log --follow -p -- ' , class , '>' , renameHistoryOutput , ' 2>' , gitErrors.
-					result := LibC uniqueInstance system: command.
-					result = 0
-						ifFalse: [ 0 halt ]
-						ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
-							command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+					"Load clients and implementations"
+					"Read in CSV of structural coupling (client-implementation)"
+					file := (projectName , clientImplementationPairsExtension) asFileReference.
+					csvInputStream := file readStream.
+					clientImplementationPairsRecords := Utility loadClientImplementationPairs: csvInputStream.
+					"Client file name is second column"
+					clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+					"Implementation file name is fifth column"
+					implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+					classesToCheckRenamings := clientsTemp union: implementationsTemp.
+					classesToCheckRenamings
+						do: [ :class | 
+							| projectRepoDir command result renamings dirs csvPath |
+							"Generate git history"
+							projectRepoDir := tempRepoRoot , projectName.
+							command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '">' , renameHistoryOutput , ' 2>' , gitErrors.
 							result := LibC uniqueInstance system: command.
 							result = 0
 								ifFalse: [ 0 halt ]
-								ifTrue: [ "Load CSV of renamed names"
-									dirs := renameHistoryCSV splitOn: $/.
-									csvPath := FileLocator C.
-									dirs
-										do: [ :dir | 
-											dir = ''
-												ifFalse: [ csvPath := csvPath / dir ] ].
-									csvInputStream := csvPath readStream.
-									renamings := Utility loadRenamings: csvInputStream.
+								ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
+									command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+									result := LibC uniqueInstance system: command.
+									result = 0
+										ifFalse: [ 0 halt ]
+										ifTrue: [ "Load CSV of renamed names"
+											dirs := renameHistoryCSV splitOn: $/.
+											csvPath := FileLocator C.
+											dirs
+												do: [ :dir | 
+													dir = ''
+														ifFalse: [ csvPath := csvPath / dir ] ].
+											csvInputStream := csvPath readStream.
+											renamings := Utility loadRenamings: csvInputStream.
 
-									"For each transaction, replace any instance of a 'from' renaming with the current name"
-									renamedTransactionRecords := OrderedCollection new.
-									transactionRecords
-										do: [ :tRecord | 
-											| copyTRecord i |
-											"make copy of transaction record and add it to the new set"
-											copyTRecord := tRecord copy asArray.
-											renamedTransactionRecords add: copyTRecord.
-											i := 0.
-											tRecord
-												do: [ :classToMaybeRename | 
-													i := i + 1.
-													"skip the UID"
-													i > 1
-														ifTrue: [ renamings
-																do: [ :renamingRecord | 
-																	| fromRename percent |
-																	percent := renamingRecord second.
-																	fromRename := renamingRecord fourth.
-																	fromRename = classToMaybeRename
-																		ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
-									"Update for next class to check for renamings"
-									transactionRecords := renamedTransactionRecords ] ] ].
+											"For each transaction, replace any instance of a 'from' renaming with the current name"
+											renamedTransactionRecords := OrderedCollection new.
+											transactionRecords
+												do: [ :tRecord | 
+													| copyTRecord i |
+													"make copy of transaction record and add it to the new set"
+													copyTRecord := tRecord copy asArray.
+													renamedTransactionRecords add: copyTRecord.
+													i := 0.
+													tRecord
+														do: [ :classToMaybeRename | 
+															i := i + 1.
+															"skip the UID"
+															i > 1
+																ifTrue: [ renamings
+																		do: [ :renamingRecord | 
+																			| fromRename percent |
+																			percent := renamingRecord second.
+																			fromRename := renamingRecord fourth.
+																			fromRename = classToMaybeRename
+																				ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
+											"Update for next class to check for renamings"
+											transactionRecords := renamedTransactionRecords ] ] ].
 
-			"Save new transactions"
-			"Concatenate items, since we can't use NeoCSV to write them"
-			concatRecords := OrderedCollection new.
-			renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ].
-			Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] displayingProgress: [ :projectRecord | 'Applying renamings to project: ', projectRecord second ]
+					"Save new transactions"
+					"Concatenate items, since we can't use NeoCSV to write them"
+					concatRecords := OrderedCollection new.
+					renamedTransactionRecords ifNotNil: [ renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ]].
+					Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ]
+				 ]
+		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]
 
 { #category : #'file service' }
