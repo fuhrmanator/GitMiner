@@ -32,82 +32,83 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 				ifFalse: [ projectName := projectRecord second.
 					file := (projectName , transactionsExtension) asFileReference.
 					csvInputStream := file readStream.
-					transactionRecordsOriginal  := Utility loadCommitTransactions: csvInputStream.
+					transactionRecordsOriginal := self loadCommitTransactions: csvInputStream.
 					transactionRecords := transactionRecordsOriginal copy.
 					"Load clients and implementations"
 					"Read in CSV of structural coupling (client-implementation)"
 					file := (projectName , clientImplementationPairsExtension) asFileReference.
 					csvInputStream := file readStream.
-					clientImplementationPairsRecords := Utility loadClientImplementationPairs: csvInputStream.
-					"Client file name is second column"
-					clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
-					"Implementation file name is fifth column"
-					implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
-					classesToCheckRenamings := clientsTemp union: implementationsTemp.
-					classesToCheckRenamings
-						do: [ :class | 
-							| projectRepoDir command result renamings dirs csvPath |
-							"Generate git history"
-							projectRepoDir := tempRepoRoot , projectName.
-							command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '">' , renameHistoryOutput , ' 2>' , gitErrors.
-							result := LibC uniqueInstance system: command.
-							result = 0
-								ifFalse: [ 0 halt ]
-								ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
-									command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+					clientImplementationPairsRecords := self loadClientImplementationPairs: csvInputStream.
+					clientImplementationPairsRecords size > 0
+						ifTrue: [ "Client file name is second column"
+							clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+							"Implementation file name is fifth column"
+							implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+							classesToCheckRenamings := clientsTemp union: implementationsTemp.
+							classesToCheckRenamings
+								do: [ :class | 
+									| projectRepoDir command result renamings dirs csvPath |
+									"Generate git history"
+									projectRepoDir := tempRepoRoot , projectName.
+									command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '">' , renameHistoryOutput , ' 2>' , gitErrors.
 									result := LibC uniqueInstance system: command.
 									result = 0
 										ifFalse: [ 0 halt ]
-										ifTrue: [ "Load CSV of renamed names"
-											dirs := renameHistoryCSV splitOn: $/.
-											csvPath := FileLocator C.
-											dirs
-												do: [ :dir | 
-													dir = ''
-														ifFalse: [ csvPath := csvPath / dir ] ].
-											csvInputStream := csvPath readStream.
-											renamings := Utility loadRenamings: csvInputStream.
+										ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
+											command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+											result := LibC uniqueInstance system: command.
+											result = 0
+												ifFalse: [ 0 halt ]
+												ifTrue: [ "Load CSV of renamed names"
+													dirs := renameHistoryCSV splitOn: $/.
+													csvPath := FileLocator C.
+													dirs
+														do: [ :dir | 
+															dir = ''
+																ifFalse: [ csvPath := csvPath / dir ] ].
+													csvInputStream := csvPath readStream.
+													renamings := Utility loadRenamings: csvInputStream.
 
-											"For each transaction, replace any instance of a 'from' renaming with the current name"
-											renamedTransactionRecords := OrderedCollection new.
-											transactionRecords
-												do: [ :tRecord | 
-													| copyTRecord i |
-													"make copy of transaction record and add it to the new set"
-													copyTRecord := tRecord copy asArray.
-													renamedTransactionRecords add: copyTRecord.
-													i := 0.
-													tRecord
-														do: [ :classToMaybeRename | 
-															i := i + 1.
-															"skip the UID"
-															i > 1
-																ifTrue: [ renamings
-																		do: [ :renamingRecord | 
-																			| fromRename percent |
-																			percent := renamingRecord second.
-																			fromRename := renamingRecord fourth.
-																			fromRename = classToMaybeRename
-																				ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
-											"Update for next class to check for renamings"
-											transactionRecords := renamedTransactionRecords ] ] ].
+													"For each transaction, replace any instance of a 'from' renaming with the current name"
+													renamedTransactionRecords := OrderedCollection new.
+													transactionRecords
+														do: [ :tRecord | 
+															| copyTRecord i |
+															"make copy of transaction record and add it to the new set"
+															copyTRecord := tRecord copy asArray.
+															renamedTransactionRecords add: copyTRecord.
+															i := 0.
+															tRecord
+																do: [ :classToMaybeRename | 
+																	i := i + 1.
+																	"skip the UID"
+																	i > 1
+																		ifTrue: [ renamings
+																				do: [ :renamingRecord | 
+																					| fromRename percent |
+																					percent := renamingRecord second.
+																					fromRename := renamingRecord fourth.
+																					fromRename = classToMaybeRename
+																						ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
+													"Update for next class to check for renamings"
+													transactionRecords := renamedTransactionRecords ] ] ] ]
+
+					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
+					ifFalse: [ renamedTransactionRecords := transactionRecordsOriginal copy ].
 
 					"Save new transactions"
-					"Concatenate items, since we can't use NeoCSV to write them"
-					concatRecords := OrderedCollection new. 
-					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
-					classesToCheckRenamings size = 0 ifTrue:[ renamedTransactionRecords  := transactionRecordsOriginal ].
-					
-					renamedTransactionRecords ifNotNil: [ renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ]].
-					Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ]
-				 ]
+					concatRecords := OrderedCollection new.
+					"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
+					renamedTransactionRecords
+						ifNotNil: [ renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ] ].
+					Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] ]
 		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]
 
 { #category : #'file service' }
 Utility class >> calculateCouplingIntersections [
 	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString results |
-	arulesExtension := '_apriori_rules.csv'.
+	arulesExtension := '_renamed_apriori_rules.csv'.
 	clientImpExtension := '_HEAD_ClientImpPairs.csv'.
 	linkString := '->'.
 	trimCurlyBraces := [ :string | string allButFirst allButLast ].
