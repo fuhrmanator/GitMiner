@@ -1,3 +1,6 @@
+"
+I am a class that tries to help with selecting commits for data mining.
+"
 Class {
 	#name : #GitCommitFilter,
 	#superclass : #Object,

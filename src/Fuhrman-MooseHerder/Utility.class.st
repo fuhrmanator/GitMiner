@@ -26,14 +26,13 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
 	projectRecords
 		do: [ :projectRecord | 
-			| githubUrl transactionRecordsOriginal transactionRecords renamedTransactionRecords |
+			| githubUrl cTransactionsOriginal renamedCTransactions cTransactions |
 			githubUrl := projectRecord last.
 			githubUrl = 'NA'
 				ifFalse: [ projectName := projectRecord second.
 					file := (projectName , transactionsExtension) asFileReference.
-					csvInputStream := file readStream.
-					transactionRecordsOriginal := self loadCommitTransactions: csvInputStream.
-					transactionRecords := transactionRecordsOriginal copy.
+					cTransactionsOriginal := self loadCommitTransactions: file.
+					cTransactions := cTransactionsOriginal copy.
 					"Load clients and implementations"
 					"Read in CSV of structural coupling (client-implementation)"
 					file := (projectName , clientImplementationPairsExtension) asFileReference.
@@ -54,7 +53,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 									result := LibC uniqueInstance system: command.
 									result = 0
 										ifFalse: [ 0 halt ]
-										ifTrue: [ "Convert to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
+										ifTrue: [ "Convert history with renames to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
 											command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 											result := LibC uniqueInstance system: command.
 											result = 0
@@ -67,41 +66,38 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 															dir = ''
 																ifFalse: [ csvPath := csvPath / dir ] ].
 													csvInputStream := csvPath readStream.
-													renamings := Utility loadRenamings: csvInputStream.
+													renamings := self loadRenamings: csvInputStream.
 
 													"For each transaction, replace any instance of a 'from' renaming with the current name"
-													renamedTransactionRecords := OrderedCollection new.
-													transactionRecords
-														do: [ :tRecord | 
-															| copyTRecord i |
+													renamedCTransactions := OrderedCollection new.
+													cTransactions
+														do: [ :cTransaction | 
+															| copyCTransaction i |
 															"make copy of transaction record and add it to the new set"
-															copyTRecord := tRecord copy asArray.
-															renamedTransactionRecords add: copyTRecord.
+															copyCTransaction := cTransaction copy.
+															renamedCTransactions add: copyCTransaction .
 															i := 0.
-															tRecord
+															cTransaction committedFileNames
 																do: [ :classToMaybeRename | 
 																	i := i + 1.
-																	"skip the UID"
-																	i > 1
-																		ifTrue: [ renamings
+																	renamings
 																				do: [ :renamingRecord | 
 																					| fromRename percent |
 																					percent := renamingRecord second.
 																					fromRename := renamingRecord fourth.
-																					fromRename = classToMaybeRename
-																						ifTrue: [ "rename it to the current class" copyTRecord at: i put: class ] ] ] ] ].
+																					copyCTransaction renameAll: fromRename to: class ] ] ] .
 													"Update for next class to check for renamings"
-													transactionRecords := renamedTransactionRecords ] ] ] ]
+													cTransactions := renamedCTransactions ] ] ] ]
 
 					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
-					ifFalse: [ renamedTransactionRecords := transactionRecordsOriginal copy ].
+					ifFalse: [ renamedCTransactions  := cTransactionsOriginal  copy ].
 
 					"Save new transactions"
 					concatRecords := OrderedCollection new.
 					"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
-					renamedTransactionRecords
-						ifNotNil: [ renamedTransactionRecords do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ] ].
-					Utility writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] ]
+					renamedCTransactions 
+						ifNotNil: [ renamedCTransactions  do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ] ].
+					self writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] ]
 		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]
 
@@ -586,10 +582,11 @@ Utility class >> loadClientImplementationPairs: scInputStream [
 ]
 
 { #category : #'file service' }
-Utility class >> loadCommitTransactions: csvInputStream [
+Utility class >> loadCommitTransactions: transactionsFileReference [
 	"Load commit transactions. Note NeoCSVReader doesn't support variable records, so we declare spots for many entries, and remove them after."
 
-	| transactionRecords |
+	| transactionRecords transactions csvInputStream |
+	csvInputStream := transactionsFileReference  readStream.
 	transactionRecords := (NeoCSVReader on: csvInputStream)
 		separator: $,;
 		"Commit UID"
@@ -619,11 +616,9 @@ Utility class >> loadCommitTransactions: csvInputStream [
 		upToEnd.
 
 	"Get rid of the nil elements in the transactions"
-	transactionRecords := transactionRecords
+	^ transactionRecords 
 		collect: [ :transaction | 
-			| holder |
-			holder := transaction asCollection select: #isNotNil ].
-	^ transactionRecords
+			CommitTransaction transactionFromRecord:  (transaction asCollection select: #isNotNil) ]
 ]
 
 { #category : #'file service' }
@@ -664,6 +659,14 @@ Utility class >> loadRenamings: csvInputStream [
 		addField;		
 		upToEnd.
 		^ records
+]
+
+{ #category : #'file service' }
+Utility class >> removeUnrelatedClassesFromTransactions [
+	 | cTransactions file | 
+	file := 'tabuvrp--study_commits_UIDs_transactions_renamed.csv' asFileReference .
+	cTransactions := self loadCommitTransactions:  file.
+	^cTransactions 
 ]
 
 { #category : #writing }
