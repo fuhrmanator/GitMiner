@@ -36,8 +36,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 					"Load clients and implementations"
 					"Read in CSV of structural coupling (client-implementation)"
 					file := (projectName , clientImplementationPairsExtension) asFileReference.
-					csvInputStream := file readStream.
-					clientImplementationPairsRecords := self loadClientImplementationPairs: csvInputStream.
+					clientImplementationPairsRecords := self loadClientImplementationPairs: file.
 					clientImplementationPairsRecords size > 0
 						ifTrue: [ "Client file name is second column"
 							clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
@@ -92,12 +91,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
 					ifFalse: [ renamedCTransactions  := cTransactionsOriginal  copy ].
 
-					"Save new transactions"
-					concatRecords := OrderedCollection new.
-					"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
-					renamedCTransactions 
-						ifNotNil: [ renamedCTransactions  do: [ :cTran | concatRecords add: (cTran uid, ',', ($, join: cTran committedFileNames ))	"ID, item, item, ..." ] ].
-					self writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] ]
+					self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension ] ]
 		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]
 
@@ -559,8 +553,9 @@ commitFiles do: [ :file |
 ]
 
 { #category : #'file service' }
-Utility class >> loadClientImplementationPairs: scInputStream [
-	| scRecords |
+Utility class >> loadClientImplementationPairs: fileReference [
+	| scRecords scInputStream |
+	scInputStream := fileReference  readStream.
 	scRecords := (NeoCSVReader on: scInputStream)
 		separator: $,;
 		skipHeader;
@@ -663,19 +658,38 @@ Utility class >> loadRenamings: csvInputStream [
 
 { #category : #'file service' }
 Utility class >> removeUnrelatedClassesFromTransactions [
-	 | cTransactions file | 
-	file := 'tabuvrp--study_commits_UIDs_transactions_renamed.csv' asFileReference .
+	 | cTransactions project file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
+	project := 'alexo-chess'.
+	file := (project,'_commits_UIDs_transactions_renamed.csv') asFileReference .
 	cTransactions := self loadCommitTransactions:  file.
-	^cTransactions 
+	file := (project, '_HEAD_ClientImpPairs.csv') asFileReference .
+	clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+	clientImplementationPairsRecords size > 0
+	ifTrue: [ "Client file name is second column"
+		clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+		"Implementation file name is fifth column"
+		implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+		classesToInclude := clientsTemp union: implementationsTemp.
+		cTransactions do: [ :cTran |
+			cTran committedFileNames: (cTran committedFileNames intersection: classesToInclude )
+			 ]
+		].
+	self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'.	
+	^cTransactions
 ]
 
 { #category : #writing }
 Utility class >> writeCommitTransactions: transactionRecords to: outFileName [
 	"Write out single column (with embedded commas!)"
+	| concatRecords |
+	"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
+	concatRecords := OrderedCollection new.
+	transactionRecords 
+		ifNotNil: [ transactionRecords  do: [ :cTran | concatRecords add: (cTran uid, ',', ($, join: cTran committedFileNames ))	"ID, item, item, ..." ] ].
 	^ FileStream
 		forceNewFileNamed: outFileName
 		do: [ :stream | 
-			transactionRecords
+			concatRecords
 				do: [ :rec |
 					stream
 						"data is text, not binary"
