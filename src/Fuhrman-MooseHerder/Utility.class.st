@@ -96,7 +96,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 					concatRecords := OrderedCollection new.
 					"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
 					renamedCTransactions 
-						ifNotNil: [ renamedCTransactions  do: [ :rec | concatRecords add: ($, join: rec)	"ID, item, item, ..." ] ].
+						ifNotNil: [ renamedCTransactions  do: [ :cTran | concatRecords add: (cTran uid, ',', ($, join: cTran committedFileNames ))	"ID, item, item, ..." ] ].
 					self writeCommitTransactions: concatRecords to: projectName , newTransactionExtension ] ]
 		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]

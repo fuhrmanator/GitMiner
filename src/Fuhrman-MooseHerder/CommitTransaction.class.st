@@ -41,7 +41,8 @@ CommitTransaction >> renameAll: fromFileName to: toFileName [
 	"attempts to rename any filenames in the committedFileNames list"
 
 	| cFileNames |
-	cFileNames := self committedFileNames copyReplaceAll: #(fromFileName ) with: #(toFileName).	
+	"fromFileName  = self committedFileNames first ifTrue:[0halt]."
+	cFileNames := self committedFileNames copyReplaceAll: { fromFileName } with: {toFileName}.
 	self committedFileNames: cFileNames.
 	^cFileNames
 	
