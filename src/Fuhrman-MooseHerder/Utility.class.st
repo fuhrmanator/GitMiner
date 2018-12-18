@@ -37,7 +37,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 					"Read in CSV of structural coupling (client-implementation)"
 					file := (projectName , clientImplementationPairsExtension) asFileReference.
 					clientImplementationPairsRecords := self loadClientImplementationPairs: file.
-					clientImplementationPairsRecords size > 0
+					clientImplementationPairsRecords isNotEmpty 
 						ifTrue: [ "Client file name is second column"
 							clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
 							"Implementation file name is fifth column"
@@ -64,8 +64,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 														do: [ :dir | 
 															dir = ''
 																ifFalse: [ csvPath := csvPath / dir ] ].
-													csvInputStream := csvPath readStream.
-													renamings := self loadRenamings: csvInputStream.
+													renamings := self loadRenamings: csvPath.
 
 													"For each transaction, replace any instance of a 'from' renaming with the current name"
 													renamedCTransactions := OrderedCollection new.
@@ -638,9 +637,10 @@ Utility class >> loadProjectsList: csvInputStream [
 ]
 
 { #category : #'file service' }
-Utility class >> loadRenamings: csvInputStream [ 
+Utility class >> loadRenamings: csvPath [
+ 	"Load csv file of renamings (from git history)"
 	| records |
-	records := (NeoCSVReader on: csvInputStream)
+	records := (NeoCSVReader on: csvPath readStream)
 		separator: $,;
 		"UID"
 		addField;
