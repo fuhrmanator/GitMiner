@@ -304,7 +304,7 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 	selectedCommitFiles := working allChildrenMatching: '*' , fileEnding.
 	selectedCommitFiles
 		do: [ :file | 
-			| csvInputStream csvRecords logicalCouplingRecords project transactionRecords outFileName |
+			| csvInputStream csvRecords logicalCouplingRecords project commitTransactions outFileName |
 			"Parse the CSV and gather the UIDs for commits that match criteria"
 			project := file basename allButLast: fileEnding size.
 			csvInputStream := file readStream.
@@ -319,7 +319,7 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 				"committed_files"
 					upToEnd.
 			logicalCouplingRecords := OrderedCollection new.
-			transactionRecords := OrderedCollection new.	"Transaction data: ID, item, item, ..."
+			commitTransactions := OrderedCollection new.	"Transaction data: UID, item, item, ..."
 			"Write out the logical coupling of java classes for the selected commits"
 			"It's pairs of classes in the committed_files set"
 			csvRecords
@@ -330,9 +330,9 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 					committedFiles := rec third splitOn: Character space.
 					committedClasses := committedFiles
 						select: [ :each | each endsWith: '.java' ].
-					transactionRecords
-						addFirst: uid , ',' , ($, join: committedClasses).	"ID, item, item, ..."
-					"Note: this won't create entries for commits with only one java file."
+					commitTransactions 
+						addFirst: (CommitTransaction new uid:uid; committedFileNames: committedClasses). "ID, item, item, ...".
+					"Note: this won't create pair-entries for commits with only one java file."
 					classPairs := committedClasses combinations
 						select: [ :each | each size = 2 ].
 					classPairs
@@ -364,7 +364,7 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 						nextPutAll: logicalCouplingRecords ].
 			"Generates a 'transactions' (basket) style file for arules in R"
 			outFileName := file basenameWithoutExtension , '_transactions.csv'.
-			self writeCommitTransactions: transactionRecords to: outFileName]
+			self writeCommitTransactions: commitTransactions to: outFileName]
 		displayingProgress: [ :file | 
 			'Generating data to calculate logical coupling for ' , file basename
 				allButLast: fileEnding size ]
