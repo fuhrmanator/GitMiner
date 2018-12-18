@@ -657,9 +657,9 @@ Utility class >> loadRenamings: csvInputStream [
 ]
 
 { #category : #'file service' }
-Utility class >> removeUnrelatedClassesFromTransactions [
-	 | cTransactions project file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
-	project := 'alexo-chess'.
+Utility class >> removeUnrelatedClassesFromTransactions: project [
+	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
+	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
 	file := (project,'_commits_UIDs_transactions_renamed.csv') asFileReference .
 	cTransactions := self loadCommitTransactions:  file.
 	file := (project, '_HEAD_ClientImpPairs.csv') asFileReference .
