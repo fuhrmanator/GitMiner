@@ -4,6 +4,9 @@ Class with homeless methods... To be refactored into an API.
 Class {
 	#name : #Utility,
 	#superclass : #Object,
+	#classInstVars : [
+		'cloneRoot'
+	],
 	#category : #'Fuhrman-MooseHerder'
 }
 
@@ -201,6 +204,23 @@ Utility class >> calculateCouplingIntersections [
 	^ results
 ]
 
+{ #category : #'as yet unclassified' }
+Utility class >> cloneRepo: url [
+	"clone a repo of a project (if it doesn't already exist) and return its handle "
+
+	| projectName location |
+	"Get project name from URL, accounting for cases where it ends in .git"
+	"Clone repo locally if not already there"
+	projectName := self extractProjectNameFromURL: url.
+	location := (self cloneRoot, projectName) asFileReference.
+	location exists
+		ifFalse: [ IceGitClone new
+				location: location;
+				url: url;
+				execute ].
+	^ location
+]
+
 { #category : #'file service' }
 Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
 	"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
@@ -222,6 +242,16 @@ Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
 			githubUrl = 'NA'
 				ifFalse: [ GitCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] ] ]
 		asJob run
+]
+
+{ #category : #accessing }
+Utility class >> cloneRoot [
+	^ cloneRoot
+]
+
+{ #category : #accessing }
+Utility class >> cloneRoot: anObject [
+	cloneRoot := anObject
 ]
 
 { #category : #'file service' }
@@ -266,6 +296,76 @@ Utility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 								addFields: #(first second third fourth) ].
 					csvWriter nextPut: each ]
 			"			separator: $,;" ] ] asJob run
+]
+
+{ #category : #'as yet unclassified' }
+Utility class >> extractProjectNameFromURL: url [
+	| projectName |
+	projectName := (url splitOn: '/') last.
+	(projectName endsWith: '.git')
+		ifTrue: [ projectName := projectName allButLast: '.git' size ].
+	^ projectName
+]
+
+{ #category : #'as yet unclassified' }
+Utility class >> filterCommitsOnRepo: location withRange: range [
+	"generates a list of info about commits according to the queries within this method."
+
+	| handle revwalk newerCommit commitDataList nCommits revisionNumber projectName |
+	projectName := location path basename.
+	handle := LGitRepository on: location.
+	handle open.
+	revwalk := LGitRevwalk of: handle.
+	range = ''
+		ifFalse: [ revwalk pushRange: range ]
+		ifTrue: [ revwalk pushHead ].
+
+	"Get commit ids that have:
+  - no added files (only changed files)
+  - 10 or fewer files
+  - at least one .java file."
+	newerCommit := nil.
+	commitDataList := LinkedList new.
+
+	"Walk through just to count commits"
+	nCommits := 0.
+	revwalk do: [ :commit | nCommits := nCommits + 1 ].
+
+	"Revwalk reset didn't work, so we start over"
+	revwalk := LGitRevwalk of: handle.
+	range = ''
+		ifFalse: [ revwalk pushRange: range ]
+		ifTrue: [ revwalk pushHead ].
+	revisionNumber := 0.
+	[ :job | 
+	revwalk
+		do: [ :commit | 
+			| addedFiles difference atLeastOneJavaFile |
+			revisionNumber := revisionNumber + 1.
+			job
+				progress: revisionNumber / nCommits;
+				title: 'Analyzing revision ' , commit name.
+			newerCommit = nil
+				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
+					addedFiles := Set new.
+					difference files
+						do: [ :file | 
+							newerCommit tree
+								entryByPath: file
+								ifAbsent:
+									[ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
+					atLeastOneJavaFile := difference files
+						anySatisfy: [ :file | file endsWith: '.java' ].
+					commitDataList
+						add:
+							{newerCommit name.
+							(nCommits - revisionNumber + 1).	"Revwalk goes from latest to earliest"
+							(Character space join: addedFiles).
+							difference numberOfDeltas.
+							atLeastOneJavaFile.
+							(Character space join: difference files)} ].
+			newerCommit := commit ] ] asJob run.
+	self writeCommitResults: commitDataList to: projectName , '_commits.csv'
 ]
 
 { #category : #'file service' }
@@ -551,6 +651,13 @@ commitFiles do: [ :file |
 ] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
 ]
 
+{ #category : #initialization }
+Utility class >> initialize [
+	"init the variables used in mining"
+
+	cloneRoot := 'c:/tmp/tempClonesPharo/'.
+]
+
 { #category : #'file service' }
 Utility class >> loadClientImplementationPairs: fileReference [
 	| scRecords scInputStream |
@@ -676,6 +783,20 @@ Utility class >> removeUnrelatedClassesFromTransactions: project [
 		].
 	self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'.	
 	^cTransactions
+]
+
+{ #category : #writing }
+Utility class >> writeCommitResults: commitDataList to: fileName [
+	" Generate a CSV with commit results"
+
+	FileStream
+		forceNewFileNamed: fileName
+		do: [ :csvStream | 
+			"{newerCommit . addedFiles . difference numberOfDeltas . atLeastOneJavaFile . committedFiles}"
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Commit_id' 'Revision_num' 'Added_files' 'n_commited_files' 'has_java' 'committed_files');
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: commitDataList ].
 ]
 
 { #category : #writing }
