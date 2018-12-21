@@ -44,7 +44,8 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 								ifTrue: [ struct parentBehaviouralEntity parentType ]
 								ifFalse: [ (struct isMemberOf: FAMIXLocalVariable)
 										ifTrue: [ struct parentBehaviouralEntity parentType ]
-										ifFalse: [ Transcript show: '*** Unanticipated type: '.
+										ifFalse: [ MooseEntity new stub: true.
+											Transcript show: '*** Unanticipated type: '.
 											Transcript
 												show: struct class;
 												cr ] ] ] ]) asSet.
