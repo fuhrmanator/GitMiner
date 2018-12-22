@@ -115,7 +115,7 @@ Utility class >> calculateCouplingIntersections [
 		cr."
 	logicalCouplingFiles
 		do: [ :logicalCouplingFile | 
-			| clientImpFile lcInputStream lcRecords scInputStream scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
+			| clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
 			basename := logicalCouplingFile basename
 				allButLast: arulesExtension size.
 			clientImpFile := FileLocator workingDirectory
@@ -146,8 +146,7 @@ Utility class >> calculateCouplingIntersections [
 					upToEnd.
 
 			"Read in CSV of structural coupling (client-implementation)"
-			scInputStream := clientImpFile readStream.
-			scRecords := self loadClientImplementationPairs: scInputStream.
+			scRecords := self loadClientImplementationPairs: clientImpFile.
 
 			"Create a set of logical coupling"
 			logicalCouplingSet := (lcRecords

@@ -37,18 +37,16 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 			"Keep track of all implementations"
 			localClients := (interface structuresWithDeclaredType
 				collect: [ :struct | 
-					"struct atScope: FAMIXType."
+					"TODO: MooseQuery... struct atScope: FAMIXType."
 					(struct isMemberOf: FAMIXAttribute)
 						ifTrue: [ struct parentType ]
 						ifFalse: [ (struct isMemberOf: FAMIXParameter)
 								ifTrue: [ struct parentBehaviouralEntity parentType ]
 								ifFalse: [ (struct isMemberOf: FAMIXLocalVariable)
 										ifTrue: [ struct parentBehaviouralEntity parentType ]
-										ifFalse: [ MooseEntity new stub: true.
-											Transcript show: '*** Unanticipated type: '.
-											Transcript
-												show: struct class;
-												cr ] ] ] ]) asSet.
+										ifFalse: [ 
+											Transcript show: '**Unanticipated type ', struct asString; cr. 
+											MooseEntity new stub: true "Reject it later" ] ] ] ]) asSet.
 			"Reject stubs (no source files)"
 			localClients := localClients reject: #isStub.
 			"localClients := localClients asSet."
