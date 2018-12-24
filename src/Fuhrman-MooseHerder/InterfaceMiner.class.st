@@ -49,7 +49,7 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
-			classesReferencingLocalImplementations := (localImplementations collect: [ :imp | imp clientTypes ]) asSet.
+			classesReferencingLocalImplementations := (localImplementations flatCollect: [ :imp | imp clientTypes ]) asSet.
 
 			"Remove the clients of the interface that reference its implementations"
 			localProtectedClients := localClients difference: classesReferencingLocalImplementations.
