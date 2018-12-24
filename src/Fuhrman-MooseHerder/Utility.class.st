@@ -463,8 +463,15 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 ]
 
 { #category : #'file service' }
-Utility class >> generateLogicalCouplingPairsWithR: inputPath [ 
-	^ LibC uniqueInstance system: '"c:\Program Files\R\R-3.5.1\bin\RScript.exe" c:\chgevo\R\GenerateLogicalPairsFromTransactions.R ', inputPath, ' 2> /tmp/R.errors.txt'.
+Utility class >> generateLogicalCouplingPairsWithR: inputPath [
+	| command |
+	command := '"C:\Program Files\R\R-3.5.1\bin\RScript.exe" R/GenerateLogicalPairsFromTransactions.R ' , inputPath
+		, ' 2> /tmp/R.errors.txt'.
+	Transcript
+		show: 'About to execute: ';
+		cr;
+		show: command.
+	^ LibC uniqueInstance system: command
 ]
 
 { #category : #'file service' }
