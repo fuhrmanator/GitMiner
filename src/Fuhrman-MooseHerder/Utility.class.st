@@ -14,14 +14,12 @@ Class {
 Utility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
 
-	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings gitErrors perlErrors renameHistoryOutput renameHistoryCSV clientsTemp implementationsTemp perlProgram concatRecords |
+	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_UIDs_transactions.csv'.
 	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
 	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
-	renameHistoryOutput := '/tmp/_renamings_temp'.
 	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
-	gitErrors := '/tmp/_git_errors'.
 	perlProgram := '/tmp/hist2renamecsv.perl'.
 	perlErrors := '/tmp/_perl_errors'.
 	working := FileSystem disk workingDirectory.
@@ -51,16 +49,11 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 									| projectRepoDir command result renamings dirs csvPath |
 									"Generate git history"
 									projectRepoDir := tempRepoRoot , projectName.
-									command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '">' , renameHistoryOutput , ' 2>' , gitErrors.
+									command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 									result := LibC uniqueInstance system: command.
 									result = 0
 										ifFalse: [ 0 halt ]
-										ifTrue: [ "Convert history with renames to CSV with Perl, see https://stackoverflow.com/q/53764609/1168342 "
-											command := 'perl -0777 -n ' , perlProgram , ' <' , renameHistoryOutput , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
-											result := LibC uniqueInstance system: command.
-											result = 0
-												ifFalse: [ 0 halt ]
-												ifTrue: [ "Load CSV of renamed names"
+										ifTrue: [ "Load CSV of renamed names"
 													dirs := renameHistoryCSV splitOn: $/.
 													csvPath := FileLocator C.
 													dirs
@@ -86,7 +79,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 																					| fromRename percent |
 																					percent := renamingRecord second.
 																					fromRename := renamingRecord fourth.
-																					copyCTransaction renameAll: fromRename to: class ] ] ] .
+																					copyCTransaction renameAll: fromRename to: class ] ]  .
 													"Update for next class to check for renamings"
 													cTransactions := renamedCTransactions ] ] ] ]
 
