@@ -12,6 +12,19 @@ Class {
 }
 
 { #category : #'client implementation analysis' }
+InterfaceMiner class >> localClientsFrom: interface [
+	| localClients |
+	localClients := (interface structuresWithDeclaredType
+		collect: [ :struct | 
+			| classArray |
+			"MooseQuery... struct atScope: FAMIXType. -- returns an Array, so just take first element"
+			classArray := struct atScope: FAMIXType.
+			"self assert: classArray size equals: 1."
+			classArray first ]) asSet.
+	^ localClients
+]
+
+{ #category : #'client implementation analysis' }
 InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifPrefix [
 	| interfaces listOfResults mooseModel |
 	listOfResults := LinkedList new.
@@ -32,35 +45,11 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
-			localImplementations := interface directSubclasses
-				reject: [ :cls | cls isInterface or: cls isStub ].
-			"Keep track of all implementations"
-			localClients := (interface structuresWithDeclaredType
-				collect: [ :struct | 
-					"TODO: MooseQuery... struct atScope: FAMIXType."
-					(struct isMemberOf: FAMIXAttribute)
-						ifTrue: [ struct parentType ]
-						ifFalse: [ (struct isMemberOf: FAMIXParameter)
-								ifTrue: [ struct parentBehaviouralEntity parentType ]
-								ifFalse: [ (struct isMemberOf: FAMIXLocalVariable)
-										ifTrue: [ struct parentBehaviouralEntity parentType ]
-										ifFalse: [ 
-											Transcript show: '**Unanticipated type ', struct asString; cr. 
-											MooseEntity new stub: true "Reject it later" ] ] ] ]) asSet.
-			"Reject stubs (no source files)"
-			localClients := localClients reject: #isStub.
-			"localClients := localClients asSet."
-			classesReferencingLocalImplementations := Set new.	"don't allow duplicates"
+			localImplementations := interface directSubclasses reject: [ :cls | cls isInterface or: cls isStub ].
+			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
-			localImplementations
-				do: [ :implementation | 
-					classesReferencingLocalImplementations := classesReferencingLocalImplementations
-						, implementation clientTypes ].
-
-			"Consider only clients and implementations that have source code (not from an API only)"
-			localClients reject: #isStub.
-			localImplementations reject: #isStub.
+			classesReferencingLocalImplementations := (localImplementations collect: [ :imp | imp clientTypes ]) asSet.
 
 			"Remove the clients of the interface that reference its implementations"
 			localProtectedClients := localClients difference: classesReferencingLocalImplementations.
