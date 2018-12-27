@@ -465,7 +465,8 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 { #category : #'file service' }
 Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 	| command |
-	command := '"C:\Program Files\R\R-3.5.1\bin\RScript.exe" R/GenerateLogicalPairsFromTransactions.R ' , inputPath
+	"TODO: Error check to remind user to add RScript.exe to path"
+	command := 'RScript R/GenerateLogicalPairsFromTransactions.R ' , inputPath
 		, ' 2> /tmp/R.errors.txt'.
 	Transcript
 		show: 'About to execute: ';
