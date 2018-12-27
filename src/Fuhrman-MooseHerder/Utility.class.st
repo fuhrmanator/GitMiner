@@ -300,6 +300,60 @@ Utility class >> extractProjectNameFromURL: url [
 ]
 
 { #category : #'as yet unclassified' }
+Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
+	"selects commits from a range specified by Git tags"
+
+	| repoHandle revwalk newerCommit commitDataList nCommits relativeRevNumber projectName startTag endTag |
+	projectName := location path basename.
+	repoHandle := LGitRepository on: location.
+	repoHandle open.
+	"Revwalk goes backwards, so we start at 'to' (latest) and end at 'from' (earliest)"
+	startTag := 'tags/' , toTag , '*'.
+	endTag := 'tags/' , fromTag , '*'.
+	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
+	newerCommit := nil.
+	commitDataList := LinkedList new.
+
+	"Walk through just to count commits for progress bar"
+	nCommits := 0.
+	revwalk do: [ :commit | nCommits := nCommits + 1 ].
+
+	"Revwalk reset didn't work, so we start over"
+	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
+
+	"Get commit ids that have:
+  - no added files (only changed files)
+  - 10 or fewer files
+  - at least one .java file."
+	relativeRevNumber := 0.
+	[ :job | 
+	revwalk
+		do: [ :commit | 
+			| addedFiles difference atLeastOneJavaFile |
+			relativeRevNumber := relativeRevNumber + 1.
+			job
+				progress: relativeRevNumber / nCommits;
+				title: 'Analyzing revision ' , commit name.
+			newerCommit = nil
+				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
+					addedFiles := Set new.
+					difference files
+						do:
+							[ :file | newerCommit tree entryByPath: file ifAbsent: [ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
+					atLeastOneJavaFile := difference files anySatisfy: [ :file | file endsWith: '.java' ].
+					commitDataList
+						add:
+							{newerCommit name.
+							(nCommits - relativeRevNumber + 1).	"Revwalk goes from latest to earliest"
+							(Character space join: addedFiles).
+							difference numberOfDeltas.
+							atLeastOneJavaFile.
+							(Character space join: difference files)} ].
+			newerCommit := commit ] ] asJob run.
+	self writeCommitResults: commitDataList to: projectName , '_' , fromTag , '-' , toTag , '_commits_tags.csv'
+]
+
+{ #category : #'as yet unclassified' }
 Utility class >> filterCommitsOnRepo: location withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
@@ -649,6 +703,19 @@ commitFiles do: [ :file |
 				addFields: #(first second sixth);
 				nextPutAll: selectedCommits ].
 ] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
+]
+
+{ #category : #'as yet unclassified' }
+Utility class >> historyRevwalk: repo from: startTag to: endTag [
+	"inits an LGitRevwalk for history between two tags, formatted as 'tags/blah*' where 'blah' is the tag name"
+	| revwalk |
+	revwalk := LGitRevwalk of: repo.
+	revwalk beSortedByCommitTime.
+	revwalk beSortedParentsBeforeChildren.
+	revwalk pushGlob: startTag.
+	revwalk hideGlob: endTag.
+	^ revwalk
+
 ]
 
 { #category : #initialization }
