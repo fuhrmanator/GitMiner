@@ -303,7 +303,7 @@ Utility class >> extractProjectNameFromURL: url [
 Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 	"selects commits from a range specified by Git tags"
 
-	| repoHandle revwalk newerCommit commitDataList nCommits relativeRevNumber projectName startTag endTag |
+	| repoHandle revwalk newerCommit commitDataList nCommits relativeRevNumber projectName startTag endTag outFile |
 	projectName := location path basename.
 	repoHandle := LGitRepository on: location.
 	repoHandle open.
@@ -350,14 +350,16 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 							atLeastOneJavaFile.
 							(Character space join: difference files)} ].
 			newerCommit := commit ] ] asJob run.
-	self writeCommitResults: commitDataList to: projectName , '_' , fromTag , '-' , toTag , '_commits_tags.csv'
+	outFile := projectName , '_' , fromTag , '-' , toTag , '_commits_tags.csv'.
+	self writeCommitResults: commitDataList to: outFile.
+	^outFile
 ]
 
 { #category : #'as yet unclassified' }
 Utility class >> filterCommitsOnRepo: location withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
-	| handle revwalk newerCommit commitDataList nCommits revisionNumber projectName |
+	| handle revwalk newerCommit commitDataList nCommits revisionNumber projectName outFile |
 	projectName := location path basename.
 	handle := LGitRepository on: location.
 	handle open.
@@ -411,7 +413,9 @@ Utility class >> filterCommitsOnRepo: location withRange: range [
 							atLeastOneJavaFile.
 							(Character space join: difference files)} ].
 			newerCommit := commit ] ] asJob run.
-	self writeCommitResults: commitDataList to: projectName , '_commits.csv'
+	outFile := projectName , '_commits.csv'.
+	self writeCommitResults: commitDataList to: outFile.
+	^outFile
 ]
 
 { #category : #'file service' }
