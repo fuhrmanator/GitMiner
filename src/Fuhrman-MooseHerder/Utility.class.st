@@ -91,6 +91,157 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 ]
 
 { #category : #'file service' }
+Utility class >> applyRenamingsToTransactions: projectName usingRevision: uid [
+	"For the commit transactions in a project, try to rename classes using the latest name.
+	This works by taking the names at a specified revision (from MSE).
+	Check out the git repo to that revision, then do a git history to get renamings."
+
+	| cTransactionsOriginal renamedCTransactions cTransactions working tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
+	transactionsExtension := '_commits_UIDs_transactions.csv'.
+	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
+	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	perlProgram := '/tmp/hist2renamecsv.perl'.
+	perlErrors := '/tmp/_perl_errors'.
+	working := FileSystem disk workingDirectory.
+	file := (projectName , transactionsExtension) asFileReference.
+	cTransactionsOriginal := self loadCommitTransactions: file.
+	cTransactions := cTransactionsOriginal copy.
+	"Load clients and implementations"
+	"Read in CSV of structural coupling (client-implementation)"
+	file := (projectName , clientImplementationPairsExtension) asFileReference.
+	clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+	clientImplementationPairsRecords isNotEmpty
+		ifTrue: [ "Client file name is second column"
+			"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
+			clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+			"Implementation file name is fifth column"
+			implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+			classesToCheckRenamings := clientsTemp union: implementationsTemp.
+			classesToCheckRenamings
+				do: [ :class | 
+					| projectRepoDir command result renamings dirs csvPath |
+					"Generate git history"
+					projectRepoDir := tempRepoRoot , projectName.
+					command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+					result := LibC uniqueInstance system: command.
+					result = 0
+						ifFalse: [ 0 halt ]
+						ifTrue: [ "Load CSV of renamed names"
+							dirs := renameHistoryCSV splitOn: $/.
+							csvPath := FileLocator C.
+							dirs
+								do: [ :dir | 
+									dir = ''
+										ifFalse: [ csvPath := csvPath / dir ] ].
+							renamings := self loadRenamings: csvPath.
+
+							"For each transaction, replace any instance of a 'from' renaming with the current name"
+							renamedCTransactions := OrderedCollection new.
+							cTransactions
+								do: [ :cTransaction | 
+									| copyCTransaction i |
+									"make copy of transaction record and add it to the new set"
+									copyCTransaction := cTransaction copy.
+									renamedCTransactions add: copyCTransaction.
+									i := 0.
+									cTransaction committedFileNames
+										do: [ :classToMaybeRename | 
+											i := i + 1.
+											renamings
+												do: [ :renamingRecord | 
+													| fromRename percent |
+													percent := renamingRecord second.
+													fromRename := renamingRecord fourth.
+													copyCTransaction renameAll: fromRename to: class ] ].
+									"Update for next class to check for renamings"
+									cTransactions := renamedCTransactions ] ] ] ]
+		ifFalse: [ renamedCTransactions := cTransactionsOriginal copy ].
+	self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension
+]
+
+{ #category : #'file service' }
+Utility class >> applyRenamingsToTransactionsFiles: projectsFile [
+	"comment stating purpose of message"
+
+	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
+	transactionsExtension := '_commits_UIDs_transactions.csv'.
+	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
+	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	perlProgram := '/tmp/hist2renamecsv.perl'.
+	perlErrors := '/tmp/_perl_errors'.
+	working := FileSystem disk workingDirectory.
+	csvInputStream := (working / projectsFile) readStream.
+	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
+	projectRecords
+		do: [ :projectRecord | 
+			| githubUrl cTransactionsOriginal renamedCTransactions cTransactions |
+			githubUrl := projectRecord last.
+			githubUrl = 'NA'
+				ifFalse: [ projectName := projectRecord second.
+					file := (projectName , transactionsExtension) asFileReference.
+					cTransactionsOriginal := self loadCommitTransactions: file.
+					cTransactions := cTransactionsOriginal copy.
+					"Load clients and implementations"
+					"Read in CSV of structural coupling (client-implementation)"
+					file := (projectName , clientImplementationPairsExtension) asFileReference.
+					clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+					clientImplementationPairsRecords isNotEmpty 
+						ifTrue: [ "Client file name is second column"
+							clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+							"Implementation file name is fifth column"
+							implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+							classesToCheckRenamings := clientsTemp union: implementationsTemp.
+							classesToCheckRenamings
+								do: [ :class | 
+									| projectRepoDir command result renamings dirs csvPath |
+									"Generate git history"
+									projectRepoDir := tempRepoRoot , projectName.
+									command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+									result := LibC uniqueInstance system: command.
+									result = 0
+										ifFalse: [ 0 halt ]
+										ifTrue: [ "Load CSV of renamed names"
+													dirs := renameHistoryCSV splitOn: $/.
+													csvPath := FileLocator C.
+													dirs
+														do: [ :dir | 
+															dir = ''
+																ifFalse: [ csvPath := csvPath / dir ] ].
+													renamings := self loadRenamings: csvPath.
+
+													"For each transaction, replace any instance of a 'from' renaming with the current name"
+													renamedCTransactions := OrderedCollection new.
+													cTransactions
+														do: [ :cTransaction | 
+															| copyCTransaction i |
+															"make copy of transaction record and add it to the new set"
+															copyCTransaction := cTransaction copy.
+															renamedCTransactions add: copyCTransaction .
+															i := 0.
+															cTransaction committedFileNames
+																do: [ :classToMaybeRename | 
+																	i := i + 1.
+																	renamings
+																				do: [ :renamingRecord | 
+																					| fromRename percent |
+																					percent := renamingRecord second.
+																					fromRename := renamingRecord fourth.
+																					copyCTransaction renameAll: fromRename to: class ] ]  .
+													"Update for next class to check for renamings"
+													cTransactions := renamedCTransactions ] ] ] ]
+
+					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
+					ifFalse: [ renamedCTransactions  := cTransactionsOriginal  copy ].
+
+					self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension ] ]
+		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
+]
+
+{ #category : #'file service' }
 Utility class >> calculateCouplingIntersections [
 	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString results |
 	arulesExtension := '_renamed_apriori_rules.csv'.
@@ -717,7 +868,7 @@ uidFiles do: [ :file |
 Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 	"Create the logical coupling candidate pairs and transaction file from the set of selected commits"
 
-	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions |
+	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions cp ct |
 	"Parse the CSV and gather the UIDs for commits that match criteria"
 	selectedCommitsFileRef := selectedCommitsFile asFileReference.
 	project := selectedCommitsFileRef basenameWithoutExtension.
@@ -760,9 +911,10 @@ Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 							uid.
 							revNum} ] ].
 	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-	self writeClassPairs: logicalCouplingRecords file: selectedCommitsFile.
+	cp := self writeClassPairs: logicalCouplingRecords file: selectedCommitsFile.
 	"Generates a 'transactions' (basket) style file for arules in R"
-	self writeCommitTransactions: commitTransactions to: selectedCommitsFile
+	ct := self writeCommitTransactions: commitTransactions to: selectedCommitsFile.
+	^ Array with: cp with: ct
 ]
 
 { #category : #'file service' }
@@ -831,6 +983,11 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 			"		committedFiles := each sixth."
 			addedFiles isNil & (countCommittedFiles <= 10) & (hasJava = 'true') ].
 	^ self writeSelectedCommits: selectedCommits file: commitMetadataFile
+]
+
+{ #category : #'as yet unclassified' }
+Utility class >> getUIDFromTag: tagString on: repo [
+	^ self callUnchecked: #(LGitReturnCodeEnum git_reference_lookup #(LGitReference * self , LGitRepository repo , String tagString)) options: #()
 ]
 
 { #category : #'as yet unclassified' }
@@ -1018,15 +1175,15 @@ Utility class >> removeUnrelatedClassesFromTransactions: project [
 { #category : #'file service' }
 Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 	| newFileName |
-	newFileName := (fromFileName asFileReference basenameWithoutExtension) , '_LC.csv'.
+	newFileName := fromFileName asFileReference basenameWithoutExtension , '_LC.csv'.
 	FileStream
-		forceNewFileNamed: newFileName 
+		forceNewFileNamed: newFileName
 		do: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
 				nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
 				addFields: #(first second third fourth fifth);
 				nextPutAll: logicalCouplingRecords ].
-
+	^ newFileName
 ]
 
 { #category : #writing }
