@@ -419,6 +419,18 @@ Utility class >> filterCommitsOnRepo: location withRange: range [
 ]
 
 { #category : #'file service' }
+Utility class >> generateClientImplementationPairs: mseFileRef [
+	"For the given MSE file, mine the client-implementation pairs info"
+
+	| results |
+	results := InterfaceMiner mineClientImplementationPairs: mseFileRef withPrefix: ''.
+	"results size = 0 ifTrue: 0halt."	"-> no interfaces will yield this"
+	"Save results to .CSV"
+	^ self writeClientImplementationPairs: results file: mseFileRef
+
+]
+
+{ #category : #'file service' }
 Utility class >> generateClientImplementationPairsFiles: extension [
 	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
 
@@ -432,7 +444,7 @@ Utility class >> generateClientImplementationPairsFiles: extension [
 			mseFiles := dir allChildrenMatching: '*.mse'.
 			mseFiles
 				do: [ :mseFile | 
-					results := InterfaceMiner mineClientImplementationPairs: mseFile readStream withPrefix: ''.
+					results := InterfaceMiner mineClientImplementationPairs: mseFile withPrefix: ''.
 					"results size = 0 ifTrue: 0halt." "-> no interfaces will yield this"
 					"Save results to .CSV"
 					FileStream
@@ -1015,6 +1027,23 @@ Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 				addFields: #(first second third fourth fifth);
 				nextPutAll: logicalCouplingRecords ].
 
+]
+
+{ #category : #writing }
+Utility class >> writeClientImplementationPairs: results file: mseFileRef [
+	"Save results to CSV file"
+
+	| fileName projectName |
+	projectName := mseFileRef parent basename allButLast: '_master' size.
+	fileName := projectName , '_' , mseFileRef basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'.
+	FileStream
+		forceNewFileNamed: fileName
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Client' 'ClientFile' 'Interface' 'Implementation' 'ImplementationFile' 'Protected');
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ fileName
 ]
 
 { #category : #writing }

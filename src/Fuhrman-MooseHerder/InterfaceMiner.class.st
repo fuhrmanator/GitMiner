@@ -25,8 +25,9 @@ InterfaceMiner class >> localClientsFrom: interface [
 ]
 
 { #category : #'client implementation analysis' }
-InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifPrefix [
-	| interfaces listOfResults mooseModel |
+InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: ifPrefix [
+	| mseStream interfaces listOfResults mooseModel |
+	mseStream := mseFileRef readStream.
 	listOfResults := LinkedList new.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
@@ -45,7 +46,7 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
-			localImplementations := interface directSubclasses reject: [ :cls | cls isInterface or: cls isStub ].
+			localImplementations := interface directSubclasses reject: [ :cls | cls isInterface | cls isStub ].
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
