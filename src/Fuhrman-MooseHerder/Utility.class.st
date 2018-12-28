@@ -660,69 +660,55 @@ uidFiles do: [ :file |
 ]
 
 { #category : #'file service' }
-Utility class >> generatePairsAndTransactions: selectedCommitsFile suffix: fileEnding [
+Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 	"Create the logical coupling candidate pairs and transaction file from the set of selected commits"
-			| csvInputStream csvRecords logicalCouplingRecords project commitTransactions outFileName |
-			"Parse the CSV and gather the UIDs for commits that match criteria"
-			project := selectedCommitsFile basename allButLast: fileEnding size.
-			csvInputStream := selectedCommitsFile readStream.
-			csvRecords := (NeoCSVReader on: csvInputStream)
-				separator: $,;
-				skipHeader;
-				addField;
-				"Commit_id"
-					addField;
-				"Revision_number"
-					addField;
-				"committed_files"
-					upToEnd.
-			logicalCouplingRecords := OrderedCollection new.
-			commitTransactions := OrderedCollection new.	"Transaction data: UID, item, item, ..."
-			"Write out the logical coupling of java classes for the selected commits"
-			"It's pairs of classes in the committed_files set"
-			csvRecords
-				do: [ :rec | 
-					| committedFiles committedClasses classPairs uid revNum |
-					uid := rec first.
-					revNum := rec second.
-					committedFiles := rec third splitOn: Character space.
-					committedClasses := committedFiles
-						select: [ :each | each endsWith: '.java' ].
-					commitTransactions 
-						addFirst: (CommitTransaction new uid:uid; committedFileNames: committedClasses). "ID, item, item, ...".
-					"Note: this won't create pair-entries for commits with only one java file."
-					classPairs := committedClasses combinations
-						select: [ :each | each size = 2 ].
-					classPairs
-						do: [ :pair | 
-							| sortedPair |
-							sortedPair := pair asSortedCollection.
-							"Add the pair twice - logical coupling could be either direction"
-							logicalCouplingRecords
-								addFirst:
-									{project.
-									pair first.
-									pair second.
-									uid.
-									revNum}.
-							logicalCouplingRecords
-								addFirst:
-									{project.
-									pair second.
-									pair first.
-									uid.
-									revNum} ] ].
-			"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-			FileStream
-				forceNewFileNamed: selectedCommitsFile basenameWithoutExtension , '_LC.csv'
-				do: [ :csvStream | 
-					(NeoCSVWriter on: csvStream)
-						nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
-						addFields: #(first second third fourth fifth);
-						nextPutAll: logicalCouplingRecords ].
-			"Generates a 'transactions' (basket) style file for arules in R"
-			outFileName := selectedCommitsFile basenameWithoutExtension , '_TR.csv'.
-			self writeCommitTransactions: commitTransactions to: outFileName
+
+	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions outFileName |
+	"Parse the CSV and gather the UIDs for commits that match criteria"
+	selectedCommitsFileRef := selectedCommitsFile asFileReference.
+	project := selectedCommitsFileRef basenameWithoutExtension.
+	csvRecords := self readSelectedCommitsFile: selectedCommitsFile.
+	logicalCouplingRecords := OrderedCollection new.
+	commitTransactions := OrderedCollection new.	"Transaction data: UID, item, item, ..."
+	"Write out the logical coupling of java classes for the selected commits"
+	"It's pairs of classes in the committed_files set"
+	csvRecords
+		do: [ :rec | 
+			| committedFiles committedClasses classPairs uid revNum |
+			uid := rec first.
+			revNum := rec second.
+			committedFiles := rec third splitOn: Character space.
+			committedClasses := committedFiles
+				select: [ :each | each endsWith: '.java' ].
+			commitTransactions
+				addFirst:
+					(CommitTransaction new
+						uid: uid;
+						committedFileNames: committedClasses).	"ID, item, item, ..."
+			classPairs := committedClasses combinations
+				select: [ :each | each size = 2 ].
+			"Note: this won't create pair-entries for commits with only one java file."
+			classPairs
+				do: [ :pair | 
+					"Add the pair twice - logical coupling could be either direction"
+					logicalCouplingRecords
+						addFirst:
+							{project.
+							pair first.
+							pair second.
+							uid.
+							revNum}.
+					logicalCouplingRecords
+						addFirst:
+							{project.
+							pair second.
+							pair first.
+							uid.
+							revNum} ] ].
+	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
+	self writeClassPairs: logicalCouplingRecords file: selectedCommitsFile.
+	"Generates a 'transactions' (basket) style file for arules in R"
+	self writeCommitTransactions: commitTransactions to: selectedCommitsFile
 ]
 
 { #category : #'file service' }
@@ -776,6 +762,24 @@ commitFiles do: [ :file |
 ]
 
 { #category : #'as yet unclassified' }
+Utility class >> generateSelectedCommits: commitMetadataFile [
+	"Selects commits from metadata file and writes the list"
+
+	| csvRecords selectedCommits addedFiles countCommittedFiles hasJava |
+	csvRecords := self loadCommitMetadataFile: commitMetadataFile.
+	selectedCommits := csvRecords
+		select: [ :each | 
+			"		commitID := each first. 
+		revisionNumber := each second. "
+			addedFiles := each third.
+			countCommittedFiles := each fourth.
+			hasJava := each fifth.
+			"		committedFiles := each sixth."
+			addedFiles = nil and: (countCommittedFiles <= 10 and: hasJava = 'true')	"no added files" ].
+	^ self writeSelectedCommits: selectedCommits file: commitMetadataFile
+]
+
+{ #category : #'as yet unclassified' }
 Utility class >> historyRevwalk: repo from: startTag to: endTag [
 	"inits an LGitRevwalk for history between two tags, formatted as 'tags/blah*' where 'blah' is the tag name"
 	| revwalk |
@@ -817,6 +821,24 @@ Utility class >> loadClientImplementationPairs: fileReference [
 		"Protected"
 			upToEnd.
 	^ scRecords
+]
+
+{ #category : #'file service' }
+Utility class >> loadCommitMetadataFile: fileName [ 
+	"Parse the CSV and gather the UIDs for commits that match criteria"
+	| csvInputStream csvRecords |
+	csvInputStream := fileName readStream.
+	csvRecords := (NeoCSVReader on:  csvInputStream) 
+		separator: $,;
+		skipHeader;
+		addField; "Commit_id"
+		addField; "Revision_number"
+		addField; "set of Added_files"
+		addIntegerField; "n_committed_files"
+		addField; "has_java"
+		addField; "committed_files"
+		upToEnd.
+		^ csvRecords
 ]
 
 { #category : #'file service' }
@@ -901,6 +923,23 @@ Utility class >> loadRenamings: csvPath [
 ]
 
 { #category : #'file service' }
+Utility class >> readSelectedCommitsFile: selectedCommitsFile [
+	| csvRecords csvInputStream |
+	csvInputStream := selectedCommitsFile asFileReference readStream.
+	csvRecords := (NeoCSVReader on: csvInputStream)
+		separator: $,;
+		skipHeader;
+		addField;
+		"Commit_id"
+			addField;
+		"Revision_number"
+			addField;
+		"committed_files"
+			upToEnd.
+	^ csvRecords
+]
+
+{ #category : #'file service' }
 Utility class >> removeUnrelatedClassesFromTransactions: project [
 	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
 	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
@@ -920,6 +959,20 @@ Utility class >> removeUnrelatedClassesFromTransactions: project [
 		].
 	self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'.	
 	^cTransactions
+]
+
+{ #category : #'file service' }
+Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
+	| newFileName |
+	newFileName := (fromFileName asFileReference basenameWithoutExtension) , '_LC.csv'.
+	FileStream
+		forceNewFileNamed: newFileName 
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
+				addFields: #(first second third fourth fifth);
+				nextPutAll: logicalCouplingRecords ].
+
 ]
 
 { #category : #writing }
@@ -954,4 +1007,19 @@ Utility class >> writeCommitTransactions: transactionRecords to: outFileName [
 						ascii;
 							nextPutAll: rec;
 						cr ] ]
+]
+
+{ #category : #'file service' }
+Utility class >> writeSelectedCommits: selectedCommits file: fileName [
+	| file selCommitsFileName |
+	file := fileName asFileReference.
+	selCommitsFileName := file basenameWithoutExtension , '_UIDs.csv'.
+	FileStream
+		forceNewFileNamed: selCommitsFileName
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
+				addFields: #(first second sixth);
+				nextPutAll: selectedCommits ].
+	^ selCommitsFileName
 ]
