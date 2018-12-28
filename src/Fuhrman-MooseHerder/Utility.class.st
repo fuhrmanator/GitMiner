@@ -419,7 +419,7 @@ Utility class >> filterCommitsOnRepo: location withRange: range [
 ]
 
 { #category : #'file service' }
-Utility class >> generateClientImplementationPairs: extension [
+Utility class >> generateClientImplementationPairsFiles: extension [
 	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
 
 	| mseDirRoot mseDirs |
@@ -531,6 +531,48 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 		cr;
 		show: command.
 	^ LibC uniqueInstance system: command
+]
+
+{ #category : #'file service' }
+Utility class >> generateMSEFileFor: uid reponame: repoName [
+	"Generate a Moose MSE for the UID"
+	
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile |
+	destPath := '/tmp/data_mining'.
+	gitErrors := '/tmp/errors_git'.
+	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
+	working := FileSystem disk workingDirectory.
+
+	"Create a new sub dir for the repos MSE dirs"
+	(working / 'MSE') ensureCreateDirectory.
+	repoPath := '/tmp/tempClonesPharo/' , repoName.
+	revPath := destPath , '/' , repoName , '_master/' , uid.
+	command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , uid , ' -- . 2>' , gitErrors.
+	revPath asFileReference ensureCreateDirectory.
+	"self logCr: 'About to create directory: ', revPath ."
+	OSEnvironment current setEnv: 'GIT_INDEX_FILE' value: revPath , '/.git'.
+	"self logCr: 'About to execute command: ', command. result := 0."
+	result := LibC uniqueInstance system: command.
+	result = 0
+		ifFalse: [ gitErrors asFileReference ]
+		ifTrue: [ | mseDestination |
+			"Make an MSE file"
+			command := 'cd ' , revPath , ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>' , jdt2FamixErrors.
+			result := LibC uniqueInstance system: command.
+			"self logCr: 'About to execute command: ', command. result := 0."
+			result = 0
+				ifFalse: [ jdt2FamixErrors asFileReference ]
+				ifTrue: [ "Move the file out of the directory"
+					mseFile := (revPath , '/' , uid , '.mse') asFileReference.
+					mseDestination := (destPath , '/' , repoName , '_master/' , uid , '.mse') asFileReference.
+					"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
+					mseFile exists
+						ifTrue: [ mseDestination exists
+								ifTrue: [ mseDestination delete ].
+							mseFile moveTo: mseDestination ] ].
+			"Clean up the directories and files"
+			"revPath asFileReference deleteAll" "Dangerous if buggy..." ].
+		^ mseFile
 ]
 
 { #category : #'file service' }
@@ -761,13 +803,12 @@ commitFiles do: [ :file |
 ] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 Utility class >> generateSelectedCommits: commitMetadataFile [
 	"Selects commits from metadata file and writes the list"
 
 	| csvRecords selectedCommits addedFiles countCommittedFiles hasJava |
 	csvRecords := self loadCommitMetadataFile: commitMetadataFile.
-	0halt.
 	selectedCommits := csvRecords
 		select: [ :each | 
 			"		commitID := each first. 
@@ -776,7 +817,7 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 			countCommittedFiles := each fourth.
 			hasJava := each fifth.
 			"		committedFiles := each sixth."
-			(addedFiles = nil) & (countCommittedFiles <= 10) & (hasJava = 'true')	"no added files" ].
+			addedFiles isNil & (countCommittedFiles <= 10) & (hasJava = 'true') ].
 	^ self writeSelectedCommits: selectedCommits file: commitMetadataFile
 ]
 
