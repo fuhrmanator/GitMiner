@@ -663,7 +663,7 @@ uidFiles do: [ :file |
 Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 	"Create the logical coupling candidate pairs and transaction file from the set of selected commits"
 
-	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions outFileName |
+	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions |
 	"Parse the CSV and gather the UIDs for commits that match criteria"
 	selectedCommitsFileRef := selectedCommitsFile asFileReference.
 	project := selectedCommitsFileRef basenameWithoutExtension.
@@ -767,6 +767,7 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 
 	| csvRecords selectedCommits addedFiles countCommittedFiles hasJava |
 	csvRecords := self loadCommitMetadataFile: commitMetadataFile.
+	0halt.
 	selectedCommits := csvRecords
 		select: [ :each | 
 			"		commitID := each first. 
@@ -775,7 +776,7 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 			countCommittedFiles := each fourth.
 			hasJava := each fifth.
 			"		committedFiles := each sixth."
-			addedFiles = nil and: (countCommittedFiles <= 10 and: hasJava = 'true')	"no added files" ].
+			(addedFiles = nil) & (countCommittedFiles <= 10) & (hasJava = 'true')	"no added files" ].
 	^ self writeSelectedCommits: selectedCommits file: commitMetadataFile
 ]
 
@@ -827,7 +828,7 @@ Utility class >> loadClientImplementationPairs: fileReference [
 Utility class >> loadCommitMetadataFile: fileName [ 
 	"Parse the CSV and gather the UIDs for commits that match criteria"
 	| csvInputStream csvRecords |
-	csvInputStream := fileName readStream.
+	csvInputStream := fileName asFileReference readStream.
 	csvRecords := (NeoCSVReader on:  csvInputStream) 
 		separator: $,;
 		skipHeader;
@@ -990,23 +991,24 @@ Utility class >> writeCommitResults: commitDataList to: fileName [
 ]
 
 { #category : #writing }
-Utility class >> writeCommitTransactions: transactionRecords to: outFileName [
+Utility class >> writeCommitTransactions: transactionRecords to: selectedCommitsFile [
 	"Write out single column (with embedded commas!)"
-	| concatRecords |
+
+	| concatRecords outFileName |
+	outFileName := selectedCommitsFile asFileReference basenameWithoutExtension , '_TR.csv'.
 	"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
 	concatRecords := OrderedCollection new.
-	transactionRecords 
-		ifNotNil: [ transactionRecords  do: [ :cTran | concatRecords add: (cTran uid, ',', ($, join: cTran committedFileNames ))	"ID, item, item, ..." ] ].
-	^ FileStream
+	transactionRecords ifNotNil: [ concatRecords := transactionRecords collect: [ :cTran | cTran uid , ',' , ($, join: cTran committedFileNames)	"ID, item, item, ..." ] ].
+	FileStream
 		forceNewFileNamed: outFileName
 		do: [ :stream | 
 			concatRecords
-				do: [ :rec |
+				do: [ :rec | 
 					stream
-						"data is text, not binary"
 						ascii;
-							nextPutAll: rec;
-						cr ] ]
+						nextPutAll: rec;
+						cr ] ].
+	^ outFileName
 ]
 
 { #category : #'file service' }
