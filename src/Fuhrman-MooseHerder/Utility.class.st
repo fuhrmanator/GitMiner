@@ -91,21 +91,20 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 ]
 
 { #category : #'file service' }
-Utility class >> applyRenamingsToTransactions: projectName usingRevision: uid [
+Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: oid project: projectName [
 	"For the commit transactions in a project, try to rename classes using the latest name.
 	This works by taking the names at a specified revision (from MSE).
 	Check out the git repo to that revision, then do a git history to get renamings."
 
-	| cTransactionsOriginal renamedCTransactions cTransactions working tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
+	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
-	transactionsExtension := '_commits_UIDs_transactions.csv'.
-	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
-	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
+	transactionsExtension := '_commits_tags_OIDs_TR.csv'.
+	newTransactionExtension := '_commits_tags_OIDs_TR_renamed.csv'.
+	clientImplementationPairsExtension := '_' , oid, '_ClientImpPairs.csv'.
 	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
 	perlProgram := '/tmp/hist2renamecsv.perl'.
 	perlErrors := '/tmp/_perl_errors'.
-	working := FileSystem disk workingDirectory.
-	file := (projectName , transactionsExtension) asFileReference.
+	file := transactionsFile asFileReference.
 	cTransactionsOriginal := self loadCommitTransactions: file.
 	cTransactions := cTransactionsOriginal copy.
 	"Load clients and implementations"
@@ -986,8 +985,17 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> getUIDFromTag: tagString on: repo [
-	^ self callUnchecked: #(LGitReturnCodeEnum git_reference_lookup #(LGitReference * self , LGitRepository repo , String tagString)) options: #()
+Utility class >> getUIDFromTag: tagString on: loc [
+	"based on example from https://ben.straub.cc/2013/06/03/refs-tags-and-branching/ "
+	| repoHandle gitRef result toReturn |
+	toReturn := nil.
+	repoHandle := LGitRepository on: loc.
+	repoHandle open.
+	gitRef := LGitReference of: repoHandle.
+	result := gitRef reference_lookup: nil repo: repoHandle name: 'refs/tags/' , tagString.
+	result = 0
+		ifTrue: [ toReturn := gitRef targetId ].
+	^ toReturn
 ]
 
 { #category : #'as yet unclassified' }
