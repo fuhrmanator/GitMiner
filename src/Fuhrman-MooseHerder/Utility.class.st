@@ -96,7 +96,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 	This works by taking the names at a specified revision (from MSE).
 	Check out the git repo to that revision, then do a git history to get renamings."
 
-	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
+	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram perlSubcommand |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_tags_OIDs_TR.csv'.
 	newTransactionExtension := '_commits_tags_OIDs_TR_renamed.csv'.
@@ -107,6 +107,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 	file := transactionsFile asFileReference.
 	cTransactionsOriginal := self loadCommitTransactions: file.
 	cTransactions := cTransactionsOriginal copy.
+	perlSubcommand := 'perl -0777 -ne "while (/commit (.+)\n(?:.*\n)+?similarity index (\d+)+%\n(rename|copy) from (.+)\n\3 to (.+)\n/g) { printf (\"$1,$2,$3,$4,$5\n\")}"'.
 	"Load clients and implementations"
 	"Read in CSV of structural coupling (client-implementation)"
 	file := (projectName , clientImplementationPairsExtension) asFileReference.
@@ -123,7 +124,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 					| projectRepoDir command result renamings dirs csvPath |
 					"Generate git history"
 					projectRepoDir := tempRepoRoot , projectName.
-					command := 'cd ' , projectRepoDir , ' && git log --follow -p "' , oid , '^@" -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+					command := 'cd ' , projectRepoDir , ' && git log --follow -p "' , oid , '^@" -- "' , class , '" | ' , perlSubcommand , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 					result := LibC uniqueInstance system: command.
 					result = 0
 						ifFalse: [ 0 halt ]
