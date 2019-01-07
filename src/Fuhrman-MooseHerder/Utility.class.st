@@ -696,8 +696,8 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 ]
 
 { #category : #'file service' }
-Utility class >> generateMSEFileFor: uid reponame: repoName [
-	"Generate a Moose MSE for the UID"
+Utility class >> generateMSEFileFor: oid reponame: repoName [
+	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 	
 	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile |
 	destPath := '/tmp/data_mining'.
@@ -708,8 +708,8 @@ Utility class >> generateMSEFileFor: uid reponame: repoName [
 	"Create a new sub dir for the repos MSE dirs"
 	(working / 'MSE') ensureCreateDirectory.
 	repoPath := '/tmp/tempClonesPharo/' , repoName.
-	revPath := destPath , '/' , repoName , '_master/' , uid.
-	command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , uid , ' -- . 2>' , gitErrors.
+	revPath := destPath , '/' , repoName , '_master/' , oid.
+	command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , oid , ' -- . 2>' , gitErrors.
 	revPath asFileReference ensureCreateDirectory.
 	"self logCr: 'About to create directory: ', revPath ."
 	OSEnvironment current setEnv: 'GIT_INDEX_FILE' value: revPath , '/.git'.
@@ -725,8 +725,8 @@ Utility class >> generateMSEFileFor: uid reponame: repoName [
 			result = 0
 				ifFalse: [ jdt2FamixErrors asFileReference ]
 				ifTrue: [ "Move the file out of the directory"
-					mseFile := (revPath , '/' , uid , '.mse') asFileReference.
-					mseDestination := (destPath , '/' , repoName , '_master/' , uid , '.mse') asFileReference.
+					mseFile := (revPath , '/' , oid , '.mse') asFileReference.
+					mseDestination := (destPath , '/' , repoName , '_master/' , oid , '.mse') asFileReference.
 					"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
 					mseFile exists
 						ifTrue: [ mseDestination exists
@@ -985,7 +985,7 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> getUIDFromTag: tagString on: loc [
+Utility class >> getOIDFromTag: tagString on: loc [
 	"based on example from https://ben.straub.cc/2013/06/03/refs-tags-and-branching/ "
 	| repoHandle gitRef result toReturn |
 	toReturn := nil.
@@ -993,8 +993,8 @@ Utility class >> getUIDFromTag: tagString on: loc [
 	repoHandle open.
 	gitRef := LGitReference of: repoHandle.
 	result := gitRef reference_lookup: nil repo: repoHandle name: 'refs/tags/' , tagString.
-	result = 0
-		ifTrue: [ toReturn := gitRef targetId ].
+	result = LGitReturnCodeEnum git_ok
+		ifTrue: [ toReturn := gitRef targetId hexString ].
 	^ toReturn
 ]
 
