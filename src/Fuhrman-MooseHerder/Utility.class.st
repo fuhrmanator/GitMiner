@@ -123,7 +123,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 					| projectRepoDir command result renamings dirs csvPath |
 					"Generate git history"
 					projectRepoDir := tempRepoRoot , projectName.
-					command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
+					command := 'cd ' , projectRepoDir , ' && git log --follow -p "' , oid , '^@" -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 					result := LibC uniqueInstance system: command.
 					result = 0
 						ifFalse: [ 0 halt ]
@@ -157,7 +157,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 									"Update for next class to check for renamings"
 									cTransactions := renamedCTransactions ] ] ] ]
 		ifFalse: [ renamedCTransactions := cTransactionsOriginal copy ].
-	self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension
+	^self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension
 ]
 
 { #category : #'file service' }
