@@ -1182,6 +1182,28 @@ Utility class >> removeUnrelatedClassesFromTransactions: project [
 ]
 
 { #category : #'file service' }
+Utility class >> removeUnrelatedClassesFromTransactions: project fromRevision: oid [
+	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
+	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
+	file := (project,'_commits_tags_OIDs_TR_renamed_TR.csv') asFileReference .
+	cTransactions := self loadCommitTransactions:  file.
+	file := (project, '_', oid , '_ClientImpPairs.csv') asFileReference .
+	clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+	clientImplementationPairsRecords size > 0
+	ifTrue: [ "Client file name is second column"
+		clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+		"Implementation file name is fifth column"
+		implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+		classesToInclude := clientsTemp union: implementationsTemp.
+		cTransactions do: [ :cTran |
+			cTran committedFileNames: (cTran committedFileNames intersection: classesToInclude )
+			 ]
+		].
+	self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'.	
+	^cTransactions
+]
+
+{ #category : #'file service' }
 Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 	| newFileName |
 	newFileName := fromFileName asFileReference basenameWithoutExtension , '_LC.csv'.
