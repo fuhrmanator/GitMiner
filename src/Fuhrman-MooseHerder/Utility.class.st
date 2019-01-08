@@ -347,6 +347,108 @@ Utility class >> calculateCouplingIntersections [
 	^ results
 ]
 
+{ #category : #'file service' }
+Utility class >> calculateCouplingIntersectionsFor: project at: oid [
+	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
+	arulesExtension := '_renamed_only_clients_and_imps_TR_apriori_rules.csv'.
+	clientImpExtension := '_' , oid , '_ClientImpPairs.csv'.
+	linkString := '->'.
+	trimCurlyBraces := [ :string | string allButFirst allButLast ].
+	results := OrderedCollection new.
+	logicalCouplingFile := FileLocator workingDirectory / 'arules'
+		/ (project , arulesExtension).
+	"	Transcript
+		show: 'Processing files: ';
+		cr.
+	Transcript
+		show: (' ' join: logicalCouplingFiles);
+		cr."
+	basename := logicalCouplingFile basename
+		allButLast: arulesExtension size.
+	clientImpFile := FileLocator workingDirectory
+		/ (basename , clientImpExtension).
+	"Transcript
+				show: basename;
+				cr."
+	"Read in CSV of logical coupling"
+	lcInputStream := logicalCouplingFile readStream.
+	lcRecords := (NeoCSVReader on: lcInputStream)
+		separator: $,;
+		skipHeader;
+		"ruleNumber LHS RHS support confidence lift count"
+			addIntegerField;
+		"ruleNumber"
+			addFieldConverter: trimCurlyBraces;
+		"{LHS} - note R puts {...} around the string"
+			addFieldConverter: trimCurlyBraces;
+		"{RHS}"
+			addFloatField;
+		"support"
+			addFloatField;
+		"confidence"
+			addFloatField;
+		"lift"
+			addIntegerField;
+		"count"
+			upToEnd.
+
+	"Read in CSV of structural coupling (client-implementation)"
+	scRecords := self loadClientImplementationPairs: clientImpFile.
+
+	"Create a set of logical coupling"
+	logicalCouplingSet := (lcRecords
+		collect: [ :each | each second , linkString , each third ]) asSet.
+	"Transcript
+				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
+				cr."
+	protectedCouplingSet := (scRecords
+		collect: [ :each | 
+			each sixth
+				ifTrue: each second , linkString , each fifth ]) asSet.
+	"Transcript
+				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
+				cr."
+	unprotectedCouplingSet := (scRecords
+		collect: [ :each | 
+			each sixth
+				ifFalse: each second , linkString , each fifth ]) asSet.
+	"Transcript
+				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
+				cr."
+	logicalProtectedIntersection := logicalCouplingSet
+		intersection: protectedCouplingSet.
+	logicalUnprotectedIntersection := logicalCouplingSet
+		intersection: unprotectedCouplingSet.
+	"Transcript
+				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalProtectedIntersection); cr."
+	"Transcript
+				show:
+					'Intersection of logical coupling and unprotected coupling set size: '
+						, logicalUnprotectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalUnprotectedIntersection); cr"
+	results
+		add:
+			{basename.
+			logicalCouplingSet size.
+			protectedCouplingSet size.
+			unprotectedCouplingSet size.
+			logicalProtectedIntersection size.
+			logicalUnprotectedIntersection size}.
+	"Save results to .CSV"
+	FileStream
+		forceNewFileNamed: 'Logical_and_Structural_Dependency_results.csv'
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut:
+					#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|');
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ results
+]
+
 { #category : #'as yet unclassified' }
 Utility class >> cloneRepo: url [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
