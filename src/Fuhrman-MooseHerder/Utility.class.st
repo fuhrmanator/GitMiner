@@ -697,6 +697,20 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 ]
 
 { #category : #'file service' }
+Utility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
+	"Use R to do some calculations"
+	"TODO: Error check to remind user to add RScript.exe to path"
+	| command |
+	command := 'RScript R/GenerateLogicalPairsFromTransactionsSingleFile.R ' , filePath
+		, ' 2> /tmp/R.errors.txt'.
+	"Transcript
+		show: 'About to execute: ';
+		cr;
+		show: command."
+	^ LibC uniqueInstance system: command
+]
+
+{ #category : #'file service' }
 Utility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 	
@@ -1199,8 +1213,7 @@ Utility class >> removeUnrelatedClassesFromTransactions: project fromRevision: o
 			cTran committedFileNames: (cTran committedFileNames intersection: classesToInclude )
 			 ]
 		].
-	self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'.	
-	^cTransactions
+	^self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'
 ]
 
 { #category : #'file service' }
