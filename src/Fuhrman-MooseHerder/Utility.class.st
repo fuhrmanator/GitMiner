@@ -570,6 +570,12 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 	"Walk through just to count commits for progress bar"
 	nCommits := 0.
 	revwalk do: [ :commit | nCommits := nCommits + 1 ].
+	nCommits > 2000
+		ifTrue: [ (UIManager
+				confirm:
+					'This range has ' , nCommits asString
+						, ' commits. Are you sure you want to mine it?')
+				ifFalse: [ 0 halt ] ].
 
 	"Revwalk reset didn't work, so we start over"
 	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
@@ -591,9 +597,13 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
 					addedFiles := Set new.
 					difference files
-						do:
-							[ :file | newerCommit tree entryByPath: file ifAbsent: [ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
-					atLeastOneJavaFile := difference files anySatisfy: [ :file | file endsWith: '.java' ].
+						do: [ :file | 
+							newerCommit tree
+								entryByPath: file
+								ifAbsent:
+									[ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
+					atLeastOneJavaFile := difference files
+						anySatisfy: [ :file | file endsWith: '.java' ].
 					commitDataList
 						add:
 							{newerCommit name.
@@ -603,9 +613,10 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 							atLeastOneJavaFile.
 							(Character space join: difference files)} ].
 			newerCommit := commit ] ] asJob run.
-	outFile := projectName , '_' , fromTag , '-' , toTag , '_commits_tags.csv'.
+	outFile := projectName , '_' , fromTag , '-' , toTag
+		, '_commits_tags.csv'.
 	self writeCommitResults: commitDataList to: outFile.
-	^outFile
+	^ outFile
 ]
 
 { #category : #'as yet unclassified' }
