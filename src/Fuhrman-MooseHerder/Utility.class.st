@@ -588,20 +588,19 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 	[ :job | 
 	revwalk
 		do: [ :commit | 
-			| addedFiles difference atLeastOneJavaFile |
+			| addedFiles difference atLeastOneJavaFile diffFiles |
 			relativeRevNumber := relativeRevNumber + 1.
-			job
-				progress: relativeRevNumber / nCommits;
-				title: 'Analyzing revision ' , commit name.
-			newerCommit = nil
-				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
-					addedFiles := Set new.
-					difference files
-						do: [ :file | 
-							newerCommit tree
-								entryByPath: file
-								ifAbsent:
-									[ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
+			newerCommit
+				ifNotNil: [ difference := newerCommit tree diffTo: commit tree.
+					diffFiles := difference files.
+					job
+						progress: relativeRevNumber / nCommits;
+						title:
+							'Analyzing revision ' , commit name , ' (' , diffFiles size asString
+								, ' files, isMerge==', commit isMerge asString, ') ' , relativeRevNumber asString , '/' , nCommits asString. 
+					addedFiles := diffFiles
+						collect: [ :file | 
+							newerCommit tree entryByPath: file ifAbsent: [ file ] ].
 					atLeastOneJavaFile := difference files
 						anySatisfy: [ :file | file endsWith: '.java' ].
 					commitDataList
