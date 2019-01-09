@@ -591,16 +591,21 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 			| addedFiles difference atLeastOneJavaFile diffFiles |
 			relativeRevNumber := relativeRevNumber + 1.
 			newerCommit
-				ifNotNil: [ difference := newerCommit tree diffTo: commit tree.
+				ifNotNil: [ difference := commit tree diffTo: newerCommit tree.
 					diffFiles := difference files.
+"					0halt."
 					job
 						progress: relativeRevNumber / nCommits;
 						title:
-							'Analyzing revision ' , commit name , ' (' , diffFiles size asString
-								, ' files, isMerge==', commit isMerge asString, ') ' , relativeRevNumber asString , '/' , nCommits asString. 
-					addedFiles := diffFiles
-						collect: [ :file | 
-							newerCommit tree entryByPath: file ifAbsent: [ file ] ].
+							'Analyzing revision ' , (commit name truncateTo: 8) , ': '''
+								, (commit message truncateTo: 25) , ''' ('
+								, difference numberOfDeltas asString , ' files, isMerge=='
+								, commit isMerge asString , ') ' , relativeRevNumber asString
+								, '/' , nCommits asString.
+					addedFiles := Set new.
+					diffFiles
+						do:
+							[ :file | newerCommit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
 					atLeastOneJavaFile := difference files
 						anySatisfy: [ :file | file endsWith: '.java' ].
 					commitDataList
@@ -610,7 +615,7 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 							(Character space join: addedFiles).
 							difference numberOfDeltas.
 							atLeastOneJavaFile.
-							(Character space join: difference files)} ].
+							(Character space join: diffFiles)} ].
 			newerCommit := commit ] ] asJob run.
 	outFile := projectName , '_' , fromTag , '-' , toTag
 		, '_commits_tags.csv'.
