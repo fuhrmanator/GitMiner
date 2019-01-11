@@ -401,17 +401,19 @@ Utility class >> calculateCouplingIntersectionsFor: project at: oid [
 	"Transcript
 				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
 				cr."
-	protectedCouplingSet := (scRecords
-		collect: [ :each | 
+	protectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
 			each sixth
-				ifTrue: each second , linkString , each fifth ]) asSet.
+				ifTrue: [ protectedCouplingSet add: each second , linkString , each fifth ] ].
 	"Transcript
 				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
 				cr."
-	unprotectedCouplingSet := (scRecords
-		collect: [ :each | 
+	unprotectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
 			each sixth
-				ifFalse: each second , linkString , each fifth ]) asSet.
+				ifFalse: [ unprotectedCouplingSet add: each second , linkString , each fifth ] ].
 	"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
