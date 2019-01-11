@@ -1,5 +1,93 @@
 "
 Class with homeless methods... To be refactored into an API.
+
+-------------
+
+HandMorph doubleClickTime: 500.
+
+Utility cloneReposAndGenerateCommitMetadata: '_projects.csv'.
+
+Utility generateSelectedCommitFiles: '*_commits.csv'.
+
+Utility generateLogicalCouplingCandidatePairsAndTransactions: '_commits_UIDs.csv'.
+
+Utility generateClientImplementationPairsFiles: 'ClientImpPairs'.
+
+Utility applyRenamingsToTransactions: '_projects.csv'.
+
+Utility removeUnrelatedClassesFromTransactions: 'alexo-chess'.
+
+""R generates the coupling pairs ""
+Utility generateLogicalCouplingPairsWithR: 'c:/chgevo'.
+
+""Utility generateMSEFilesForEachUID: '_commits_UIDs.csv'.""
+
+Utility calculateCouplingIntersections.
+""---------------- Single project pipeline ""
+gitName := 'rhino'.
+olderTag :='Rhino1_7_8_Release'.
+newerTag := 'Rhino1_7_9_Release'.
+loc := Utility cloneRepo: 'https://github.com/mozilla/rhino'.
+
+gitName := 'cassandra'.
+""olderTag :='cassandra-2.0.0-beta1'.""
+olderTag :='cassandra-3.11.2'.
+newerTag := 'cassandra-3.11.3'.
+loc := Utility cloneRepo: 'https://github.com/apache/cassandra'.
+startOIDString := '3dcde0821a40eb2bc633082916d8f3ff861efdb5'.
+endOIDString := '50560aaf0f2d395271ade59ba9b900a84cae70f1'.
+commitMetadata := Utility filterCommitsOnRepoLeftBranchOnly: loc from: startOIDString to: endOIDString.
+
+""Utility filterCommitsOnRepo: loc withRange: ''.""
+
+selectedCommits := Utility generateSelectedCommits: commitMetadata.
+pairsAndTransactions := Utility generatePairsAndTransactions: selectedCommits.
+
+""oid := Utility getOIDFromTag: newerTag on: loc.""
+mseFileRef := Utility generateMSEFileFor: startOIDString reponame: loc basename.
+""mseFileRef := Utility generateMSEFileFor: 'HEAD' reponame: loc basename.""
+
+cimpFile := Utility generateClientImplementationPairs: mseFileRef.
+
+""Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command.""
+renamedTransactionsFile := Utility applyRenamingsToTransactions: pairsAndTransactions second usingRevision: startOIDString project: gitName.
+
+removedTr := Utility removeUnrelatedClassesFromTransactions: gitName fromRevision: startOIDString.
+Utility generateLogicalCouplingPairsWithRSingleFile: removedTr.
+
+Utility calculateCouplingIntersectionsFor: gitName at: startOIDString.
+
+""-----------------------------------""
+
+repoHandle := LGitRepository on: loc.
+repoHandle open.
+gitRef := LGitReference of: repoHandle.
+result := gitRef reference_lookup: nil repo: repoHandle name: 'refs/tags/',newerTag.
+result = 0 ifTrue:[^gitRef targetId].
+gitRef targetId .
+
+""mseDirRoot := FileLocator C / 'tmp' / 'data_mining'.
+mseDirs := mseDirRoot directories.
+dir := mseDirs first.
+projectName := dir basename asString allButLast: '_master' size.
+mseFiles := dir allChildrenMatching: '*.mse'.
+mseFile := mseFiles first.
+results := InterfaceMiner mineClientImplementationPairs: mseFile readStream withPrefix: ''.
+newFileName := projectName , '_', mseFile basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'.
+
+mseFile := (FileStream readOnlyFileNamed: 'C:\tmp\data_mining\alexo-chess_master\HEAD.mse').
+InterfaceMiner mineClientImplementationPairs: mseFile withPrefix: ''.""
+
+
+
+""Only needed once...""
+Utility extractIndividualProjectLogicalCouplingData: 'G:\My Drive\Congé sabbatique 2018-2019\Activités INRIA\Change Evolution Interface Clients\AC2017 JSS\logicalcoupling.csv'.
+
+
+OSEnvironment current setEnv: 'BLAH' value: 'x'.
+OSEnvironment current getEnv: 'BLAH'.
+LibC uniqueInstance system: 'env | more'.
+
 "
 Class {
 	#name : #Utility,
