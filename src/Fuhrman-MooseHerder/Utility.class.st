@@ -156,7 +156,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 													fromRename := renamingRecord fourth.
 													copyCTransaction renameAll: fromRename to: class ] ].
 									"Update for next class to check for renamings"
-									cTransactions := renamedCTransactions ] ] ] ]
+									cTransactions := renamedCTransactions ] ] ] displayingProgress: 'Renaming classes.' ]
 		ifFalse: [ renamedCTransactions := cTransactionsOriginal copy ].
 	^self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension
 ]
