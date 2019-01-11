@@ -759,12 +759,20 @@ Utility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStrin
 Utility class >> generateClientImplementationPairs: mseFileRef [
 	"For the given MSE file, mine the client-implementation pairs info"
 
-	| results |
-	results := InterfaceMiner mineClientImplementationPairs: mseFileRef withPrefix: ''.
+	| results file |
+	[ :job | 
+	job title: 'Mining client-implementation pairs...'.
+	results := InterfaceMiner
+		mineClientImplementationPairs: mseFileRef
+		withPrefix: ''.
 	"results size = 0 ifTrue: 0halt."	"-> no interfaces will yield this"
 	"Save results to .CSV"
-	^ self writeClientImplementationPairs: results file: mseFileRef
-
+	job
+		title: 'Saving file...';
+		progress: 0.5.
+	file := self writeClientImplementationPairs: results file: mseFileRef ]
+		asJob run.
+	^ file
 ]
 
 { #category : #'file service' }
