@@ -686,6 +686,75 @@ Utility class >> filterCommitsOnRepo: location withRange: range [
 	^outFile
 ]
 
+{ #category : #'as yet unclassified' }
+Utility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
+	"selects commits from a range specified by Git tags"
+
+	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit |
+	projectName := location path basename.
+	repoHandle := LGitRepository on: location.
+	repoHandle open.
+	commitDataList := LinkedList new.
+
+	startCommit := repoHandle revparse: startOIDString.
+	endCommit := repoHandle revparse: endOIDString.
+
+	"Walk through to count commits for progress bar"
+	nCommits := 0.
+	commit := startCommit.
+	[ (commit hasParents) & (commit ~= endCommit) ]
+		whileTrue: [ nCommits := nCommits + 1.
+			commit := commit parents first ].
+	nCommits > 2000
+		ifTrue: [ (UIManager
+				confirm:
+					'This range has ' , nCommits asString
+						, ' commits. Are you sure you want to mine it?')
+				ifFalse: [ 0 halt ] ].
+
+	"Get commit ids that have:
+  - no added files (only changed files)
+  - 10 or fewer files
+  - at least one .java file."
+	relativeRevNumber := 0.
+	commit := startCommit.
+	parentCommit := startCommit parents first.
+	[ :job | 
+	[ (parentCommit hasParents) & (parentCommit ~= endCommit) ]
+		whileTrue: [ | addedFiles difference atLeastOneJavaFile diffFiles |
+			relativeRevNumber := relativeRevNumber + 1.
+			difference := parentCommit tree diffTo: commit tree.
+			diffFiles := difference files.
+			job
+				progress: relativeRevNumber / nCommits;
+				title:
+					'Analyzing revision ' , (commit name truncateTo: 8) , ': '''
+						, (commit message truncateTo: 25) , ''' ('
+						, difference numberOfDeltas asString , ' files, isMerge=='
+						, commit isMerge asString , ') ' , relativeRevNumber asString
+						, '/' , nCommits asString.
+			addedFiles := Set new.
+			diffFiles
+				do:
+					[ :file | commit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
+			atLeastOneJavaFile := difference files
+				anySatisfy: [ :file | file endsWith: '.java' ].
+			commitDataList
+				add:
+					{commit name.
+					(nCommits - relativeRevNumber + 1).	"Revwalk goes from latest to earliest"
+					(Character space join: addedFiles).
+					difference numberOfDeltas.
+					atLeastOneJavaFile.
+					(Character space join: diffFiles)}.
+			commit := parentCommit.
+			parentCommit := commit parents first ] ] asJob run.
+	outFile := projectName , '_' , startCommit name , '-'
+		, endCommit name , '_commits_tags.csv'.
+	self writeCommitResults: commitDataList to: outFile.
+	^ outFile
+]
+
 { #category : #'file service' }
 Utility class >> generateClientImplementationPairs: mseFileRef [
 	"For the given MSE file, mine the client-implementation pairs info"
@@ -1353,14 +1422,18 @@ Utility class >> writeClientImplementationPairs: results file: mseFileRef [
 
 	| fileName projectName |
 	projectName := mseFileRef parent basename allButLast: '_master' size.
-	fileName := projectName , '_' , mseFileRef basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'.
+	fileName := projectName , '_' , mseFileRef basenameWithoutExtension
+		, '_' , 'ClientImpPairs' , '.csv'.
+	[ :job | 
+	job title: 'Writing client-implementation pairs.'.
 	FileStream
 		forceNewFileNamed: fileName
 		do: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
-				nextPut: #('Client' 'ClientFile' 'Interface' 'Implementation' 'ImplementationFile' 'Protected');
+				nextPut:
+					#('Client' 'ClientFile' 'Interface' 'Implementation' 'ImplementationFile' 'Protected');
 				addFields: #(first second third fourth fifth sixth);
-				nextPutAll: results ].
+				nextPutAll: results ] ] asJob run.
 	^ fileName
 ]
 

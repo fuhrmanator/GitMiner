@@ -31,31 +31,41 @@ InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: if
 	listOfResults := LinkedList new.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
-			mseStream close ].
-
-	"Limit interfaces to those starting with prefix"
-	interfaces := (mooseModel allClasses
-		select: [ :each | 
-			(ifPrefix isEmpty
-				ifTrue: [ true ]
-				ifFalse: [ each container mooseName beginsWith: ifPrefix ]) and: each isInterface ]) asSet.
+			mseStream close ]
+		ifNil: [ 0 halt ].
 
 	"Find implementations and clients for each interface"
+	"Limit interfaces to those starting with prefix"
+	[ :job | 
+	| count |
+	count := 0.
+	interfaces := (mooseModel allClasses
+		select: [ :each | 
+			job
+				progress: count / mooseModel allClasses size;
+				title: 'Collecting interfaces'.
+			each isInterface
+				& ((ifPrefix isEmpty) | (each container mooseName beginsWith: ifPrefix)) ]) asSet ]
+		asJob run.
 	interfaces
 		do: [ :interface | 
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
-			localImplementations := interface directSubclasses reject: [ :cls | cls isInterface | cls isStub ].
+			localImplementations := interface directSubclasses
+				reject: [ :cls | cls isInterface | cls isStub ].
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
-			classesReferencingLocalImplementations := (localImplementations flatCollect: [ :imp | imp clientTypes ]) asSet.
+			classesReferencingLocalImplementations := (localImplementations
+				flatCollect: [ :imp | imp clientTypes ]) asSet.
 
 			"Remove the clients of the interface that reference its implementations"
-			localProtectedClients := localClients difference: classesReferencingLocalImplementations.
+			localProtectedClients := localClients
+				difference: classesReferencingLocalImplementations.
 			"Only take clients of the interface"
-			localUnprotectedClients := localClients intersection: classesReferencingLocalImplementations.
+			localUnprotectedClients := localClients
+				intersection: classesReferencingLocalImplementations.
 
 			"Generate the protected client-implementation pairs"
 			localProtectedClients
@@ -80,7 +90,8 @@ InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: if
 										protectedGroup: false
 										client: client
 										interface: interface
-										implementation: imp) ] ] ].
+										implementation: imp) ] ] ]
+		displayingProgress: 'Mining: Classifying interface clients'.
 	^ listOfResults
 ]
 
