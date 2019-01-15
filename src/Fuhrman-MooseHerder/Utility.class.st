@@ -2,7 +2,6 @@
 Class with homeless methods... To be refactored into an API.
 
 -------------
-
 HandMorph doubleClickTime: 500.
 
 Utility cloneReposAndGenerateCommitMetadata: '_projects.csv'.
@@ -54,6 +53,7 @@ renamedTransactionsFile := Utility applyRenamingsToTransactions: pairsAndTransac
 
 removedTr := Utility removeUnrelatedClassesFromTransactions: gitName fromRevision: startOIDString.
 Utility generateLogicalCouplingPairsWithRSingleFile: removedTr.
+""Utility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second.""
 
 Utility calculateCouplingIntersectionsFor: gitName at: startOIDString.
 
@@ -1207,11 +1207,20 @@ Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 							pair second.
 							pair first.
 							uid.
-							revNum} ] ].
+							revNum} ] ]
+		displayingProgress: 'Selecting commits according to criteria...'.
 	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-	cp := self writeClassPairs: logicalCouplingRecords file: selectedCommitsFile.
+	[ :job | 
+	job title: 'Writing class pairs.'.
+	cp := self
+		writeClassPairs: logicalCouplingRecords
+		file: selectedCommitsFile.
+	job progress: 0.5;
+	title: 'Writing transactions.'.
 	"Generates a 'transactions' (basket) style file for arules in R"
-	ct := self writeCommitTransactions: commitTransactions to: selectedCommitsFile.
+	ct := self
+		writeCommitTransactions: commitTransactions
+		to: selectedCommitsFile ] asJob run.
 	^ Array with: cp with: ct
 ]
 
@@ -1503,10 +1512,11 @@ Utility class >> removeUnrelatedClassesFromTransactions: project fromRevision: o
 { #category : #'file service' }
 Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 	| newFileName |
-	newFileName := fromFileName asFileReference basenameWithoutExtension , '_LC.csv'.
-	FileStream
-		forceNewFileNamed: newFileName
-		do: [ :csvStream | 
+	newFileName := fromFileName asFileReference basenameWithoutExtension
+		, '_LC.csv'.
+	newFileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
 				nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
 				addFields: #(first second third fourth fifth);
@@ -1554,17 +1564,20 @@ Utility class >> writeCommitTransactions: transactionRecords to: selectedCommits
 	"Write out single column (with embedded commas!)"
 
 	| concatRecords outFileName |
-	outFileName := selectedCommitsFile asFileReference basenameWithoutExtension , '_TR.csv'.
+	outFileName := selectedCommitsFile asFileReference
+		basenameWithoutExtension , '_TR.csv'.
 	"Concatenate variable number of items with commas, since we can't use NeoCSV to write them"
 	concatRecords := OrderedCollection new.
-	transactionRecords ifNotNil: [ concatRecords := transactionRecords collect: [ :cTran | cTran uid , ',' , ($, join: cTran committedFileNames)	"ID, item, item, ..." ] ].
-	FileStream
-		forceNewFileNamed: outFileName
-		do: [ :stream | 
+	transactionRecords
+		ifNotNil: [ concatRecords := transactionRecords
+				collect:
+					[ :cTran | cTran uid , ',' , ($, join: cTran committedFileNames)	"ID, item, item, ..." ] ].
+	outFileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
 			concatRecords
 				do: [ :rec | 
 					stream
-						ascii;
 						nextPutAll: rec;
 						cr ] ].
 	^ outFileName
@@ -1575,9 +1588,9 @@ Utility class >> writeSelectedCommits: selectedCommits file: fileName [
 	| file selCommitsFileName |
 	file := fileName asFileReference.
 	selCommitsFileName := file basenameWithoutExtension , '_UIDs.csv'.
-	FileStream
-		forceNewFileNamed: selCommitsFileName
-		do: [ :csvStream | 
+	selCommitsFileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
 				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
 				addFields: #(first second sixth);
