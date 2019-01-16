@@ -12,61 +12,60 @@ Class {
 }
 
 { #category : #'client implementation analysis' }
-InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifPrefix [
-	| interfaces listOfResults mooseModel |
+InterfaceMiner class >> localClientsFrom: interface [
+	| localClients |
+	localClients := (interface structuresWithDeclaredType
+		collect: [ :struct | 
+			| classArray |
+			"MooseQuery... struct atScope: FAMIXType. -- returns an Array, so just take first element"
+			classArray := struct atScope: FAMIXType.
+			"self assert: classArray size equals: 1."
+			classArray first ]) asSet.
+	^ localClients
+]
+
+{ #category : #'client implementation analysis' }
+InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: ifPrefix [
+	| mseStream interfaces listOfResults mooseModel |
+	mseStream := mseFileRef readStream.
 	listOfResults := LinkedList new.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
-			mseStream close ].
-
-	"Limit interfaces to those starting with prefix"
-	interfaces := (mooseModel allClasses
-		select: [ :each | 
-			(ifPrefix isEmpty
-				ifTrue: [ true ]
-				ifFalse: [ each container mooseName beginsWith: ifPrefix ]) and: each isInterface ]) asSet.
+			mseStream close ]
+		ifNil: [ 0 halt ].
 
 	"Find implementations and clients for each interface"
+	"Limit interfaces to those starting with prefix"
+	[ :job | 
+	| count |
+	count := 0.
+	interfaces := (mooseModel allClasses
+		select: [ :each | 
+			job
+				progress: count / mooseModel allClasses size;
+				title: 'Collecting interfaces'.
+			each isInterface
+				& ((ifPrefix isEmpty) | (each container mooseName beginsWith: ifPrefix)) ]) asSet ]
+		asJob run.
 	interfaces
 		do: [ :interface | 
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
 			localImplementations := interface directSubclasses
-				reject: [ :cls | cls isInterface or: cls isStub ].
-			"Keep track of all implementations"
-			localClients := (interface structuresWithDeclaredType
-				collect: [ :struct | 
-					"struct atScope: FAMIXType."
-					(struct isMemberOf: FAMIXAttribute)
-						ifTrue: [ struct parentType ]
-						ifFalse: [ (struct isMemberOf: FAMIXParameter)
-								ifTrue: [ struct parentBehaviouralEntity parentType ]
-								ifFalse: [ (struct isMemberOf: FAMIXLocalVariable)
-										ifTrue: [ struct parentBehaviouralEntity parentType ]
-										ifFalse: [ Transcript show: '*** Unanticipated type: '.
-											Transcript
-												show: struct class;
-												cr ] ] ] ]) asSet.
-			"Reject stubs (no source files)"
-			localClients := localClients reject: #isStub.
-			"localClients := localClients asSet."
-			classesReferencingLocalImplementations := Set new.	"don't allow duplicates"
+				reject: [ :cls | cls isInterface | cls isStub ].
+			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
-			localImplementations
-				do: [ :implementation | 
-					classesReferencingLocalImplementations := classesReferencingLocalImplementations
-						, implementation clientTypes ].
-
-			"Consider only clients and implementations that have source code (not from an API only)"
-			localClients reject: #isStub.
-			localImplementations reject: #isStub.
+			classesReferencingLocalImplementations := (localImplementations
+				flatCollect: [ :imp | imp clientTypes ]) asSet.
 
 			"Remove the clients of the interface that reference its implementations"
-			localProtectedClients := localClients difference: classesReferencingLocalImplementations.
+			localProtectedClients := localClients
+				difference: classesReferencingLocalImplementations.
 			"Only take clients of the interface"
-			localUnprotectedClients := localClients intersection: classesReferencingLocalImplementations.
+			localUnprotectedClients := localClients
+				intersection: classesReferencingLocalImplementations.
 
 			"Generate the protected client-implementation pairs"
 			localProtectedClients
@@ -91,7 +90,8 @@ InterfaceMiner class >> mineClientImplementationPairs: mseStream withPrefix: ifP
 										protectedGroup: false
 										client: client
 										interface: interface
-										implementation: imp) ] ] ].
+										implementation: imp) ] ] ]
+		displayingProgress: 'Mining: Classifying interface clients'.
 	^ listOfResults
 ]
 
