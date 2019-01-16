@@ -1,0 +1,31 @@
+@startuml
+skinparam defaultFontName Arial
+title Example of an empirical analysis pipeline
+skinparam style strictuml
+|Pharo|
+start
+:git clone (Iceberg);
+:local git repository
+of Java code]
+:filterCommitsLeftBranch;
+:Commit Metadata]
+:selectCommits;
+:Selected subset of commits]
+:generatePairsAndTransactions;
+:pairs and transactions]
+:generate MSE file for startOID
+(extract commit @startOID);
+:startOID.mse]
+:generate client-
+implementation pairs;
+:Client+Imp Pairs.csv]
+|#antiquewhite|R|
+:Generate logical-coupling
+rules with R (apriori);
+:LogicalCoupling.csv]
+|Pharo|
+:Calculate logical-static 
+coupling intersections;
+:Stats for set sizes]
+stop
+@enduml
