@@ -1,6 +1,6 @@
 "
 Class with homeless methods... To be refactored into an API.
-
+ 
 -------------
 HandMorph doubleClickTime: 500.
 
