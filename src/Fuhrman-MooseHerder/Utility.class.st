@@ -983,14 +983,18 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 { #category : #'file service' }
 Utility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 	"Use R to do some calculations"
-	"TODO: Error check to remind user to add RScript.exe to path"
-	| command |
-	command := 'RScript R/GenerateLogicalPairsFromTransactionsSingleFile.R ' , filePath
+
+	| command pathToRFiles |
+	self isRInPath
+		ifFalse: [ UIManager default
+				abort:
+					'RScript.exe could not be found. R must be installed and RScript.exe''s directory must be added to the system path'.
+			"Return non-zero means something bad happened"
+			^ 1 ].
+	pathToRFiles := (self locationOfProjectRepo / 'R/') pathString.
+	command := 'RScript ' , pathToRFiles
+		, '/GenerateLogicalPairsFromTransactionsSingleFile.R ' , filePath
 		, ' 2> /tmp/R.errors.txt'.
-	"Transcript
-		show: 'About to execute: ';
-		cr;
-		show: command."
 	^ LibC uniqueInstance system: command
 ]
 
@@ -1326,6 +1330,14 @@ Utility class >> initialize [
 	cloneRoot := 'c:/tmp/tempClonesPharo/'.
 ]
 
+{ #category : #'as yet unclassified' }
+Utility class >> isRInPath [
+	"Make sure RScript.exe can be found"
+	| result |
+	result := LibC uniqueInstance system: 'RScript --version'.
+	^ result = 0
+]
+
 { #category : #'file service' }
 Utility class >> loadClientImplementationPairs: fileReference [
 	| scRecords scInputStream |
@@ -1447,6 +1459,24 @@ Utility class >> loadRenamings: csvPath [
 		addField;		
 		upToEnd.
 		^ records
+]
+
+{ #category : #'as yet unclassified' }
+Utility class >> locationOfProjectRepo [
+	"finds the location of the project (e.g., to find R files that are not part of Pharo)"
+
+	| icebergRepository |
+	icebergRepository := IceRepository registry
+		detect: [ :repository | 
+			repository workingCopy packages
+				anySatisfy: [ :package | package name = 'Fuhrman-MooseHerder' ] ]
+		ifNone:
+			[ self error: 'No repository in Iceberg containing the needed files.' ].
+	icebergRepository location exists
+		ifFalse: [ self
+				error:
+					'The repository of the project does not have a pointer to a local clone to find the files' ].
+	^ icebergRepository location
 ]
 
 { #category : #'file service' }
