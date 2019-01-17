@@ -8,7 +8,7 @@ This class is based originally on scripts from Playground experiments.
 Class {
 	#name : #InterfaceMiner,
 	#superclass : #Object,
-	#category : #'Fuhrman-MooseHerder'
+	#category : #GitMiner
 }
 
 { #category : #'client implementation analysis' }

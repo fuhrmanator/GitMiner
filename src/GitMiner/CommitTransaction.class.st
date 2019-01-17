@@ -14,7 +14,7 @@ Class {
 		'uid',
 		'committedFileNames'
 	],
-	#category : #'Fuhrman-MooseHerder'
+	#category : #GitMiner
 }
 
 { #category : #initialization }

@@ -35,7 +35,7 @@ Class {
 		'toTag',
 		'commitFilter'
 	],
-	#category : #'Fuhrman-MooseHerder'
+	#category : #GitMiner
 }
 
 { #category : #accessing }

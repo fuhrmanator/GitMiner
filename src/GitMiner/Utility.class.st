@@ -95,7 +95,7 @@ Class {
 	#classInstVars : [
 		'cloneRoot'
 	],
-	#category : #'Fuhrman-MooseHerder'
+	#category : #GitMiner
 }
 
 { #category : #'file service' }

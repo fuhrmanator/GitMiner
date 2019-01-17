@@ -17,7 +17,7 @@ Class {
 		'unprotectedClientDictionary',
 		'protectedClientDictionary'
 	],
-	#category : #'Fuhrman-MooseHerder'
+	#category : #GitMiner
 }
 
 { #category : #accessing }
