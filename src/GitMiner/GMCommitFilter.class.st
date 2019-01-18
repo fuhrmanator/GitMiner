@@ -2,13 +2,13 @@
 I am a class that tries to help with selecting commits for data mining.
 "
 Class {
-	#name : #GitCommitFilter,
+	#name : #GMCommitFilter,
 	#superclass : #Object,
 	#category : #GitMiner
 }
 
 { #category : #'as yet unclassified' }
-GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
+GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
 	| revisionNumber nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
@@ -78,7 +78,7 @@ GitCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 ]
 
 { #category : #writing }
-GitCommitFilter class >> writeCommitResults: commitDataList to: fileName [
+GMCommitFilter class >> writeCommitResults: commitDataList to: fileName [
 	" Generate a CSV with commit results"
 
 	FileStream

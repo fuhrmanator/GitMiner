@@ -8,7 +8,7 @@ I keep the list of files and I know the UID of the commit.
 	uid:		<String>
 "
 Class {
-	#name : #CommitTransaction,
+	#name : #GMCommitTransaction,
 	#superclass : #Object,
 	#instVars : [
 		'uid',
@@ -18,7 +18,7 @@ Class {
 }
 
 { #category : #initialization }
-CommitTransaction class >> transactionFromRecord: record [
+GMCommitTransaction class >> transactionFromRecord: record [
 	"create a transaction object from a record read from a CSV file"
 
 	^ self new
@@ -27,17 +27,17 @@ CommitTransaction class >> transactionFromRecord: record [
 ]
 
 { #category : #accessing }
-CommitTransaction >> committedFileNames [
+GMCommitTransaction >> committedFileNames [
 	^ committedFileNames
 ]
 
 { #category : #accessing }
-CommitTransaction >> committedFileNames: anObject [
+GMCommitTransaction >> committedFileNames: anObject [
 	committedFileNames := anObject
 ]
 
 { #category : #accessing }
-CommitTransaction >> renameAll: fromFileName to: toFileName [
+GMCommitTransaction >> renameAll: fromFileName to: toFileName [
 	"attempts to rename any filenames in the committedFileNames list"
 
 	| cFileNames |
@@ -49,11 +49,11 @@ CommitTransaction >> renameAll: fromFileName to: toFileName [
 ]
 
 { #category : #accessing }
-CommitTransaction >> uid [
+GMCommitTransaction >> uid [
 	^ uid
 ]
 
 { #category : #accessing }
-CommitTransaction >> uid: anObject [
+GMCommitTransaction >> uid: anObject [
 	uid := anObject
 ]

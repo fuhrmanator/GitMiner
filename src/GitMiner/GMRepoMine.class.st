@@ -27,7 +27,7 @@ Internal Representation and Key Implementation Points.
     Implementation Points
 "
 Class {
-	#name : #RepoMine,
+	#name : #GMRepoMine,
 	#superclass : #Object,
 	#instVars : [
 		'pathToRepo',
@@ -39,41 +39,41 @@ Class {
 }
 
 { #category : #accessing }
-RepoMine >> commitFilter [
+GMRepoMine >> commitFilter [
 	^ commitFilter
 ]
 
 { #category : #accessing }
-RepoMine >> commitFilter: anObject [
+GMRepoMine >> commitFilter: anObject [
 	commitFilter := anObject
 ]
 
 { #category : #accessing }
-RepoMine >> fromTag [
+GMRepoMine >> fromTag [
 	^ fromTag
 ]
 
 { #category : #accessing }
-RepoMine >> fromTag: anObject [
+GMRepoMine >> fromTag: anObject [
 	fromTag := anObject
 ]
 
 { #category : #accessing }
-RepoMine >> pathToRepo [
+GMRepoMine >> pathToRepo [
 	^ pathToRepo
 ]
 
 { #category : #accessing }
-RepoMine >> pathToRepo: anObject [
+GMRepoMine >> pathToRepo: anObject [
 	pathToRepo := anObject
 ]
 
 { #category : #accessing }
-RepoMine >> toTag [
+GMRepoMine >> toTag [
 	^ toTag
 ]
 
 { #category : #accessing }
-RepoMine >> toTag: anObject [
+GMRepoMine >> toTag: anObject [
 	toTag := anObject
 ]

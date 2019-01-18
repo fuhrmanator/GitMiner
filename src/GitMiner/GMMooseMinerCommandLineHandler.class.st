@@ -11,7 +11,7 @@ Documentation:
 A CommandLineHandler that processes (mines) a FAMIX model loaded in from an MSE file and generates output in a .CSV file. 
 "
 Class {
-	#name : #MooseMinerCommandLineHandler,
+	#name : #GMMooseMinerCommandLineHandler,
 	#superclass : #PharoCommandLineHandler,
 	#instVars : [
 		'unprotectedClientDictionary',
@@ -21,17 +21,17 @@ Class {
 }
 
 { #category : #accessing }
-MooseMinerCommandLineHandler class >> commandName [
+GMMooseMinerCommandLineHandler class >> commandName [
 	^ 'mooseminer'
 ]
 
 { #category : #accessing }
-MooseMinerCommandLineHandler class >> description [
+GMMooseMinerCommandLineHandler class >> description [
 	^ 'My Directly evaluates passed in one line scripts'
 ]
 
 { #category : #'handler selection' }
-MooseMinerCommandLineHandler class >> isResponsibleFor: commandLineArguments [
+GMMooseMinerCommandLineHandler class >> isResponsibleFor: commandLineArguments [
 	"directly handle top-level -e and --evaluate options"
 	commandLineArguments withFirstArgument: [ :arg| 
 		(#('-e' '--evaluate') includes: arg)
@@ -41,7 +41,7 @@ MooseMinerCommandLineHandler class >> isResponsibleFor: commandLineArguments [
 ]
 
 { #category : #'writing CSV files' }
-MooseMinerCommandLineHandler class >> writeClientImplementationPairs: myIFList [
+GMMooseMinerCommandLineHandler class >> writeClientImplementationPairs: myIFList [
 	"CSV with 4 columns: Client, Interface, Implementation, Protectedness"
 	FileStream
 		forceNewFileNamed: 'ClientInterfaceImplementationProtectedness.csv'
@@ -88,7 +88,7 @@ MooseMinerCommandLineHandler class >> writeClientImplementationPairs: myIFList [
 ]
 
 { #category : #'writing CSV files' }
-MooseMinerCommandLineHandler class >> writeInterfaces: interfaces [
+GMMooseMinerCommandLineHandler class >> writeInterfaces: interfaces [
 	" Generate a CSV with interfaces"
 	FileStream
 		forceNewFileNamed: 'Interfaces.csv'
@@ -104,7 +104,7 @@ MooseMinerCommandLineHandler class >> writeInterfaces: interfaces [
 ]
 
 { #category : #'writing CSV files' }
-MooseMinerCommandLineHandler class >> writePlantUMLOutput: myIFList [
+GMMooseMinerCommandLineHandler class >> writePlantUMLOutput: myIFList [
 	| plantUMLFile |
 	"PlantUML output"
 	plantUMLFile := 'modelUML.puml'.
@@ -214,7 +214,7 @@ MooseMinerCommandLineHandler class >> writePlantUMLOutput: myIFList [
 ]
 
 { #category : #activation }
-MooseMinerCommandLineHandler >> activate [
+GMMooseMinerCommandLineHandler >> activate [
 	self activateHelp
 		ifTrue: [  ^ self ].
 		
@@ -234,7 +234,7 @@ MooseMinerCommandLineHandler >> activate [
 ]
 
 { #category : #commands }
-MooseMinerCommandLineHandler >> addProtectedLink: sClient wrt: interface [
+GMMooseMinerCommandLineHandler >> addProtectedLink: sClient wrt: interface [
 	"Add a protected link to the interface to the client dictionary"
 
 	| clients clientDic pLinksSet |
@@ -255,7 +255,7 @@ MooseMinerCommandLineHandler >> addProtectedLink: sClient wrt: interface [
 ]
 
 { #category : #commands }
-MooseMinerCommandLineHandler >> addUnprotectedLink: sClient wrt: interface becauseOf: implementation [
+GMMooseMinerCommandLineHandler >> addUnprotectedLink: sClient wrt: interface becauseOf: implementation [
 	"Add a protected link to the interface to the client dictionary"
 
 	| clients clientDic uLinksSet |
@@ -279,7 +279,7 @@ MooseMinerCommandLineHandler >> addUnprotectedLink: sClient wrt: interface becau
 ]
 
 { #category : #activation }
-MooseMinerCommandLineHandler >> argumentString [
+GMMooseMinerCommandLineHandler >> argumentString [
 	| arguments skipArguments |
 	
 	"Now this is ugly... Coral would be nice here! Basically we strip skipArguments if, and only if they appear at the beginning of arguments"
@@ -296,7 +296,7 @@ MooseMinerCommandLineHandler >> argumentString [
 ]
 
 { #category : #commands }
-MooseMinerCommandLineHandler >> classifyClients: myIFList [
+GMMooseMinerCommandLineHandler >> classifyClients: myIFList [
 	"convert the IF list into a client Map structure"
 
 	|  |
@@ -329,7 +329,7 @@ MooseMinerCommandLineHandler >> classifyClients: myIFList [
 ]
 
 { #category : #activation }
-MooseMinerCommandLineHandler >> evaluateArguments [
+GMMooseMinerCommandLineHandler >> evaluateArguments [
 	| argumentString |
 	argumentString :=  self argumentString.
 	argumentString ifEmpty: [ ^ self ].
@@ -337,7 +337,7 @@ MooseMinerCommandLineHandler >> evaluateArguments [
 ]
 
 { #category : #commands }
-MooseMinerCommandLineHandler >> mine: mseStream withUML: plantUMLOut withPrefix: ifPrefix [
+GMMooseMinerCommandLineHandler >> mine: mseStream withUML: plantUMLOut withPrefix: ifPrefix [
 	"Load the MSE into Moose, then process it (this is hard-coded here)"
 
 	| interfaces clients protectedClients unprotectedClients implementations myIFList mooseModel sharedSet |
@@ -415,8 +415,8 @@ MooseMinerCommandLineHandler >> mine: mseStream withUML: plantUMLOut withPrefix:
 				show: 'Warning: Intersection of protected and unprotected clients is not empty. Here are the shared elements:';
 				show: sharedSet;
 				cr ].
-	MooseMinerCommandLineHandler writeClientImplementationPairs: myIFList.
-	MooseMinerCommandLineHandler writeInterfaces: interfaces.
+	GMMooseMinerCommandLineHandler writeClientImplementationPairs: myIFList.
+	GMMooseMinerCommandLineHandler writeInterfaces: interfaces.
 
 	"Separate dictionaries for each type of clients"
 	self classifyClients: myIFList.
@@ -425,11 +425,11 @@ MooseMinerCommandLineHandler >> mine: mseStream withUML: plantUMLOut withPrefix:
 	"PlantUML output"
 	plantUMLOut
 		ifTrue: [ self writePlantUMLClients.
-			MooseMinerCommandLineHandler writePlantUMLOutput: myIFList ]
+			GMMooseMinerCommandLineHandler writePlantUMLOutput: myIFList ]
 ]
 
 { #category : #commands }
-MooseMinerCommandLineHandler >> mineArguments [
+GMMooseMinerCommandLineHandler >> mineArguments [
 	"Verify there's an MSE file in arguments and then process it"
 
 	| mseFiles resolvedMseFile ifPrefix |
@@ -456,7 +456,7 @@ MooseMinerCommandLineHandler >> mineArguments [
 ]
 
 { #category : #'writing CSV files' }
-MooseMinerCommandLineHandler >> writeClients [
+GMMooseMinerCommandLineHandler >> writeClients [
   	|   |
 	" Generate a CSV with protected clients and their interfaces"
 	FileStream
@@ -514,7 +514,7 @@ MooseMinerCommandLineHandler >> writeClients [
 ]
 
 { #category : #'writing CSV files' }
-MooseMinerCommandLineHandler >> writePlantUMLClients [
+GMMooseMinerCommandLineHandler >> writePlantUMLClients [
 	"Generate a PlantUML file showing clients and their interfaces"
 
 	| clientSet pClients uClients writtenInterfaces writtenImplementations |

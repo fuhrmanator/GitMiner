@@ -90,7 +90,7 @@ LibC uniqueInstance system: 'env | more'.
 
 "
 Class {
-	#name : #Utility,
+	#name : #GMUtility,
 	#superclass : #Object,
 	#classInstVars : [
 		'cloneRoot'
@@ -99,7 +99,7 @@ Class {
 }
 
 { #category : #'file service' }
-Utility class >> applyRenamingsToTransactions: projectsFile [
+GMUtility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
 
 	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
@@ -179,7 +179,7 @@ Utility class >> applyRenamingsToTransactions: projectsFile [
 ]
 
 { #category : #'file service' }
-Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: oid project: projectName [
+GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision: oid project: projectName [
 	"For the commit transactions in a project, try to rename classes using the latest name.
 	This works by taking the names at a specified revision (from MSE).
 	Check out the git repo to that revision, then do a git history to get renamings."
@@ -250,7 +250,7 @@ Utility class >> applyRenamingsToTransactions: transactionsFile usingRevision: o
 ]
 
 { #category : #'file service' }
-Utility class >> applyRenamingsToTransactionsFiles: projectsFile [
+GMUtility class >> applyRenamingsToTransactionsFiles: projectsFile [
 	"comment stating purpose of message"
 
 	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
@@ -330,7 +330,7 @@ Utility class >> applyRenamingsToTransactionsFiles: projectsFile [
 ]
 
 { #category : #'file service' }
-Utility class >> calculateCouplingIntersections [
+GMUtility class >> calculateCouplingIntersections [
 	| logicalCouplingFiles arulesExtension clientImpExtension basename trimCurlyBraces linkString results |
 	arulesExtension := '_renamed_apriori_rules.csv'.
 	clientImpExtension := '_HEAD_ClientImpPairs.csv'.
@@ -436,7 +436,7 @@ Utility class >> calculateCouplingIntersections [
 ]
 
 { #category : #'file service' }
-Utility class >> calculateCouplingIntersectionsFor: project at: oid [
+GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
 	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
 	arulesExtension := '_renamed_only_clients_and_imps_TR_apriori_rules.csv'.
 	clientImpExtension := '_' , oid , '_ClientImpPairs.csv'.
@@ -540,7 +540,7 @@ Utility class >> calculateCouplingIntersectionsFor: project at: oid [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> cloneRepo: url [
+GMUtility class >> cloneRepo: url [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
 
 	| projectName location |
@@ -557,7 +557,7 @@ Utility class >> cloneRepo: url [
 ]
 
 { #category : #'file service' }
-Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
+GMUtility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
 	"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
 
 	| working csvInputStream csvRecords i |
@@ -575,22 +575,22 @@ Utility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
 				title: 'Generating CSV files for commits: ' , each second.
 			githubUrl := each last.
 			githubUrl = 'NA'
-				ifFalse: [ GitCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] ] ]
+				ifFalse: [ GMCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] ] ]
 		asJob run
 ]
 
 { #category : #accessing }
-Utility class >> cloneRoot [
+GMUtility class >> cloneRoot [
 	^ cloneRoot
 ]
 
 { #category : #accessing }
-Utility class >> cloneRoot: anObject [
+GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
 ]
 
 { #category : #'file service' }
-Utility class >> extractIndividualProjectLogicalCouplingData: csvFile [
+GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
 
 	| project csvWriter csvOutStream count |
@@ -634,7 +634,7 @@ Utility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> extractProjectNameFromURL: url [
+GMUtility class >> extractProjectNameFromURL: url [
 	| projectName |
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
@@ -643,7 +643,7 @@ Utility class >> extractProjectNameFromURL: url [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
+GMUtility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 	"selects commits from a range specified by Git tags"
 
 	| repoHandle revwalk newerCommit commitDataList nCommits relativeRevNumber projectName startTag endTag outFile |
@@ -714,7 +714,7 @@ Utility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> filterCommitsOnRepo: location withRange: range [
+GMUtility class >> filterCommitsOnRepo: location withRange: range [
 	"generates a list of info about commits according to the queries within this method."
 
 	| handle revwalk newerCommit commitDataList nCommits revisionNumber projectName outFile |
@@ -777,7 +777,7 @@ Utility class >> filterCommitsOnRepo: location withRange: range [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
+GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
 	"selects commits from a range specified by Git tags"
 
 	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit |
@@ -846,13 +846,13 @@ Utility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStrin
 ]
 
 { #category : #'file service' }
-Utility class >> generateClientImplementationPairs: mseFileRef [
+GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"For the given MSE file, mine the client-implementation pairs info"
 
 	| results file |
 	[ :job | 
 	job title: 'Mining client-implementation pairs...'.
-	results := InterfaceMiner
+	results := GMInterfaceMiner
 		mineClientImplementationPairs: mseFileRef
 		withPrefix: ''.
 	"results size = 0 ifTrue: 0halt."	"-> no interfaces will yield this"
@@ -866,7 +866,7 @@ Utility class >> generateClientImplementationPairs: mseFileRef [
 ]
 
 { #category : #'file service' }
-Utility class >> generateClientImplementationPairsFiles: extension [
+GMUtility class >> generateClientImplementationPairsFiles: extension [
 	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
 
 	| mseDirRoot mseDirs |
@@ -879,7 +879,7 @@ Utility class >> generateClientImplementationPairsFiles: extension [
 			mseFiles := dir allChildrenMatching: '*.mse'.
 			mseFiles
 				do: [ :mseFile | 
-					results := InterfaceMiner mineClientImplementationPairs: mseFile withPrefix: ''.
+					results := GMInterfaceMiner mineClientImplementationPairs: mseFile withPrefix: ''.
 					"results size = 0 ifTrue: 0halt." "-> no interfaces will yield this"
 					"Save results to .CSV"
 					FileStream
@@ -893,7 +893,7 @@ Utility class >> generateClientImplementationPairsFiles: extension [
 ]
 
 { #category : #'file service' }
-Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnding [
+GMUtility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnding [
 	"take files ending with '_commits_UIDs.csv' and create the logical coupling candidate pairs and transaction files"
 
 	| working selectedCommitFiles |
@@ -928,7 +928,7 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 					committedClasses := committedFiles
 						select: [ :each | each endsWith: '.java' ].
 					commitTransactions 
-						addFirst: (CommitTransaction new uid:uid; committedFileNames: committedClasses). "ID, item, item, ...".
+						addFirst: (GMCommitTransaction new uid:uid; committedFileNames: committedClasses). "ID, item, item, ...".
 					"Note: this won't create pair-entries for commits with only one java file."
 					classPairs := committedClasses combinations
 						select: [ :each | each size = 2 ].
@@ -968,7 +968,7 @@ Utility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEndin
 ]
 
 { #category : #'file service' }
-Utility class >> generateLogicalCouplingPairsWithR: inputPath [
+GMUtility class >> generateLogicalCouplingPairsWithR: inputPath [
 	| command |
 	"TODO: Error check to remind user to add RScript.exe to path"
 	command := 'RScript R/GenerateLogicalPairsFromTransactions.R ' , inputPath
@@ -981,7 +981,7 @@ Utility class >> generateLogicalCouplingPairsWithR: inputPath [
 ]
 
 { #category : #'file service' }
-Utility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
+GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 	"Use R to do some calculations"
 
 	| command pathToRFiles |
@@ -999,7 +999,7 @@ Utility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 ]
 
 { #category : #'file service' }
-Utility class >> generateMSEFileFor: oid reponame: repoName [
+GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 	
 	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile |
@@ -1041,7 +1041,7 @@ Utility class >> generateMSEFileFor: oid reponame: repoName [
 ]
 
 { #category : #'file service' }
-Utility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
+GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 	"For each *_UIDs.csv file, generate a Moose MSE for the HEAD of repo"
 
 	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath |
@@ -1094,7 +1094,7 @@ Utility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 ]
 
 { #category : #'file service' }
-Utility class >> generateMSEFilesForEachUID: uidFileSuffix [
+GMUtility class >> generateMSEFilesForEachUID: uidFileSuffix [
 "For each *_UIDs.csv file, generate a Moose MSE "
 
 | working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath |
@@ -1167,7 +1167,7 @@ uidFiles do: [ :file |
 ]
 
 { #category : #'file service' }
-Utility class >> generatePairsAndTransactions: selectedCommitsFile [
+GMUtility class >> generatePairsAndTransactions: selectedCommitsFile [
 	"Create the logical coupling candidate pairs and transaction file from the set of selected commits"
 
 	| selectedCommitsFileRef csvRecords logicalCouplingRecords project commitTransactions cp ct |
@@ -1189,7 +1189,7 @@ Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 				select: [ :each | each endsWith: '.java' ].
 			commitTransactions
 				addFirst:
-					(CommitTransaction new
+					(GMCommitTransaction new
 						uid: uid;
 						committedFileNames: committedClasses).	"ID, item, item, ..."
 			classPairs := committedClasses combinations
@@ -1229,7 +1229,7 @@ Utility class >> generatePairsAndTransactions: selectedCommitsFile [
 ]
 
 { #category : #'file service' }
-Utility class >> generateSelectedCommitFiles: commitFileExtension [
+GMUtility class >> generateSelectedCommitFiles: commitFileExtension [
 "Selects commits from *_commits.csv files and writes out a list of UIDs that match (in a *_UIDs.csv file)"
 
 | working commitFiles |
@@ -1279,7 +1279,7 @@ commitFiles do: [ :file |
 ]
 
 { #category : #accessing }
-Utility class >> generateSelectedCommits: commitMetadataFile [
+GMUtility class >> generateSelectedCommits: commitMetadataFile [
 	"Selects commits from metadata file and writes the list"
 
 	| csvRecords selectedCommits addedFiles countCommittedFiles hasJava |
@@ -1297,7 +1297,7 @@ Utility class >> generateSelectedCommits: commitMetadataFile [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> getOIDFromTag: tagString on: loc [
+GMUtility class >> getOIDFromTag: tagString on: loc [
 	"based on example from https://ben.straub.cc/2013/06/03/refs-tags-and-branching/ "
 	| repoHandle gitRef result toReturn |
 	toReturn := nil.
@@ -1311,7 +1311,7 @@ Utility class >> getOIDFromTag: tagString on: loc [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> historyRevwalk: repo from: startTag to: endTag [
+GMUtility class >> historyRevwalk: repo from: startTag to: endTag [
 	"inits an LGitRevwalk for history between two tags, formatted as 'tags/blah*' where 'blah' is the tag name"
 	| revwalk |
 	revwalk := LGitRevwalk of: repo.
@@ -1324,14 +1324,14 @@ Utility class >> historyRevwalk: repo from: startTag to: endTag [
 ]
 
 { #category : #initialization }
-Utility class >> initialize [
+GMUtility class >> initialize [
 	"init the variables used in mining"
 
 	cloneRoot := 'c:/tmp/tempClonesPharo/'.
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> isRInPath [
+GMUtility class >> isRInPath [
 	"Make sure RScript.exe can be found"
 	| result |
 	result := LibC uniqueInstance system: 'RScript --version'.
@@ -1339,7 +1339,7 @@ Utility class >> isRInPath [
 ]
 
 { #category : #'file service' }
-Utility class >> loadClientImplementationPairs: fileReference [
+GMUtility class >> loadClientImplementationPairs: fileReference [
 	| scRecords scInputStream |
 	scInputStream := fileReference  readStream.
 	scRecords := (NeoCSVReader on: scInputStream)
@@ -1363,7 +1363,7 @@ Utility class >> loadClientImplementationPairs: fileReference [
 ]
 
 { #category : #'file service' }
-Utility class >> loadCommitMetadataFile: fileName [ 
+GMUtility class >> loadCommitMetadataFile: fileName [ 
 	"Parse the CSV and gather the UIDs for commits that match criteria"
 	| csvInputStream csvRecords |
 	csvInputStream := fileName asFileReference readStream.
@@ -1381,7 +1381,7 @@ Utility class >> loadCommitMetadataFile: fileName [
 ]
 
 { #category : #'file service' }
-Utility class >> loadCommitTransactions: transactionsFileReference [
+GMUtility class >> loadCommitTransactions: transactionsFileReference [
 	"Load commit transactions. Note NeoCSVReader doesn't support variable records, so we declare spots for many entries, and remove them after."
 
 	| transactionRecords transactions csvInputStream |
@@ -1417,11 +1417,11 @@ Utility class >> loadCommitTransactions: transactionsFileReference [
 	"Get rid of the nil elements in the transactions"
 	^ transactionRecords 
 		collect: [ :transaction | 
-			CommitTransaction transactionFromRecord:  (transaction asCollection select: #isNotNil) ]
+			GMCommitTransaction transactionFromRecord:  (transaction asCollection select: #isNotNil) ]
 ]
 
 { #category : #'file service' }
-Utility class >> loadProjectsList: csvInputStream [
+GMUtility class >> loadProjectsList: csvInputStream [
 	| csvRecords |
 	csvRecords := (NeoCSVReader on: csvInputStream)
 		separator: $,;
@@ -1442,7 +1442,7 @@ Utility class >> loadProjectsList: csvInputStream [
 ]
 
 { #category : #'file service' }
-Utility class >> loadRenamings: csvPath [
+GMUtility class >> loadRenamings: csvPath [
  	"Load csv file of renamings (from git history)"
 	| records |
 	records := (NeoCSVReader on: csvPath readStream)
@@ -1462,7 +1462,7 @@ Utility class >> loadRenamings: csvPath [
 ]
 
 { #category : #'as yet unclassified' }
-Utility class >> locationOfProjectRepo [
+GMUtility class >> locationOfProjectRepo [
 	"finds the location of the project (e.g., to find R files that are not part of Pharo)"
 
 	| icebergRepository |
@@ -1480,7 +1480,7 @@ Utility class >> locationOfProjectRepo [
 ]
 
 { #category : #'file service' }
-Utility class >> readSelectedCommitsFile: selectedCommitsFile [
+GMUtility class >> readSelectedCommitsFile: selectedCommitsFile [
 	| csvRecords csvInputStream |
 	csvInputStream := selectedCommitsFile asFileReference readStream.
 	csvRecords := (NeoCSVReader on: csvInputStream)
@@ -1497,7 +1497,7 @@ Utility class >> readSelectedCommitsFile: selectedCommitsFile [
 ]
 
 { #category : #'file service' }
-Utility class >> removeUnrelatedClassesFromTransactions: project [
+GMUtility class >> removeUnrelatedClassesFromTransactions: project [
 	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
 	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
 	file := (project,'_commits_UIDs_transactions_renamed.csv') asFileReference .
@@ -1519,7 +1519,7 @@ Utility class >> removeUnrelatedClassesFromTransactions: project [
 ]
 
 { #category : #'file service' }
-Utility class >> removeUnrelatedClassesFromTransactions: project fromRevision: oid [
+GMUtility class >> removeUnrelatedClassesFromTransactions: project fromRevision: oid [
 	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
 	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
 	file := (project,'_commits_tags_OIDs_TR_renamed_TR.csv') asFileReference .
@@ -1540,7 +1540,7 @@ Utility class >> removeUnrelatedClassesFromTransactions: project fromRevision: o
 ]
 
 { #category : #'file service' }
-Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
+GMUtility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 	| newFileName |
 	newFileName := fromFileName asFileReference basenameWithoutExtension
 		, '_LC.csv'.
@@ -1555,7 +1555,7 @@ Utility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 ]
 
 { #category : #writing }
-Utility class >> writeClientImplementationPairs: results file: mseFileRef [
+GMUtility class >> writeClientImplementationPairs: results file: mseFileRef [
 	"Save results to CSV file"
 
 	| fileName projectName |
@@ -1576,7 +1576,7 @@ Utility class >> writeClientImplementationPairs: results file: mseFileRef [
 ]
 
 { #category : #writing }
-Utility class >> writeCommitResults: commitDataList to: fileName [
+GMUtility class >> writeCommitResults: commitDataList to: fileName [
 	" Generate a CSV with commit results"
 
 	FileStream
@@ -1590,7 +1590,7 @@ Utility class >> writeCommitResults: commitDataList to: fileName [
 ]
 
 { #category : #writing }
-Utility class >> writeCommitTransactions: transactionRecords to: selectedCommitsFile [
+GMUtility class >> writeCommitTransactions: transactionRecords to: selectedCommitsFile [
 	"Write out single column (with embedded commas!)"
 
 	| concatRecords outFileName |
@@ -1614,7 +1614,7 @@ Utility class >> writeCommitTransactions: transactionRecords to: selectedCommits
 ]
 
 { #category : #'file service' }
-Utility class >> writeSelectedCommits: selectedCommits file: fileName [
+GMUtility class >> writeSelectedCommits: selectedCommits file: fileName [
 	| file selCommitsFileName |
 	file := fileName asFileReference.
 	selCommitsFileName := file basenameWithoutExtension , '_UIDs.csv'.

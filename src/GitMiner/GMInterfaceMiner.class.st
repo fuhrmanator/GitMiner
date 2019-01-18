@@ -6,13 +6,13 @@ I extract useful information regarding interfaces (coupling to clients, implemen
 This class is based originally on scripts from Playground experiments.
 "
 Class {
-	#name : #InterfaceMiner,
+	#name : #GMInterfaceMiner,
 	#superclass : #Object,
 	#category : #GitMiner
 }
 
 { #category : #'client implementation analysis' }
-InterfaceMiner class >> localClientsFrom: interface [
+GMInterfaceMiner class >> localClientsFrom: interface [
 	| localClients |
 	localClients := (interface structuresWithDeclaredType
 		collect: [ :struct | 
@@ -25,7 +25,7 @@ InterfaceMiner class >> localClientsFrom: interface [
 ]
 
 { #category : #'client implementation analysis' }
-InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: ifPrefix [
+GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: ifPrefix [
 	| mseStream interfaces listOfResults mooseModel |
 	mseStream := mseFileRef readStream.
 	listOfResults := LinkedList new.
@@ -96,7 +96,7 @@ InterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: if
 ]
 
 { #category : #'client implementation analysis' }
-InterfaceMiner class >> protectedGroup: isProtected client: client interface: interface implementation: imp [
+GMInterfaceMiner class >> protectedGroup: isProtected client: client interface: interface implementation: imp [
 	"makes an array element with the info"
 
 	^ {client mooseName.
