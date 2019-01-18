@@ -23,16 +23,13 @@ BaselineOfGitMiner >> baseline: spec [
 
 { #category : #baselines }
 BaselineOfGitMiner >> launchVerifications [
-
 	"Todo: make sure RScript is in the path?"
-	self class environment at: #Transcript ifPresent: [ :transcript | transcript show: 'test' ].
-	Transcript crLog: 'GitMiner project loaded.'
-]
 
-{ #category : #baselines }
-BaselineOfGitMiner >> postload: loader package: packageSpec [
-
-	"Todo: make sure RScript is in the path?"
-	self class environment at: #Transcript ifPresent: [ :transcript | transcript show: 'test' ].
-	Transcript crLog: 'GitMiner project loaded.'
+	self class environment
+		at: #GMUtility
+		ifPresent: [ :utilClass | 
+			utilClass isRInPath
+				ifFalse: [ UIManager default
+						abort:
+							'RScript.exe could not be found. R must be installed and RScript.exe''s directory must be added to the system path' ] ]
 ]
