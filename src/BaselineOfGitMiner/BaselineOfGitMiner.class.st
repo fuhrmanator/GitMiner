@@ -14,6 +14,7 @@ BaselineOfGitMiner >> baseline: spec [
 		"spec baseline: 'Moose' with: [ 
 			spec repository: 'github://moosetechnology/Moose:development/src' ]."
 
+		spec preLoadDoIt: #verifyMooseInstalled.
       spec postLoadDoIt: #launchVerifications.
 		"Packages" 
 		spec 
@@ -23,7 +24,7 @@ BaselineOfGitMiner >> baseline: spec [
 
 { #category : #baselines }
 BaselineOfGitMiner >> launchVerifications [
-	"Todo: make sure RScript is in the path?"
+	"Make sure RScript is in the path?"
 
 	self class environment
 		at: #GMUtility
@@ -32,4 +33,13 @@ BaselineOfGitMiner >> launchVerifications [
 				ifFalse: [ UIManager default
 						abort:
 							'RScript.exe could not be found. R must be installed and RScript.exe''s directory must be added to the system path' ] ]
+]
+
+{ #category : #baselines }
+BaselineOfGitMiner >> verifyMooseInstalled [
+	self class environment
+		at: #MooseModel
+		ifAbsent: [ UIManager default
+						abort:
+							'Moose must be installed prior to loading GitMiner. The baseline doesn''t load it because it''s big. We recommend loading it from the GitHub repo, or starting with a Moose image from Pharo Launcher.' ]
 ]
