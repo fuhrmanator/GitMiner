@@ -11,6 +11,7 @@ Class {
 BaselineOfGitMiner >> baseline: spec [
 	<baseline>
 	spec for: #common do: [ 
+		"Don't load Moose finally, it's heavy. Recommend users to start with CI image."
 		"spec baseline: 'Moose' with: [ 
 			spec repository: 'github://moosetechnology/Moose:development/src' ]."
 		spec baseline: 'NeoCSV' with: [ spec repository: 'github://svenvc/NeoCSV/repository' ].
@@ -19,7 +20,7 @@ BaselineOfGitMiner >> baseline: spec [
       spec postLoadDoIt: #launchVerifications.
 		"Packages" 
 		spec 
-		  package: 'GitMiner'.
+		  package: 'GitMiner' with: [ spec requires: #('NeoCSV') ].
 		 ]
 ]
 
