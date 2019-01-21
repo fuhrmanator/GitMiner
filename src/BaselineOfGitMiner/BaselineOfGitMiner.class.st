@@ -13,6 +13,7 @@ BaselineOfGitMiner >> baseline: spec [
 	spec for: #common do: [ 
 		"spec baseline: 'Moose' with: [ 
 			spec repository: 'github://moosetechnology/Moose:development/src' ]."
+		spec baseline: 'NeoCSV' with: [ spec repository: 'github://svenvc/NeoCSV/repository' ].
 
 		spec preLoadDoIt: #verifyMooseInstalled.
       spec postLoadDoIt: #launchVerifications.
