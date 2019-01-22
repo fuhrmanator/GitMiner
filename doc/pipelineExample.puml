@@ -13,12 +13,26 @@ of Java code]
 :Selected subset of commits]
 :generatePairsAndTransactions;
 :pairs and transactions]
-:generate MSE file for startOID
-(extract commit @startOID);
+|#antiquewhite|Git|
+:Extract commit startOID;
+:temp directory startOID]
+|Java|
+:generate MSE file for startOID;
 :startOID.mse]
+|#antiquewhite|Pharo+Moose|
 :generate client-
 implementation pairs;
 :Client+Imp Pairs.csv]
+|Git|
+:Find class renamings;
+:Log file]
+|Perl|
+:Convert renamings;
+:Renamings CSV]
+|Pharo|
+:Update transactions with
+renamings and clients;
+:Updated transactions]
 |#antiquewhite|R|
 :Generate logical-coupling
 rules with R (apriori);
