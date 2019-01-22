@@ -184,17 +184,16 @@ GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision:
 	This works by taking the names at a specified revision (from MSE).
 	Check out the git repo to that revision, then do a git history to get renamings."
 
-	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram perlSubcommand |
+	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlSubcommand |
 	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
-	transactionsExtension := '_commits_tags_OIDs_TR.csv'.
 	newTransactionExtension := '_commits_tags_OIDs_TR_renamed.csv'.
 	clientImplementationPairsExtension := '_' , oid, '_ClientImpPairs.csv'.
 	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
-	perlProgram := '/tmp/hist2renamecsv.perl'.
 	perlErrors := '/tmp/_perl_errors'.
 	file := transactionsFile asFileReference.
 	cTransactionsOriginal := self loadCommitTransactions: file.
 	cTransactions := cTransactionsOriginal copy.
+	"Properly escape the double-quotes on this"
 	perlSubcommand := 'perl -0777 -ne "while (/commit (.+)\n(?:.*\n)+?similarity index (\d+)+%\n(rename|copy) from (.+)\n\3 to (.+)\n/g) { printf (\"$1,$2,$3,$4,$5\n\")}"'.
 	"Load clients and implementations"
 	"Read in CSV of structural coupling (client-implementation)"
@@ -215,7 +214,7 @@ GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision:
 					command := 'cd ' , projectRepoDir , ' && git log --follow -p "' , oid , '^@" -- "' , class , '" | ' , perlSubcommand , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 					result := LibC uniqueInstance system: command.
 					result = 0
-						ifFalse: [ 0 halt ]
+						ifFalse: [ self error: 'LibC system command: '' , command , '' failed.' ]
 						ifTrue: [ "Load CSV of renamed names"
 							dirs := renameHistoryCSV splitOn: $/.
 							csvPath := FileLocator C.
@@ -437,7 +436,7 @@ GMUtility class >> calculateCouplingIntersections [
 
 { #category : #'file service' }
 GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
-	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection |
+	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection outRef isOutFileNew |
 	arulesExtension := '_renamed_only_clients_and_imps_TR_apriori_rules.csv'.
 	clientImpExtension := '_' , oid , '_ClientImpPairs.csv'.
 	linkString := '->'.
@@ -451,10 +450,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
 	Transcript
 		show: (' ' join: logicalCouplingFiles);
 		cr."
-	basename := logicalCouplingFile basename
-		allButLast: arulesExtension size.
-	clientImpFile := FileLocator workingDirectory
-		/ (basename , clientImpExtension).
+	basename := logicalCouplingFile basename allButLast: arulesExtension size.
+	clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
 	"Transcript
 				show: basename;
 				cr."
@@ -505,10 +502,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
 	"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
-	logicalProtectedIntersection := logicalCouplingSet
-		intersection: protectedCouplingSet.
-	logicalUnprotectedIntersection := logicalCouplingSet
-		intersection: unprotectedCouplingSet.
+	logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
+	logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
 	"Transcript
 				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
 				cr."
@@ -527,13 +522,20 @@ GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
 			unprotectedCouplingSet size.
 			logicalProtectedIntersection size.
 			logicalUnprotectedIntersection size}.
-	"Save results to .CSV"
-	FileStream
-		forceNewFileNamed: 'Logical_and_Structural_Dependency_results.csv'
-		do: [ :csvStream | 
-			(NeoCSVWriter on: csvStream)
-				nextPut:
-					#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|');
+	"Append results to .CSV"
+	outRef := 'Logical_and_Structural_Dependency_results.csv' asFileReference.
+	isOutFileNew := outRef exists not.
+	outRef
+		writeStreamDo: [ :csvStream | 
+			| streamWriter |
+			"Append"
+			csvStream setToEnd.
+			streamWriter := NeoCSVWriter on: csvStream.
+			isOutFileNew
+				ifTrue: [ streamWriter
+						nextPut:
+							#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|') ].
+			streamWriter
 				addFields: #(first second third fourth fifth sixth);
 				nextPutAll: results ].
 	^ results
@@ -800,8 +802,10 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 				confirm:
 					'This range has ' , nCommits asString
 						, ' commits. Are you sure you want to mine it?')
-				ifFalse: [ 0 halt ] ].
-
+				ifFalse: [ UIManager default abort: 'User aborted.' title: 'Mining stopped.'.
+					self error: 'need to terminate Mining pipeline.'
+					 ] ].
+			
 	"Get commit ids that have:
   - no added files (only changed files)
   - 10 or fewer files
@@ -839,8 +843,8 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 					(Character space join: diffFiles)}.
 			commit := parentCommit.
 			parentCommit := commit parents first ] ] asJob run.
-	outFile := projectName , '_' , startCommit name , '-'
-		, endCommit name , '_commits_tags.csv'.
+	outFile := projectName , '_' , (startCommit name first: 7), '-'
+		, (endCommit name first: 7), '_commits_oids.csv'.
 	self writeCommitResults: commitDataList to: outFile.
 	^ outFile
 ]
