@@ -1469,7 +1469,7 @@ GMUtility class >> locationOfProjectRepo [
 	icebergRepository := IceRepository registry
 		detect: [ :repository | 
 			repository workingCopy packages
-				anySatisfy: [ :package | package name = 'Fuhrman-MooseHerder' ] ]
+				anySatisfy: [ :package | package name = 'GitMiner' ] ]
 		ifNone:
 			[ self error: 'No repository in Iceberg containing the needed files.' ].
 	icebergRepository location exists
