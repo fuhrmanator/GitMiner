@@ -1,4 +1,5 @@
 # GitMiner
+
 Pharo smalltalk tools to mine Git Repos, work with R, Perl, git, etc. Tested only under Windows so far...
 
 ## Installation
@@ -12,6 +13,6 @@ Metacello new
   load.
 ```
 
-For now, most of the functions are in the Utility class (unstable). 
+For now, most of the functions are in the Utility class (unstable).
 
-![Example Pipeline](http://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/fuhrmanator/GitMiner/master/doc/pipelineExample.puml)
+![Example Pipeline](http://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/fuhrmanator/GitMiner/master/doc/pipelineExample.puml?cacheChangeCount=0)
