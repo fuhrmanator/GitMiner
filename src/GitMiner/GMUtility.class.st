@@ -1,6 +1,12 @@
 "
 Class with homeless methods... To be refactored into an API.
  
+--------------
+
+GMUtility mineClientChanges: 'cassandra' url: 'https://github.com/apache/cassandra' from: '3dcde0821a40eb2bc633082916d8f3ff861efdb5' to: '50560aaf0f2d395271ade59ba9b900a84cae70f1'.
+
+GMUtility mineClientChanges: 'rhino' url: 'https://github.com/mozilla/rhino' from: 'HEAD' to: 'c34013ac67907ad2e1958d413bdea28d1ff707d5'.
+
 -------------
 HandMorph doubleClickTime: 500.
 
