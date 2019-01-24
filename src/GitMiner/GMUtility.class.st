@@ -1549,7 +1549,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 		removeUnrelatedClassesFromTransactions: gitName
 		fromRevision: startOIDString.
 	rResult := GMUtility generateLogicalCouplingPairsWithRSingleFile: removedTr.
-	rResult = 0 ifFalse: [ self abortWithRErrorMessage ].
+	rResult = 0 ifFalse: [ self abortWithRErrorMessage. self error: 'Process aborted' ].
 	
 	"GMUtility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second."
 	GMUtility calculateCouplingIntersectionsFor: gitName at: startOIDString
