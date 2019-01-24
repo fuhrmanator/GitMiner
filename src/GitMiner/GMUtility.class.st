@@ -4,7 +4,6 @@ Class with homeless methods... To be refactored into an API.
 --------------
 
 GMUtility mineClientChanges: 'cassandra' url: 'https://github.com/apache/cassandra' from: '3dcde0821a40eb2bc633082916d8f3ff861efdb5' to: '50560aaf0f2d395271ade59ba9b900a84cae70f1'.
-
 GMUtility mineClientChanges: 'rhino' url: 'https://github.com/mozilla/rhino' from: 'HEAD' to: 'c34013ac67907ad2e1958d413bdea28d1ff707d5'.
 
 -------------
@@ -788,14 +787,25 @@ GMUtility class >> filterCommitsOnRepo: location withRange: range [
 GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
 	"selects commits from a range specified by Git tags"
 
-	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit |
+	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit startCommitShortOID endCommitShortOID |
 	projectName := location path basename.
 	repoHandle := LGitRepository on: location.
 	repoHandle open.
 	commitDataList := LinkedList new.
 
 	startCommit := repoHandle revparse: startOIDString.
-	endCommit := repoHandle revparse: endOIDString.
+	"Make a shortened OID (7 chars)"
+	startCommitShortOID := startCommit name first: 7.
+
+	endOIDString isEmpty ifTrue: [ 
+		"Find commit with no parent"
+		endCommit := nil.
+		endCommitShortOID := 'END'.
+	] ifFalse: [ 
+		endCommit := repoHandle revparse: endOIDString. 
+		"Make a shortened OID (7 chars)"
+		endCommitShortOID := endCommit name first: 7.
+	].
 
 	"Walk through to count commits for progress bar"
 	nCommits := 0.
@@ -849,10 +859,16 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 					(Character space join: diffFiles)}.
 			commit := parentCommit.
 			parentCommit := commit parents first ] ] asJob run.
-	outFile := projectName , '_' , (startCommit name first: 7), '-'
-		, (endCommit name first: 7), '_commits_oids.csv'.
+	outFile := projectName , '_' , startCommitShortOID , '-'
+		, endCommitShortOID, '_commits_oids.csv'.
 	self writeCommitResults: commitDataList to: outFile.
 	^ outFile
+]
+
+{ #category : #pipeline }
+GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
+	"Mine whole left branch, from HEAD to (no stopping commit)"
+	^ self filterCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
 ]
 
 { #category : #'file service' }
@@ -1487,6 +1503,69 @@ GMUtility class >> locationOfProjectRepo [
 				error:
 					'The repository of the project does not have a pointer to a local clone to find the files' ].
 	^ icebergRepository location
+]
+
+{ #category : #pipeline }
+GMUtility class >> mineClientChanges: gitName url: urlString [
+	"Mine the whole repo, using HEAD and nil as limits"
+	^ self mineClientChanges: gitName url: urlString from: 'HEAD' to: ''
+]
+
+{ #category : #pipeline }
+GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDString to: endOIDString [
+	"Pipeline to mine changes of clients of interfaces"
+
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult |
+	loc := GMUtility cloneRepo: urlString.
+	commitMetadata := GMUtility
+		filterCommitsOnRepoLeftBranchOnly: loc
+		from: startOIDString
+		to: endOIDString.
+	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
+	pairsAndTransactions := GMUtility generatePairsAndTransactions: selectedCommits.
+
+	"oid := GMUtility getOIDFromTag: newerTag on: loc."
+	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
+	"mseFileRef := GMUtility generateMSEFileFor: 'HEAD' reponame: loc basename."
+	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+
+	"Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command."
+	renamedTransactionsFile := GMUtility
+		applyRenamingsToTransactions: pairsAndTransactions second
+		usingRevision: startOIDString
+		project: gitName.
+	removedTr := GMUtility
+		removeUnrelatedClassesFromTransactions: gitName
+		fromRevision: startOIDString.
+	rResult := GMUtility generateLogicalCouplingPairsWithRSingleFile: removedTr.
+	rResult = 0 ifFalse: [ self abortWithRErrorMessage ].
+	
+	"GMUtility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second."
+	GMUtility calculateCouplingIntersectionsFor: gitName at: startOIDString
+]
+
+{ #category : #'file service' }
+GMUtility class >> mineProjectsIn: projectsFile [
+	"For all repos in the 'projects.csv' file do a mining operation"
+
+	| working csvInputStream csvRecords i |
+	working := FileSystem disk workingDirectory.
+	csvInputStream := (working / projectsFile) readStream.
+	csvRecords := self loadProjectsList: csvInputStream.	"ID Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%) CLD(%) GC_url GitHub_url"
+	i := 0.
+	[ :job | 
+	csvRecords
+		do: [ :each | 
+			| projectName githubUrl |
+			i := i + 1.
+			job
+				progress: i / csvRecords size;
+				title: 'Generating CSV files for commits: ' , each second.
+			projectName := each second.
+			githubUrl := each last.
+			githubUrl = 'NA'
+				ifFalse: [ self mineClientChanges: projectName url: githubUrl  ] ] ]
+		asJob run
 ]
 
 { #category : #'file service' }
