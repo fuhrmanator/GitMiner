@@ -103,6 +103,17 @@ Class {
 	#category : #GitMiner
 }
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> abortWithRErrorMessage [
+	"Show abort dialog and the message from the R output"
+
+	| displayText |
+	displayText := ('/tmp/R.errors.txt' asFileReference) readStreamEncoded: 'cp-1250' do: [ :stream |
+        stream upToEnd ].
+	^ UIManager default abort: displayText title: 'R terminated with errors'.
+	
+]
+
 { #category : #'file service' }
 GMUtility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
@@ -1531,7 +1542,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 
 	"Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command."
 	renamedTransactionsFile := GMUtility
-		applyRenamingsToTransactions: pairsAndTransactions second
+		applyRenamingsToTransactions: pairsAndTransactions second 
 		usingRevision: startOIDString
 		project: gitName.
 	removedTr := GMUtility
