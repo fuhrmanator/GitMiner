@@ -1541,13 +1541,19 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 
 	"Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command."
-	renamedTransactionsFile := GMUtility
+	"renamedTransactionsFile := GMUtility
 		applyRenamingsToTransactions: pairsAndTransactions second 
 		usingRevision: startOIDString
-		project: gitName.
+		project: gitName."
+		
+	"skip renamings"
+	renamedTransactionsFile := pairsAndTransactions second.
+
 	removedTr := GMUtility
 		removeUnrelatedClassesFromTransactions: gitName
+		withTransactionsFile: renamedTransactionsFile 
 		fromRevision: startOIDString.
+		
 	rResult := GMUtility generateLogicalCouplingPairsWithRSingleFile: removedTr.
 	rResult = 0 ifFalse: [ self abortWithRErrorMessage. self error: 'Process aborted' ].
 	
@@ -1637,6 +1643,27 @@ GMUtility class >> removeUnrelatedClassesFromTransactions: project fromRevision:
 			 ]
 		].
 	^self writeCommitTransactions: cTransactions  to: project,'_commits_UIDs_transactions_renamed_only_clients_and_imps.csv'
+]
+
+{ #category : #'file service' }
+GMUtility class >> removeUnrelatedClassesFromTransactions: project withTransactionsFile: transFile fromRevision: oid [
+	"Go through renamed transaction files and remove the class names that aren't clients or implementations"
+	 | cTransactions file clientImplementationPairsRecords clientsTemp implementationsTemp classesToInclude | 
+	file := transFile asFileReference .
+	cTransactions := self loadCommitTransactions:  file.
+	file := (project, '_', oid , '_ClientImpPairs.csv') asFileReference .
+	clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+	clientImplementationPairsRecords size > 0
+	ifTrue: [ "Client file name is second column"
+		clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
+		"Implementation file name is fifth column"
+		implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+		classesToInclude := clientsTemp union: implementationsTemp.
+		cTransactions do: [ :cTran |
+			cTran committedFileNames: (cTran committedFileNames intersection: classesToInclude )
+			 ]
+		].
+	^self writeCommitTransactions: cTransactions  to: file basenameWithoutExtension , '_only_clients_and_imps.csv'
 ]
 
 { #category : #'file service' }
