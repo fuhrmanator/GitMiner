@@ -557,6 +557,220 @@ GMUtility class >> calculateCouplingIntersectionsFor: project at: oid [
 	^ results
 ]
 
+{ #category : #'file service' }
+GMUtility class >> calculateCouplingIntersectionsFor: project withARulesFile: trFile at: oid [
+	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection outRef isOutFileNew |
+	arulesExtension := '_apriori_rules.csv'.
+	clientImpExtension := '_' , oid , '_ClientImpPairs.csv'.
+	linkString := '->'.
+	trimCurlyBraces := [ :string | string allButFirst allButLast ].
+	results := OrderedCollection new.
+	logicalCouplingFile := FileLocator workingDirectory / 'arules'
+		/ ((trFile asFileReference) basenameWithoutExtension , arulesExtension).
+	"	Transcript
+		show: 'Processing files: ';
+		cr.
+	Transcript
+		show: (' ' join: logicalCouplingFiles);
+		cr."
+	basename := logicalCouplingFile basename allButLast: '_only_clients_and_imps_TR.csv' size.
+	clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
+	"Transcript
+				show: basename;
+				cr."
+	"Read in CSV of logical coupling"
+	lcInputStream := logicalCouplingFile readStream.
+	lcRecords := (NeoCSVReader on: lcInputStream)
+		separator: $,;
+		skipHeader;
+		"ruleNumber LHS RHS support confidence lift count"
+			addIntegerField;
+		"ruleNumber"
+			addFieldConverter: trimCurlyBraces;
+		"{LHS} - note R puts {...} around the string"
+			addFieldConverter: trimCurlyBraces;
+		"{RHS}"
+			addFloatField;
+		"support"
+			addFloatField;
+		"confidence"
+			addFloatField;
+		"lift"
+			addIntegerField;
+		"count"
+			upToEnd.
+
+	"Read in CSV of structural coupling (client-implementation)"
+	scRecords := self loadClientImplementationPairs: clientImpFile.
+
+	"Create a set of logical coupling"
+	logicalCouplingSet := (lcRecords
+		collect: [ :each | each second , linkString , each third ]) asSet.
+	"Transcript
+				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
+				cr."
+	protectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifTrue: [ protectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
+				cr."
+	unprotectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifFalse: [ unprotectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
+				cr."
+	logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
+	logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
+	"Transcript
+				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalProtectedIntersection); cr."
+	"Transcript
+				show:
+					'Intersection of logical coupling and unprotected coupling set size: '
+						, logicalUnprotectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalUnprotectedIntersection); cr"
+	results
+		add:
+			{basename.
+			logicalCouplingSet size.
+			protectedCouplingSet size.
+			unprotectedCouplingSet size.
+			logicalProtectedIntersection size.
+			logicalUnprotectedIntersection size}.
+	"Append results to .CSV"
+	outRef := 'Logical_and_Structural_Dependency_results.csv' asFileReference.
+	isOutFileNew := outRef exists not.
+	outRef
+		writeStreamDo: [ :csvStream | 
+			| streamWriter |
+			"Append"
+			csvStream setToEnd.
+			streamWriter := NeoCSVWriter on: csvStream.
+			isOutFileNew
+				ifTrue: [ streamWriter
+						nextPut:
+							#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|') ].
+			streamWriter
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ results
+]
+
+{ #category : #'file service' }
+GMUtility class >> calculateCouplingIntersectionsFor: project withARulesFile: trFile from: startOID to: endOID [
+	| logicalCouplingFile arulesExtension clientImpExtension basename trimCurlyBraces linkString results clientImpFile lcInputStream lcRecords scRecords logicalCouplingSet protectedCouplingSet unprotectedCouplingSet logicalProtectedIntersection logicalUnprotectedIntersection outRef isOutFileNew |
+	arulesExtension := '_apriori_rules.csv'.
+	clientImpExtension := '_' , startOID , '_ClientImpPairs.csv'.
+	linkString := '->'.
+	trimCurlyBraces := [ :string | string allButFirst allButLast ].
+	results := OrderedCollection new.
+	logicalCouplingFile := FileLocator workingDirectory / 'arules'
+		/ ((trFile asFileReference) basenameWithoutExtension , arulesExtension).
+	"	Transcript
+		show: 'Processing files: ';
+		cr.
+	Transcript
+		show: (' ' join: logicalCouplingFiles);
+		cr."
+	basename := project. "logicalCouplingFile basename allButLast: arulesExtension size"
+	clientImpFile := FileLocator workingDirectory / (basename , clientImpExtension).
+	"Transcript
+				show: basename;
+				cr."
+	"Read in CSV of logical coupling"
+	lcInputStream := logicalCouplingFile readStream.
+	lcRecords := (NeoCSVReader on: lcInputStream)
+		separator: $,;
+		skipHeader;
+		"ruleNumber LHS RHS support confidence lift count"
+			addIntegerField;
+		"ruleNumber"
+			addFieldConverter: trimCurlyBraces;
+		"{LHS} - note R puts {...} around the string"
+			addFieldConverter: trimCurlyBraces;
+		"{RHS}"
+			addFloatField;
+		"support"
+			addFloatField;
+		"confidence"
+			addFloatField;
+		"lift"
+			addIntegerField;
+		"count"
+			upToEnd.
+
+	"Read in CSV of structural coupling (client-implementation)"
+	scRecords := self loadClientImplementationPairs: clientImpFile.
+
+	"Create a set of logical coupling"
+	logicalCouplingSet := (lcRecords
+		collect: [ :each | each second , linkString , each third ]) asSet.
+	"Transcript
+				show: 'Logical coupling set size: ' , logicalCouplingSet size asString;
+				cr."
+	protectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifTrue: [ protectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
+				cr."
+	unprotectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifFalse: [ unprotectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
+				cr."
+	logicalProtectedIntersection := logicalCouplingSet intersection: protectedCouplingSet.
+	logicalUnprotectedIntersection := logicalCouplingSet intersection: unprotectedCouplingSet.
+	"Transcript
+				show: 'Intersection of logical coupling and protected coupling set size:' , logicalProtectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalProtectedIntersection); cr."
+	"Transcript
+				show:
+					'Intersection of logical coupling and unprotected coupling set size: '
+						, logicalUnprotectedIntersection size asString;
+				cr."
+	"						, (' ' join: logicalUnprotectedIntersection); cr"
+	results
+		add:
+			{basename.
+			logicalCouplingSet size.
+			protectedCouplingSet size.
+			unprotectedCouplingSet size.
+			logicalProtectedIntersection size.
+			logicalUnprotectedIntersection size}.
+	"Append results to .CSV"
+	outRef := 'Logical_and_Structural_Dependency_results.csv' asFileReference.
+	isOutFileNew := outRef exists not.
+	outRef
+		writeStreamDo: [ :csvStream | 
+			| streamWriter |
+			"Append"
+			csvStream setToEnd.
+			streamWriter := NeoCSVWriter on: csvStream.
+			isOutFileNew
+				ifTrue: [ streamWriter
+						nextPut:
+							#('Project' '|Logical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|Logical Coupling ^ Protected Structural Coupling|' '|Logical Coupling ^ Unprotected Structural Coupling|') ].
+			streamWriter
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ results
+]
+
 { #category : #'as yet unclassified' }
 GMUtility class >> cloneRepo: url [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
@@ -1557,8 +1771,11 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	rResult := GMUtility generateLogicalCouplingPairsWithRSingleFile: removedTr.
 	rResult = 0 ifFalse: [ self abortWithRErrorMessage. self error: 'Process aborted' ].
 	
+	"TODO: pass the filename"
+	"rhino_HEAD_ClientImpPairs_only_clients_and_imps_TR_apriori_rules"
+
 	"GMUtility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second."
-	GMUtility calculateCouplingIntersectionsFor: gitName at: startOIDString
+	GMUtility calculateCouplingIntersectionsFor: gitName withARulesFile: removedTr from: startOIDString to: endOIDString 
 ]
 
 { #category : #'file service' }
