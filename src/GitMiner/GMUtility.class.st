@@ -1470,8 +1470,9 @@ GMUtility class >> generatePairsAndTransactions: selectedCommitsFile [
 	cp := self
 		writeClassPairs: logicalCouplingRecords
 		file: selectedCommitsFile.
-	job progress: 0.5;
-	title: 'Writing transactions.'.
+	job
+		progress: 0.5;
+		title: 'Writing transactions.'.
 	"Generates a 'transactions' (basket) style file for arules in R"
 	ct := self
 		writeCommitTransactions: commitTransactions
