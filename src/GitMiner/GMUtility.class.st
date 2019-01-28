@@ -771,6 +771,100 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withARulesFile: tr
 	^ results
 ]
 
+{ #category : #pipeline }
+GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: commitHistoryPairsFile from: startOIDString to: endOIDString [
+	"take the pairs file (commits) and client-implementation pairs and find intersections"
+	"Read commit history pairs"
+	"Read structural coupling pairs"
+	"Create protected set"
+	"Create unprotected set"
+	"Calculate intersections"
+	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingSet protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersection historicalUnprotectedIntersection outRef isOutFileNew |
+	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
+	linkString := '->'.
+	results := OrderedCollection new.
+
+	subprojectName := project , '_' , (startOIDString truncate: 7) , '-' , (endOIDString truncate: 7 ellipsis: '' ).
+	clientImpFile := FileLocator workingDirectory / (project , clientImpExtension).
+
+	"Read in CSV of commit history pairs"
+	lcInputStream := 	commitHistoryPairsFile asFileReference readStream.
+	lcRecords := (NeoCSVReader on: lcInputStream)
+		separator: $,;
+		skipHeader;
+		"Project Class_1 Class_2 Commit_ID Revision_number"
+			addField; "ruleNumber"
+			addField; "Class_1"
+			addField; "Class_2"
+			addField; "Commit_ID"
+			addIntegerField; "Revision_number"
+			upToEnd.
+
+	"Create a set of historical coupling"
+	historicalCouplingSet := (lcRecords
+		collect: [ :each | each second , linkString , each third ]) asSet.
+	"Transcript
+				show: 'historical coupling set size: ' , historicalCouplingSet size asString;
+				cr."
+
+	"Read in CSV of structural coupling (client-implementation)"
+	scRecords := self loadClientImplementationPairs: clientImpFile.
+
+	protectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifTrue: [ protectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
+				cr."
+	unprotectedCouplingSet := Set new.
+	scRecords
+		do: [ :each | 
+			each sixth
+				ifFalse: [ unprotectedCouplingSet add: each second , linkString , each fifth ] ].
+	"Transcript
+				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
+				cr."
+	historicalProtectedIntersection := historicalCouplingSet intersection: protectedCouplingSet.
+	historicalUnprotectedIntersection := historicalCouplingSet intersection: unprotectedCouplingSet.
+	"Transcript
+				show: 'Intersection of historical coupling and protected coupling set size:' , historicalProtectedIntersection size asString;
+				cr."
+	"						, (' ' join: historicalProtectedIntersection); cr."
+	"Transcript
+				show:
+					'Intersection of historical coupling and unprotected coupling set size: '
+						, historicalUnprotectedIntersection size asString;
+				cr."
+	"						, (' ' join: historicalUnprotectedIntersection); cr"
+	results
+		add:
+			{subprojectName.
+			historicalCouplingSet size.
+			protectedCouplingSet size.
+			unprotectedCouplingSet size.
+			historicalProtectedIntersection size.
+			historicalUnprotectedIntersection size}.
+	"Append results to .CSV"
+	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
+	isOutFileNew := outRef exists not.
+	outRef
+		writeStreamDo: [ :csvStream | 
+			| streamWriter |
+			"Append"
+			csvStream setToEnd.
+			streamWriter := NeoCSVWriter on: csvStream.
+			isOutFileNew
+				ifTrue: [ streamWriter
+						nextPut:
+							#('Project' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
+			streamWriter
+				addFields: #(first second third fourth fifth sixth);
+				nextPutAll: results ].
+	^ results
+]
+
 { #category : #'as yet unclassified' }
 GMUtility class >> cloneRepo: url [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
@@ -1020,7 +1114,7 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 
 	startCommit := repoHandle revparse: startOIDString.
 	"Make a shortened OID (7 chars)"
-	startCommitShortOID := startCommit name first: 7.
+	startCommitShortOID := self shortOID: startCommit name.
 
 	endOIDString isEmpty ifTrue: [ 
 		"Find commit with no parent"
@@ -1029,7 +1123,7 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 	] ifFalse: [ 
 		endCommit := repoHandle revparse: endOIDString. 
 		"Make a shortened OID (7 chars)"
-		endCommitShortOID := endCommit name first: 7.
+		endCommitShortOID := self shortOID: endCommit name.
 	].
 
 	"Walk through to count commits for progress bar"
@@ -1252,43 +1346,49 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 { #category : #'file service' }
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
-	
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile |
+
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination |
 	destPath := '/tmp/data_mining'.
 	gitErrors := '/tmp/errors_git'.
 	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
 	working := FileSystem disk workingDirectory.
-
-	"Create a new sub dir for the repos MSE dirs"
-	(working / 'MSE') ensureCreateDirectory.
 	repoPath := '/tmp/tempClonesPharo/' , repoName.
 	revPath := destPath , '/' , repoName , '_master/' , oid.
-	command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , oid , ' -- . 2>' , gitErrors.
-	revPath asFileReference ensureCreateDirectory.
-	"self logCr: 'About to create directory: ', revPath ."
-	OSEnvironment current setEnv: 'GIT_INDEX_FILE' value: revPath , '/.git'.
-	"self logCr: 'About to execute command: ', command. result := 0."
-	result := LibC uniqueInstance system: command.
-	result = 0
-		ifFalse: [ gitErrors asFileReference ]
-		ifTrue: [ | mseDestination |
-			"Make an MSE file"
-			command := 'cd ' , revPath , ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>' , jdt2FamixErrors.
-			result := LibC uniqueInstance system: command.
+	mseFile := (revPath , '/' , oid , '.mse') asFileReference.
+	mseDestination := (destPath , '/' , repoName , '_master/' , oid
+		, '.mse') asFileReference.
+
+	"Don't do anything if the MSE already exists"
+	mseDestination exists
+		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
+			(working / 'MSE') ensureCreateDirectory.
+			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath
+				, ' checkout ' , oid , ' -- . 2>' , gitErrors.
+			revPath asFileReference ensureCreateDirectory.
+			"self logCr: 'About to create directory: ', revPath ."
+			OSEnvironment current
+				setEnv: 'GIT_INDEX_FILE'
+				value: revPath , '/.git'.
 			"self logCr: 'About to execute command: ', command. result := 0."
+			result := LibC uniqueInstance system: command.
 			result = 0
-				ifFalse: [ jdt2FamixErrors asFileReference ]
-				ifTrue: [ "Move the file out of the directory"
-					mseFile := (revPath , '/' , oid , '.mse') asFileReference.
-					mseDestination := (destPath , '/' , repoName , '_master/' , oid , '.mse') asFileReference.
-					"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
-					mseFile exists
-						ifTrue: [ mseDestination exists
-								ifTrue: [ mseDestination delete ].
-							mseFile moveTo: mseDestination ] ].
-			"Clean up the directories and files"
-			"revPath asFileReference deleteAll" "Dangerous if buggy..." ].
-		^ mseFile
+				ifFalse: [ gitErrors asFileReference ]
+				ifTrue: [ "Make an MSE file"
+					command := 'cd ' , revPath
+						, ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>' , jdt2FamixErrors.
+					result := LibC uniqueInstance system: command.
+					"self logCr: 'About to execute command: ', command. result := 0."
+					result = 0
+						ifFalse: [ jdt2FamixErrors asFileReference ]
+						ifTrue: [ "Move the file out of the directory"
+							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
+							mseFile exists
+								ifTrue: [ mseDestination exists
+										ifTrue: [ mseDestination delete ].
+									mseFile moveTo: mseDestination ] ]
+					"Clean up the directories and files"
+					"revPath asFileReference deleteAll"	"Dangerous if buggy..." ] ].
+	^ mseDestination
 ]
 
 { #category : #'file service' }
@@ -1779,6 +1879,31 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	GMUtility calculateCouplingIntersectionsFor: gitName withARulesFile: removedTr from: startOIDString to: endOIDString 
 ]
 
+{ #category : #pipeline }
+GMUtility class >> mineClientChangesNoARules: gitName url: urlString [
+	"Mine the whole repo, using HEAD and nil as limits"
+	^ self mineClientChangesNoARules: gitName url: urlString from: 'HEAD' to: ''
+]
+
+{ #category : #pipeline }
+GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: startOIDString to: endOIDString [
+	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
+
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile |
+	loc := GMUtility cloneRepo: urlString.
+	commitMetadata := GMUtility
+		filterCommitsOnRepoLeftBranchOnly: loc
+		from: startOIDString
+		to: endOIDString.
+	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
+	pairsAndTransactions := GMUtility generatePairsAndTransactions: selectedCommits.
+
+	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
+	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+
+	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString 
+]
+
 { #category : #'file service' }
 GMUtility class >> mineProjectsIn: projectsFile [
 	"For all repos in the 'projects.csv' file do a mining operation"
@@ -1799,8 +1924,9 @@ GMUtility class >> mineProjectsIn: projectsFile [
 			projectName := each second.
 			githubUrl := each last.
 			githubUrl = 'NA'
-				ifFalse: [ self mineClientChanges: projectName url: githubUrl  ] ] ]
+				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
+	
 ]
 
 { #category : #'file service' }
@@ -1882,6 +2008,13 @@ GMUtility class >> removeUnrelatedClassesFromTransactions: project withTransacti
 			 ]
 		].
 	^self writeCommitTransactions: cTransactions  to: file basenameWithoutExtension , '_only_clients_and_imps.csv'
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> shortOID: oidString [
+	"Take the traditional (github) 7 characters of an OID string, but don't chop it if it's shorter (e.g., HEAD)"
+	self flag: 'Should make this smarter to handle commit-ish'.
+	^ oidString truncate: 7 ellipsis: ''
 ]
 
 { #category : #'file service' }
