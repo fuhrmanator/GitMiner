@@ -1380,7 +1380,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
-						ifFalse: [ self abortWithErrorMessageFromFileReference: jdt2FamixErrors asFileReference  title: 'jdt2Famix terminated with errors'. self error: 'Process aborted' ]
+						ifFalse: [ self abortWithErrorMessageFromFileReference: jdt2FamixErrors asFileReference  title: 'jdt2Famix terminated with errors'. ]
 						ifTrue: [ "Move the file out of the directory"
 							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
 							mseFile exists
