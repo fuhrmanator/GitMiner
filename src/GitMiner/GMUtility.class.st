@@ -104,13 +104,14 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-GMUtility class >> abortWithRErrorMessage [
+GMUtility class >> abortWithErrorMessageFromFileReference: fileRef title: title [
 	"Show abort dialog and the message from the R output"
 
 	| displayText |
-	displayText := ('/tmp/R.errors.txt' asFileReference) readStreamEncoded: 'cp-1250' do: [ :stream |
+	displayText := fileRef readStreamEncoded: 'cp-1250' do: [ :stream |
         stream upToEnd ].
-	^ UIManager default abort: displayText title: 'R terminated with errors'.
+	UIManager default abort: displayText title: title.
+	self error: 'Process aborted'
 	
 ]
 
@@ -1379,7 +1380,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
-						ifFalse: [ jdt2FamixErrors asFileReference ]
+						ifFalse: [ self abortWithErrorMessageFromFileReference: jdt2FamixErrors asFileReference  title: 'jdt2Famix terminated with errors'. self error: 'Process aborted' ]
 						ifTrue: [ "Move the file out of the directory"
 							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
 							mseFile exists
@@ -1842,18 +1843,18 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	"Pipeline to mine changes of clients of interfaces"
 
 	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult |
-	loc := GMUtility cloneRepo: urlString.
-	commitMetadata := GMUtility
+	loc := self cloneRepo: urlString.
+	commitMetadata := self
 		filterCommitsOnRepoLeftBranchOnly: loc
 		from: startOIDString
 		to: endOIDString.
-	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
-	pairsAndTransactions := GMUtility generatePairsAndTransactions: selectedCommits.
+	selectedCommits := self generateSelectedCommits: commitMetadata.
+	pairsAndTransactions := self generatePairsAndTransactions: selectedCommits.
 
 	"oid := GMUtility getOIDFromTag: newerTag on: loc."
-	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
+	mseFileRef := self generateMSEFileFor: startOIDString reponame: loc basename.
 	"mseFileRef := GMUtility generateMSEFileFor: 'HEAD' reponame: loc basename."
-	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+	cimpFile := self generateClientImplementationPairs: mseFileRef.
 
 	"Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command."
 	"renamedTransactionsFile := GMUtility
@@ -1864,19 +1865,19 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	"skip renamings"
 	renamedTransactionsFile := pairsAndTransactions second.
 
-	removedTr := GMUtility
+	removedTr := self
 		removeUnrelatedClassesFromTransactions: gitName
 		withTransactionsFile: renamedTransactionsFile 
 		fromRevision: startOIDString.
 		
-	rResult := GMUtility generateLogicalCouplingPairsWithRSingleFile: removedTr.
-	rResult = 0 ifFalse: [ self abortWithRErrorMessage. self error: 'Process aborted' ].
+	rResult := self generateLogicalCouplingPairsWithRSingleFile: removedTr.
+	rResult = 0 ifFalse: [ self abortWithErrorMessageFromFileReference: '/tmp/R.errors.txt' asFileReference title: 'R terminated with errors'. ].
 	
 	"TODO: pass the filename"
 	"rhino_HEAD_ClientImpPairs_only_clients_and_imps_TR_apriori_rules"
 
 	"GMUtility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second."
-	GMUtility calculateCouplingIntersectionsFor: gitName withARulesFile: removedTr from: startOIDString to: endOIDString 
+	self calculateCouplingIntersectionsFor: gitName withARulesFile: removedTr from: startOIDString to: endOIDString 
 ]
 
 { #category : #pipeline }
