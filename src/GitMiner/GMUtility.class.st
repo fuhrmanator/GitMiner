@@ -786,6 +786,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results := OrderedCollection new.
 
 	subprojectName := project , '_' , (startOIDString truncate: 7) , '-' , (endOIDString truncate: 7 ellipsis: '' ).
+	self flag: 'should not recreate path to ClientImpPairs, it should be passed as argument.'.
 	clientImpFile := FileLocator workingDirectory / (project , clientImpExtension).
 
 	"Read in CSV of commit history pairs"
@@ -1133,14 +1134,14 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 	[ (commit hasParents) & (commit ~= endCommit) ]
 		whileTrue: [ nCommits := nCommits + 1.
 			commit := commit parents first ].
-	nCommits > 2000
+	"nCommits > 2000
 		ifTrue: [ (UIManager
 				confirm:
 					'This range has ' , nCommits asString
 						, ' commits. Are you sure you want to mine it?')
 				ifFalse: [ UIManager default abort: 'User aborted.' title: 'Mining stopped.'.
 					self error: 'need to terminate Mining pipeline.'
-					 ] ].
+					 ] ]."
 			
 	"Get commit ids that have:
   - no added files (only changed files)
