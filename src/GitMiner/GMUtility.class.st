@@ -1380,7 +1380,8 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand |
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand imageHome |
+	imageHome := OSEnvironment current at: 'PWD' ifAbsent: [ nil ].
 	destPath := 'tmp/data_mining'.
 	gitErrors := 'tmp/errors_git'.
 	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
@@ -1393,18 +1394,19 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	pathToJDT2FamixCommand := OSEnvironment current
 		at: 'JDT2FAMIXCOMMAND'
 		ifAbsent: [ nil ].
-	self ensureTmpDirectoryCreation.
+
 	"Don't do anything if the MSE already exists"
 	mseDestination exists
 		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
-			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath
-				, ' checkout ' , oid , ' -- . 2>' , gitErrors.
+			command := 'cd ' , repoPath , ' && git --work-tree=' , imageHome
+				, '/' , revPath , ' checkout ' , oid , ' -- . 2>' , imageHome
+				, '/' , gitErrors.
 			revPath asFileReference ensureCreateDirectory.
 			"self logCr: 'About to create directory: ', revPath ."
-			OSEnvironment current
+			"			OSEnvironment current
 				setEnv: 'GIT_INDEX_FILE'
-				value: revPath , '/.git'.
+				value: revPath , '/.git'."
 			"self logCr: 'About to execute command: ', command. result := 0."
 			result := LibC uniqueInstance system: command.
 			result = 0
@@ -1413,7 +1415,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
-						, jdt2FamixErrors.
+						, imageHome,'/', jdt2FamixErrors.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
@@ -1729,8 +1731,8 @@ GMUtility class >> historyRevwalk: repo from: startTag to: endTag [
 { #category : #initialization }
 GMUtility class >> initialize [
 	"init the variables used in mining"
-
-		self ensureTmpDirectoryCreation.
+	cloneRoot := 'tmp/tempClonesPharo/'.
+	self ensureTmpDirectoryCreation
 ]
 
 { #category : #'as yet unclassified' }
