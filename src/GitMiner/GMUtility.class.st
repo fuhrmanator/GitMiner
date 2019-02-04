@@ -1349,16 +1349,18 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination |
-	destPath := '/tmp/data_mining'.
-	gitErrors := '/tmp/errors_git'.
-	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand |
+	destPath := 'tmp/data_mining'.
+	gitErrors := 'tmp/errors_git'.
+	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
 	working := FileSystem disk workingDirectory.
-	repoPath := '/tmp/tempClonesPharo/' , repoName.
+	repoPath := 'tmp/tempClonesPharo/' , repoName.
 	revPath := destPath , '/' , repoName , '_master/' , oid.
 	mseFile := (revPath , '/' , oid , '.mse') asFileReference.
 	mseDestination := (destPath , '/' , repoName , '_master/' , oid
 		, '.mse') asFileReference.
+	pathToJDT2FamixCommand := OSEnvironment current
+				getEnv: 'JDT2FAMIXCOMMAND'.
 
 	"Don't do anything if the MSE already exists"
 	mseDestination exists
@@ -1374,10 +1376,10 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 			"self logCr: 'About to execute command: ', command. result := 0."
 			result := LibC uniqueInstance system: command.
 			result = 0
-				ifFalse: [ gitErrors asFileReference ]
+				ifFalse: [ self abortWithErrorMessageFromFileReference: gitErrors asFileReference  title: 'Failed to execute: ', command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath
-						, ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>' , jdt2FamixErrors.
+						, ' && ', pathToJDT2FamixCommand, '  2>' , jdt2FamixErrors.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0

@@ -16,7 +16,7 @@ GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
 		ifTrue: [ projectName := projectName allButLast: '.git' size ].
-	location := ('c:/tmp/tempClonesPharo/' , projectName) asFileReference.
+	location := ('tmp/tempClonesPharo/' , projectName) asFileReference.
 
 	"Clone repo locally if not already there"
 	location exists
