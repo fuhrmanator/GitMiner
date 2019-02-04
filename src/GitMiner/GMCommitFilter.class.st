@@ -13,6 +13,7 @@ GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 
 	| revisionNumber nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
 	"Get project name from URL, accounting for cases where it ends in .git"
+	self ensureTmpDirectoryCreation.
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
 		ifTrue: [ projectName := projectName allButLast: '.git' size ].
@@ -40,21 +41,20 @@ GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 
 	"Walk through just to count commits"
 	nCommits := 0.
-	revwalk do: [ :commit | nCommits := nCommits + 1 ]. 
+	revwalk do: [ :commit | nCommits := nCommits + 1 ].
 
 	"Revwalk reset didn't work, so we start over"
 	revwalk := LGitRevwalk of: handle.
 	range = ''
 		ifFalse: [ revwalk pushRange: range ]
 		ifTrue: [ revwalk pushHead ].
-
 	revisionNumber := 0.
 	[ :job | 
 	revwalk
 		do: [ :commit | 
 			revisionNumber := revisionNumber + 1.
 			job
-				progress: (revisionNumber / nCommits);
+				progress: revisionNumber / nCommits;
 				title: 'Analysing revision ' , commit name.
 			newerCommit = nil
 				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
@@ -63,18 +63,22 @@ GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 						do: [ :file | 
 							newerCommit tree
 								entryByPath: file
-								ifAbsent: [ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
-					atLeastOneJavaFile := difference files anySatisfy: [ :file | file endsWith: '.java' ].
+								ifAbsent:
+									[ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
+					atLeastOneJavaFile := difference files
+						anySatisfy: [ :file | file endsWith: '.java' ].
 					commitDataList
 						add:
 							{newerCommit name.
-							nCommits - revisionNumber + 1. "Revwalk goes from latest to earliest"
+							(nCommits - revisionNumber + 1).	"Revwalk goes from latest to earliest"
 							(Character space join: addedFiles).
 							difference numberOfDeltas.
 							atLeastOneJavaFile.
 							(Character space join: difference files)} ].
 			newerCommit := commit ] ] asJob run.
-	self writeCommitResults: commitDataList to: projectName , '_commits.csv'
+	self
+		writeCommitResults: commitDataList
+		to: projectName , '_commits.csv'
 ]
 
 { #category : #writing }

@@ -12,5 +12,5 @@ GitMinerTest >> testEnvironmentVariables [
 		ifAbsent: [ nil ].
 	self assert: path isNotNil.
 	self assert: path isNotEmpty.
-	self assert: ((path endsWith: '.sh') | (path endsWith: '.cmd'))
+	self assert: (path endsWith: '.sh') | (path endsWith: '.cmd')
 ]
