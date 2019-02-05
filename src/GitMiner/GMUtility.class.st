@@ -1414,7 +1414,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
-					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
+					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
 						, imageHome,'/', jdt2FamixErrors.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
