@@ -1380,12 +1380,22 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand imageHome |
-	imageHome := OSEnvironment current at: 'PWD' ifAbsent: [ nil ].
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand imageHome stripChars |
 	destPath := 'tmp/data_mining'.
 	gitErrors := 'tmp/errors_git'.
 	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
 	working := FileSystem disk workingDirectory.
+	"Convert it to LibC style path:"
+	imageHome := '/' join: (working path segments).
+	"Remove : e.g., in case of 'C:'"
+	stripChars := [ :string :chars | 
+		string reject: [ :c | chars includes: c ] ].
+	imageHome := stripChars 
+		value: imageHome
+		value: ':'.
+	"Add '/' at start, again in case of 'C/a/b/c/"
+	(imageHome beginsWith: '/') ifFalse: [ imageHome := '/' , imageHome ].
+	
 	repoPath := 'tmp/tempClonesPharo/' , repoName.
 	revPath := destPath , '/' , repoName , '_master/' , oid.
 	mseFile := (revPath , '/' , oid , '.mse') asFileReference.
@@ -1393,15 +1403,19 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 		, '.mse') asFileReference.
 	pathToJDT2FamixCommand := OSEnvironment current
 		at: 'JDT2FAMIXCOMMAND'
-		ifAbsent: [ nil ].
+		ifAbsent: [ |cmdFileRef| cmdFileRef := self navigateToFile: 'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.' extensions: #('cmd' 'sh').
+			cmdFileRef ifNotNil: ["we want the string containing the entire path, not a file ref" cmdFileRef fullName ]
+			].
+	pathToJDT2FamixCommand ifNil: [ self error: 'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
 
 	"Don't do anything if the MSE already exists"
 	mseDestination exists
 		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
-			command := 'cd ' , repoPath , ' && git --work-tree=' , imageHome
-				, '/' , revPath , ' checkout ' , oid , ' -- . 2>' , imageHome
-				, '/' , gitErrors.
+			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
+			OSEnvironment current setEnv: 'GIT_WORK_TREE' value: imageHome, '/', revPath.
+			command := 'cd ' , repoPath , ' && git checkout ' , oid , ' -- . 2>"' , imageHome
+				, '/' , gitErrors , '"'.
 			revPath asFileReference ensureCreateDirectory.
 			"self logCr: 'About to create directory: ', revPath ."
 			"			OSEnvironment current
@@ -1430,7 +1444,9 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 							mseFile exists
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
-									mseFile moveTo: mseDestination ] ] ] ].
+									mseFile moveTo: mseDestination ] ] ].
+							OSEnvironment current removeKey: 'GIT_WORK_TREE'.
+						].
 	^ mseDestination
 ]
 
@@ -1980,6 +1996,13 @@ GMUtility class >> mineProjectsIn: projectsFile [
 				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
 	
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> navigateToFile: userMessage extensions: ext [
+	"Ask the user to find something on the filesystem"
+	^ UIManager default chooseExistingFileReference: userMessage extensions: ext path: FileLocator home.
+
 ]
 
 { #category : #'file service' }
