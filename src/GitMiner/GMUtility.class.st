@@ -1370,9 +1370,9 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 			^ 1 ].
 	self ensureTmpDirectoryCreation.
 	pathToRFiles := (self locationOfProjectRepo / 'R/') pathString.
-	command := 'RScript ' , pathToRFiles
-		, '/GenerateLogicalPairsFromTransactionsSingleFile.R ' , filePath
-		, ' 2> tmp/R.errors.txt'.
+	command := 'RScript "' , pathToRFiles
+		, '/GenerateLogicalPairsFromTransactionsSingleFile.R" "' , filePath
+		, '" 2> tmp/R.errors.txt'.
 	^ LibC uniqueInstance system: command
 ]
 
@@ -1380,27 +1380,19 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination pathToJDT2FamixCommand imageHome stripChars |
-	destPath := 'tmp/data_mining'.
-	gitErrors := 'tmp/errors_git'.
-	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
 	working := FileSystem disk workingDirectory.
-	"Convert it to LibC style path:"
-	imageHome := '/' join: (working path segments).
-	"Remove : e.g., in case of 'C:'"
-	stripChars := [ :string :chars | 
-		string reject: [ :c | chars includes: c ] ].
-	imageHome := stripChars 
-		value: imageHome
-		value: ':'.
-	"Add '/' at start, again in case of 'C/a/b/c/"
-	(imageHome beginsWith: '/') ifFalse: [ imageHome := '/' , imageHome ].
+	destPath := Path * 'tmp' / 'data_mining'.
+	gitErrors := working / 'tmp' / 'errors_git'.
+	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
+	checkoutDest := working resolve: (destPath / (repoName , '_master') / oid).
 	
-	repoPath := 'tmp/tempClonesPharo/' , repoName.
-	revPath := destPath , '/' , repoName , '_master/' , oid.
-	mseFile := (revPath , '/' , oid , '.mse') asFileReference.
-	mseDestination := (destPath , '/' , repoName , '_master/' , oid
-		, '.mse') asFileReference.
+	repoPath := Path * 'tmp' / 'tempClonesPharo' / repoName.
+	revPath := destPath / (repoName , '_master') / oid.
+	mseFromJDT2Famix := working resolve: (revPath / oid , 'mse').
+	mseDestination := working resolve: (destPath / (repoName , '_master') / oid
+		, 'mse').
+
 	pathToJDT2FamixCommand := OSEnvironment current
 		at: 'JDT2FAMIXCOMMAND'
 		ifAbsent: [ |cmdFileRef| cmdFileRef := self navigateToFile: 'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.' extensions: #('cmd' 'sh').
@@ -1413,38 +1405,34 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
 			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
-			OSEnvironment current setEnv: 'GIT_WORK_TREE' value: imageHome, '/', revPath.
-			command := 'cd ' , repoPath , ' && git checkout ' , oid , ' -- . 2>"' , imageHome
-				, '/' , gitErrors , '"'.
-			revPath asFileReference ensureCreateDirectory.
-			"self logCr: 'About to create directory: ', revPath ."
-			"			OSEnvironment current
-				setEnv: 'GIT_INDEX_FILE'
-				value: revPath , '/.git'."
-			"self logCr: 'About to execute command: ', command. result := 0."
+			OSEnvironment current setEnv: 'GIT_WORK_TREE' value: checkoutDest fullName.
+			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
+			command := 'cd ' , (repoPath fullName), ' && git checkout ' , oid , ' -- . 2>"' , (gitErrors fullName) , '"'.
+			"Work_tree must exist"
+			checkoutDest ensureCreateDirectory.
 			result := LibC uniqueInstance system: command.
 			result = 0
 				ifFalse: [ self
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
-					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
-						, imageHome,'/', jdt2FamixErrors.
+					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand , '"  2> "'
+						, jdt2FamixErrors fullName , '"'.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
 						ifFalse: [ self
-								abortWithErrorMessageFromFileReference: jdt2FamixErrors asFileReference
+								abortWithErrorMessageFromFileReference: jdt2FamixErrors
 								title: 'jdt2Famix terminated with errors' ]
 						ifTrue: [ "Move the file out of the directory"
 							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
 							"Clean up the directories and files"
 							"revPath asFileReference deleteAll"
 							"Dangerous if buggy..."
-							mseFile exists
+							mseFromJDT2Famix exists
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
-									mseFile moveTo: mseDestination ] ] ].
+									mseFromJDT2Famix moveTo: mseDestination ] ] ].
 							OSEnvironment current removeKey: 'GIT_WORK_TREE'.
 						].
 	^ mseDestination
