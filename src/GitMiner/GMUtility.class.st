@@ -1022,7 +1022,7 @@ GMUtility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 				confirm:
 					'This range has ' , nCommits asString
 						, ' commits. Are you sure you want to mine it?')
-				ifFalse: [ 0 halt ] ].
+				ifFalse: [ self error: 'Process aborted by user.' ] ].
 
 	"Revwalk reset didn't work, so we start over"
 	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
