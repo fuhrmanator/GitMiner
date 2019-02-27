@@ -939,13 +939,6 @@ GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
 ]
 
-{ #category : #utilities }
-GMUtility class >> ensureTmpDirectoryCreation [
-	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.
-	(FileLocator workingDirectory / 'tmp' / 'data_mining' ) ensureCreateDirectory.
-	(FileLocator workingDirectory / 'tmp'/ 'tempClonesPharo') ensureCreateDirectory
-]
-
 { #category : #'file service' }
 GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
@@ -1370,7 +1363,7 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 			^ 1 ].
 	self ensureTmpDirectoryCreation.
 	pathToRFiles := (self locationOfProjectRepo / 'R/') pathString.
-	command := 'RScript "' , pathToRFiles
+	command := self getLocalRCommand , ' "' , pathToRFiles
 		, '/GenerateLogicalPairsFromTransactionsSingleFile.R" "' , filePath
 		, '" 2> tmp/R.errors.txt'.
 	^ LibC uniqueInstance system: command
@@ -1385,29 +1378,43 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	destPath := Path * 'tmp' / 'data_mining'.
 	gitErrors := working / 'tmp' / 'errors_git'.
 	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
-	checkoutDest := working resolve: (destPath / (repoName , '_master') / oid).
-	
+	checkoutDest := working
+		resolve: destPath / (repoName , '_master') / oid.
 	repoPath := Path * 'tmp' / 'tempClonesPharo' / repoName.
 	revPath := destPath / (repoName , '_master') / oid.
-	mseFromJDT2Famix := working resolve: (revPath / oid , 'mse').
-	mseDestination := working resolve: (destPath / (repoName , '_master') / oid
-		, 'mse').
-
-	pathToJDT2FamixCommand := OSEnvironment current
-		at: 'JDT2FAMIXCOMMAND'
-		ifAbsent: [ |cmdFileRef| cmdFileRef := self navigateToFile: 'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.' extensions: #('cmd' 'sh').
-			cmdFileRef ifNotNil: ["we want the string containing the entire path, not a file ref" cmdFileRef fullName ]
-			].
-	pathToJDT2FamixCommand ifNil: [ self error: 'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
+	mseFromJDT2Famix := working resolve: revPath / oid , 'mse'.
+	mseDestination := working
+		resolve: destPath / (repoName , '_master') / oid , 'mse'.
 
 	"Don't do anything if the MSE already exists"
 	mseDestination exists
-		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
+		ifFalse: [ pathToJDT2FamixCommand := OSEnvironment current
+				at: 'JDT2FAMIXCOMMAND'
+				ifAbsent: [ | cmdFileRef |
+					cmdFileRef := self
+						navigateToFile:
+							'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.'
+						extensions: #('cmd' 'sh').
+					cmdFileRef
+						ifNotNil: [ "set the environment variable"
+							OSEnvironment current
+								setEnv: 'JDT2FAMIXCOMMAND'
+								value: cmdFileRef fullName.
+							"we want the string containing the entire path, not a file ref"
+							cmdFileRef fullName ] ].
+			pathToJDT2FamixCommand
+				ifNil: [ self
+						error:
+							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
+			"Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
 			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
-			OSEnvironment current setEnv: 'GIT_WORK_TREE' value: checkoutDest fullName.
+			OSEnvironment current
+				setEnv: 'GIT_WORK_TREE'
+				value: checkoutDest fullName.
 			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-			command := 'cd ' , (repoPath fullName), ' && git checkout ' , oid , ' -- . 2>"' , (gitErrors fullName) , '"'.
+			command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
+				, ' -- . 2>"' , gitErrors fullName , '"'.
 			"Work_tree must exist"
 			checkoutDest ensureCreateDirectory.
 			result := LibC uniqueInstance system: command.
@@ -1416,8 +1423,8 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
-					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand , '"  2> "'
-						, jdt2FamixErrors fullName , '"'.
+					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
+						, '"  2> "' , jdt2FamixErrors fullName , '"'.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
@@ -1433,8 +1440,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
 									mseFromJDT2Famix moveTo: mseDestination ] ] ].
-							OSEnvironment current removeKey: 'GIT_WORK_TREE'.
-						].
+			OSEnvironment current removeKey: 'GIT_WORK_TREE' ].
 	^ mseDestination
 ]
 
@@ -1742,8 +1748,9 @@ GMUtility class >> initialize [
 { #category : #'as yet unclassified' }
 GMUtility class >> isRInPath [
 	"Make sure RScript.exe can be found"
-	| result |
-	result := LibC uniqueInstance system: 'RScript --version'.
+	| result rCommand |
+	rCommand := self getLocalRCommand.
+ 	result := LibC uniqueInstance system: rCommand, ' --version'.
 	^ result = 0
 ]
 
@@ -1984,13 +1991,6 @@ GMUtility class >> mineProjectsIn: projectsFile [
 				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
 	
-]
-
-{ #category : #'as yet unclassified' }
-GMUtility class >> navigateToFile: userMessage extensions: ext [
-	"Ask the user to find something on the filesystem"
-	^ UIManager default chooseExistingFileReference: userMessage extensions: ext path: FileLocator home.
-
 ]
 
 { #category : #'file service' }
