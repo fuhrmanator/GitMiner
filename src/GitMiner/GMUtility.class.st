@@ -829,8 +829,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
-	historicalProtectedIntersectionBag := historicalCouplingBag intersectionKeepingCounts: protectedCouplingSet.
-	historicalUnprotectedIntersectionBag := historicalCouplingBag intersectionKeepingCounts: unprotectedCouplingSet.
+	historicalProtectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: protectedCouplingSet.
+	historicalUnprotectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: unprotectedCouplingSet.
 	"Transcript
 				show: 'Intersection of historical coupling and protected coupling set size:' , historicalProtectedIntersection size asString;
 				cr."
