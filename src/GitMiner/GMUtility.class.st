@@ -802,9 +802,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			addIntegerField; "Revision_number"
 			upToEnd.
 
-	"Create a set of historical coupling"
+	"Create a bag of historical coupling -- occurrences of each entry will be counted"
 	historicalCouplingSet := (lcRecords
-		collect: [ :each | each second , linkString , each third ]) asSet.
+		collect: [ :each | each second , linkString , each third ]) asBag.
 	"Transcript
 				show: 'historical coupling set size: ' , historicalCouplingSet size asString;
 				cr."
@@ -812,7 +812,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Read in CSV of structural coupling (client-implementation)"
 	scRecords := self loadClientImplementationPairs: clientImpFile.
 
-	protectedCouplingSet := Set new.
+	"Bag allows us to count occurrences"
+	protectedCouplingSet := Bag new.
 	scRecords
 		do: [ :each | 
 			each sixth
@@ -820,7 +821,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Transcript
 				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
 				cr."
-	unprotectedCouplingSet := Set new.
+	unprotectedCouplingSet := Bag new.
 	scRecords
 		do: [ :each | 
 			each sixth
