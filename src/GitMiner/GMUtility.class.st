@@ -780,7 +780,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Create protected set"
 	"Create unprotected set"
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingSet protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersection historicalUnprotectedIntersection outRef isOutFileNew |
+	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	linkString := '->'.
 	results := OrderedCollection new.
@@ -803,7 +803,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			upToEnd.
 
 	"Create a bag of historical coupling -- occurrences of each entry will be counted"
-	historicalCouplingSet := (lcRecords
+	historicalCouplingBag := (lcRecords
 		collect: [ :each | each second , linkString , each third ]) asBag.
 	"Transcript
 				show: 'historical coupling set size: ' , historicalCouplingSet size asString;
@@ -813,7 +813,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	scRecords := self loadClientImplementationPairs: clientImpFile.
 
 	"Bag allows us to count occurrences"
-	protectedCouplingSet := Bag new.
+	protectedCouplingSet := Set new.
 	scRecords
 		do: [ :each | 
 			each sixth
@@ -821,7 +821,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Transcript
 				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
 				cr."
-	unprotectedCouplingSet := Bag new.
+	unprotectedCouplingSet := Set new.
 	scRecords
 		do: [ :each | 
 			each sixth
@@ -829,8 +829,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
-	historicalProtectedIntersection := historicalCouplingSet intersection: protectedCouplingSet.
-	historicalUnprotectedIntersection := historicalCouplingSet intersection: unprotectedCouplingSet.
+	historicalProtectedIntersectionBag := historicalCouplingBag intersectionKeepingCounts: protectedCouplingSet.
+	historicalUnprotectedIntersectionBag := historicalCouplingBag intersectionKeepingCounts: unprotectedCouplingSet.
 	"Transcript
 				show: 'Intersection of historical coupling and protected coupling set size:' , historicalProtectedIntersection size asString;
 				cr."
@@ -844,11 +844,11 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
-			historicalCouplingSet size.
+			historicalCouplingBag size.
 			protectedCouplingSet size.
 			unprotectedCouplingSet size.
-			historicalProtectedIntersection size.
-			historicalUnprotectedIntersection size}.
+			historicalProtectedIntersectionBag size.
+			historicalUnprotectedIntersectionBag size}.
 	"Append results to .CSV"
 	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
 	isOutFileNew := outRef exists not.
