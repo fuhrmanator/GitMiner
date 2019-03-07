@@ -120,14 +120,13 @@ GMUtility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
 
 	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
-	tempRepoRoot := 'tmp/tempClonesPharo/'.
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_UIDs_transactions.csv'.
 	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
 	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
-	renameHistoryCSV := 'tmp/_renamings_temp.csv'.
-	perlProgram := 'tmp/hist2renamecsv.perl'.
-	perlErrors := 'tmp/_perl_errors'.
-	self ensureTmpDirectoryCreation.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	perlProgram := '/tmp/hist2renamecsv.perl'.
+	perlErrors := '/tmp/_perl_errors'.
 	working := FileSystem disk workingDirectory.
 	csvInputStream := (working / projectsFile) readStream.
 	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
@@ -203,13 +202,11 @@ GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision:
 	Check out the git repo to that revision, then do a git history to get renamings."
 
 	| cTransactionsOriginal renamedCTransactions cTransactions tempRepoRoot newTransactionExtension clientImplementationPairsExtension file clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlSubcommand |
-	tempRepoRoot := 'tmp/tempClonesPharo/'.
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	newTransactionExtension := '_commits_tags_OIDs_TR_renamed.csv'.
-	clientImplementationPairsExtension := '_' , oid
-		, '_ClientImpPairs.csv'.
-	renameHistoryCSV := 'tmp/_renamings_temp.csv'.
-	perlErrors := 'tmp/_perl_errors'.
-	self ensureTmpDirectoryCreation.
+	clientImplementationPairsExtension := '_' , oid, '_ClientImpPairs.csv'.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	perlErrors := '/tmp/_perl_errors'.
 	file := transactionsFile asFileReference.
 	cTransactionsOriginal := self loadCommitTransactions: file.
 	cTransactions := cTransactionsOriginal copy.
@@ -217,27 +214,21 @@ GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision:
 	perlSubcommand := 'perl -0777 -ne "while (/commit (.+)\n(?:.*\n)+?similarity index (\d+)+%\n(rename|copy) from (.+)\n\3 to (.+)\n/g) { printf (\"$1,$2,$3,$4,$5\n\")}"'.
 	"Load clients and implementations"
 	"Read in CSV of structural coupling (client-implementation)"
-	file := (projectName , clientImplementationPairsExtension)
-		asFileReference.
-	clientImplementationPairsRecords := self
-		loadClientImplementationPairs: file.
+	file := (projectName , clientImplementationPairsExtension) asFileReference.
+	clientImplementationPairsRecords := self loadClientImplementationPairs: file.
 	clientImplementationPairsRecords isNotEmpty
 		ifTrue: [ "Client file name is second column"
 			"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
-			clientsTemp := (clientImplementationPairsRecords collect: #second)
-				asSet.
+			clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
 			"Implementation file name is fifth column"
-			implementationsTemp := (clientImplementationPairsRecords
-				collect: #fifth) asSet.
+			implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
 			classesToCheckRenamings := clientsTemp union: implementationsTemp.
 			classesToCheckRenamings
 				do: [ :class | 
 					| projectRepoDir command result renamings dirs csvPath |
 					"Generate git history"
 					projectRepoDir := tempRepoRoot , projectName.
-					command := 'cd ' , projectRepoDir , ' && git log --follow -p "'
-						, oid , '^@" -- "' , class , '" | ' , perlSubcommand , ' > '
-						, renameHistoryCSV , ' 2>' , perlErrors.
+					command := 'cd ' , projectRepoDir , ' && git log --follow -p "' , oid , '^@" -- "' , class , '" | ' , perlSubcommand , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 					result := LibC uniqueInstance system: command.
 					result = 0
 						ifFalse: [ self error: 'LibC system command: '' , command , '' failed.' ]
@@ -269,12 +260,9 @@ GMUtility class >> applyRenamingsToTransactions: transactionsFile usingRevision:
 													fromRename := renamingRecord fourth.
 													copyCTransaction renameAll: fromRename to: class ] ].
 									"Update for next class to check for renamings"
-									cTransactions := renamedCTransactions ] ] ]
-				displayingProgress: 'Renaming classes.' ]
+									cTransactions := renamedCTransactions ] ] ] displayingProgress: 'Renaming classes.' ]
 		ifFalse: [ renamedCTransactions := cTransactionsOriginal copy ].
-	^ self
-		writeCommitTransactions: renamedCTransactions
-		to: projectName , newTransactionExtension
+	^self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension
 ]
 
 { #category : #'file service' }
@@ -282,15 +270,14 @@ GMUtility class >> applyRenamingsToTransactionsFiles: projectsFile [
 	"comment stating purpose of message"
 
 	| working projectRecords projectName tempRepoRoot transactionsExtension newTransactionExtension clientImplementationPairsExtension file csvInputStream clientImplementationPairsRecords classesToCheckRenamings perlErrors renameHistoryCSV clientsTemp implementationsTemp perlProgram |
-	tempRepoRoot := 'tmp/tempClonesPharo/'.
+	tempRepoRoot := 'c:/tmp/tempClonesPharo/'.
 	transactionsExtension := '_commits_UIDs_transactions.csv'.
 	newTransactionExtension := '_commits_UIDs_transactions_renamed.csv'.
 	clientImplementationPairsExtension := '_HEAD_ClientImpPairs.csv'.
-	renameHistoryCSV := 'tmp/_renamings_temp.csv'.
-	perlProgram := 'tmp/hist2renamecsv.perl'.
-	perlErrors := 'tmp/_perl_errors'.
+	renameHistoryCSV := '/tmp/_renamings_temp.csv'.
+	perlProgram := '/tmp/hist2renamecsv.perl'.
+	perlErrors := '/tmp/_perl_errors'.
 	working := FileSystem disk workingDirectory.
-	self ensureTmpDirectoryCreation.
 	csvInputStream := (working / projectsFile) readStream.
 	projectRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
 	projectRecords
@@ -304,67 +291,58 @@ GMUtility class >> applyRenamingsToTransactionsFiles: projectsFile [
 					cTransactions := cTransactionsOriginal copy.
 					"Load clients and implementations"
 					"Read in CSV of structural coupling (client-implementation)"
-					file := (projectName , clientImplementationPairsExtension)
-						asFileReference.
-					clientImplementationPairsRecords := self
-						loadClientImplementationPairs: file.
-					clientImplementationPairsRecords isNotEmpty
+					file := (projectName , clientImplementationPairsExtension) asFileReference.
+					clientImplementationPairsRecords := self loadClientImplementationPairs: file.
+					clientImplementationPairsRecords isNotEmpty 
 						ifTrue: [ "Client file name is second column"
-							"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
-							clientsTemp := (clientImplementationPairsRecords collect: #second)
-								asSet.
+							clientsTemp := (clientImplementationPairsRecords collect: #second) asSet.
 							"Implementation file name is fifth column"
-							implementationsTemp := (clientImplementationPairsRecords
-								collect: #fifth) asSet.
-							classesToCheckRenamings := clientsTemp
-								union: implementationsTemp.
+							implementationsTemp := (clientImplementationPairsRecords collect: #fifth) asSet.
+							classesToCheckRenamings := clientsTemp union: implementationsTemp.
 							classesToCheckRenamings
 								do: [ :class | 
 									| projectRepoDir command result renamings dirs csvPath |
 									"Generate git history"
 									projectRepoDir := tempRepoRoot , projectName.
-									command := 'cd ' , projectRepoDir
-										, ' && git log --follow -p -- "' , class
-										, '" | perl -0777 -n ' , perlProgram , ' > '
-										, renameHistoryCSV , ' 2>' , perlErrors.
+									command := 'cd ' , projectRepoDir , ' && git log --follow -p -- "' , class , '" | perl -0777 -n ' , perlProgram , ' > ' , renameHistoryCSV , ' 2>' , perlErrors.
 									result := LibC uniqueInstance system: command.
 									result = 0
 										ifFalse: [ 0 halt ]
 										ifTrue: [ "Load CSV of renamed names"
-											dirs := renameHistoryCSV splitOn: $/.
-											csvPath := FileLocator C.
-											dirs
-												do: [ :dir | 
-													dir = ''
-														ifFalse: [ csvPath := csvPath / dir ] ].
-											renamings := self loadRenamings: csvPath.
+													dirs := renameHistoryCSV splitOn: $/.
+													csvPath := FileLocator C.
+													dirs
+														do: [ :dir | 
+															dir = ''
+																ifFalse: [ csvPath := csvPath / dir ] ].
+													renamings := self loadRenamings: csvPath.
 
-											"For each transaction, replace any instance of a 'from' renaming with the current name"
-											renamedCTransactions := OrderedCollection new.
-											cTransactions
-												do: [ :cTransaction | 
-													| copyCTransaction i |
-													"make copy of transaction record and add it to the new set"
-													copyCTransaction := cTransaction copy.
-													renamedCTransactions add: copyCTransaction.
-													i := 0.
-													cTransaction committedFileNames
-														do: [ :classToMaybeRename | 
-															i := i + 1.
-															renamings
-																do: [ :renamingRecord | 
-																	| fromRename percent |
-																	percent := renamingRecord second.
-																	fromRename := renamingRecord fourth.
-																	copyCTransaction renameAll: fromRename to: class ] ].
+													"For each transaction, replace any instance of a 'from' renaming with the current name"
+													renamedCTransactions := OrderedCollection new.
+													cTransactions
+														do: [ :cTransaction | 
+															| copyCTransaction i |
+															"make copy of transaction record and add it to the new set"
+															copyCTransaction := cTransaction copy.
+															renamedCTransactions add: copyCTransaction .
+															i := 0.
+															cTransaction committedFileNames
+																do: [ :classToMaybeRename | 
+																	i := i + 1.
+																	renamings
+																				do: [ :renamingRecord | 
+																					| fromRename percent |
+																					percent := renamingRecord second.
+																					fromRename := renamingRecord fourth.
+																					copyCTransaction renameAll: fromRename to: class ] ]  .
 													"Update for next class to check for renamings"
 													cTransactions := renamedCTransactions ] ] ] ]
-						ifFalse: [ renamedCTransactions := cTransactionsOriginal copy ].
-					self
-						writeCommitTransactions: renamedCTransactions
-						to: projectName , newTransactionExtension ] ]
-		displayingProgress:
-			[ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
+
+					"Check for case of no clients/implementations (no interfaces), just use original records (nothing to rename)"
+					ifFalse: [ renamedCTransactions  := cTransactionsOriginal  copy ].
+
+					self writeCommitTransactions: renamedCTransactions to: projectName , newTransactionExtension ] ]
+		displayingProgress: [ :projectRecord | 'Applying renamings to project: ' , projectRecord second ]
 ]
 
 { #category : #'file service' }
@@ -802,7 +780,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Create protected set"
 	"Create unprotected set"
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingSet protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersection historicalUnprotectedIntersection outRef isOutFileNew |
+	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	linkString := '->'.
 	results := OrderedCollection new.
@@ -824,9 +802,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			addIntegerField; "Revision_number"
 			upToEnd.
 
-	"Create a set of historical coupling"
-	historicalCouplingSet := (lcRecords
-		collect: [ :each | each second , linkString , each third ]) asSet.
+	"Create a bag of historical coupling -- occurrences of each entry will be counted"
+	historicalCouplingBag := (lcRecords
+		collect: [ :each | each second , linkString , each third ]) asBag.
 	"Transcript
 				show: 'historical coupling set size: ' , historicalCouplingSet size asString;
 				cr."
@@ -834,6 +812,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Read in CSV of structural coupling (client-implementation)"
 	scRecords := self loadClientImplementationPairs: clientImpFile.
 
+	"Bag allows us to count occurrences"
 	protectedCouplingSet := Set new.
 	scRecords
 		do: [ :each | 
@@ -850,8 +829,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Transcript
 				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
 				cr."
-	historicalProtectedIntersection := historicalCouplingSet intersection: protectedCouplingSet.
-	historicalUnprotectedIntersection := historicalCouplingSet intersection: unprotectedCouplingSet.
+	historicalProtectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: protectedCouplingSet.
+	historicalUnprotectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: unprotectedCouplingSet.
 	"Transcript
 				show: 'Intersection of historical coupling and protected coupling set size:' , historicalProtectedIntersection size asString;
 				cr."
@@ -865,11 +844,11 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
-			historicalCouplingSet size.
+			historicalCouplingBag size.
 			protectedCouplingSet size.
 			unprotectedCouplingSet size.
-			historicalProtectedIntersection size.
-			historicalUnprotectedIntersection size}.
+			historicalProtectedIntersectionBag size.
+			historicalUnprotectedIntersectionBag size}.
 	"Append results to .CSV"
 	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
 	isOutFileNew := outRef exists not.
@@ -1022,7 +1001,7 @@ GMUtility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
 				confirm:
 					'This range has ' , nCommits asString
 						, ' commits. Are you sure you want to mine it?')
-				ifFalse: [ self error: 'Process aborted by user.' ] ].
+				ifFalse: [ 0 halt ] ].
 
 	"Revwalk reset didn't work, so we start over"
 	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
@@ -1246,7 +1225,7 @@ GMUtility class >> generateClientImplementationPairsFiles: extension [
 	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
 
 	| mseDirRoot mseDirs |
-	mseDirRoot := FileLocator workingDirectory /'tmp' / 'data_mining'.
+	mseDirRoot := FileLocator C / 'tmp' / 'data_mining'.
 	mseDirs := mseDirRoot directories.
 	mseDirs
 		do: [ :dir | 
@@ -1347,9 +1326,8 @@ GMUtility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnd
 GMUtility class >> generateLogicalCouplingPairsWithR: inputPath [
 	| command |
 	"TODO: Error check to remind user to add RScript.exe to path"
-	self ensureTmpDirectoryCreation.
-	command := 'RScript R/GenerateLogicalPairsFromTransactions.R '
-		, inputPath , ' 2> tmp/R.errors.txt'.
+	command := 'RScript R/GenerateLogicalPairsFromTransactions.R ' , inputPath
+		, ' 2> /tmp/R.errors.txt'.
 	Transcript
 		show: 'About to execute: ';
 		cr;
@@ -1365,14 +1343,13 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 	self isRInPath
 		ifFalse: [ UIManager default
 				abort:
-					'RScript could not be found in the path. R must be installed and RScript''s directory must be added to the system path'.
+					'RScript.exe could not be found. R must be installed and RScript.exe''s directory must be added to the system path'.
 			"Return non-zero means something bad happened"
 			^ 1 ].
-	self ensureTmpDirectoryCreation.
 	pathToRFiles := (self locationOfProjectRepo / 'R/') pathString.
-	command := self getLocalRCommand , ' "' , pathToRFiles
-		, '/GenerateLogicalPairsFromTransactionsSingleFile.R" "' , filePath
-		, '" 2> tmp/R.errors.txt'.
+	command := 'RScript ' , pathToRFiles
+		, '/GenerateLogicalPairsFromTransactionsSingleFile.R ' , filePath
+		, ' 2> /tmp/R.errors.txt'.
 	^ LibC uniqueInstance system: command
 ]
 
@@ -1380,74 +1357,47 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
+	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFile mseDestination |
+	destPath := '/tmp/data_mining'.
+	gitErrors := '/tmp/errors_git'.
+	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
 	working := FileSystem disk workingDirectory.
-	destPath := Path * 'tmp' / 'data_mining'.
-	gitErrors := working / 'tmp' / 'errors_git'.
-	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
-	checkoutDest := working
-		resolve: destPath / (repoName , '_master') / oid.
-	repoPath := Path * 'tmp' / 'tempClonesPharo' / repoName.
-	revPath := destPath / (repoName , '_master') / oid.
-	mseFromJDT2Famix := working resolve: revPath / oid , 'mse'.
-	mseDestination := working
-		resolve: destPath / (repoName , '_master') / oid , 'mse'.
+	repoPath := '/tmp/tempClonesPharo/' , repoName.
+	revPath := destPath , '/' , repoName , '_master/' , oid.
+	mseFile := (revPath , '/' , oid , '.mse') asFileReference.
+	mseDestination := (destPath , '/' , repoName , '_master/' , oid
+		, '.mse') asFileReference.
 
 	"Don't do anything if the MSE already exists"
 	mseDestination exists
-		ifFalse: [ pathToJDT2FamixCommand := OSEnvironment current
-				at: 'JDT2FAMIXCOMMAND'
-				ifAbsent: [ | cmdFileRef |
-					cmdFileRef := self
-						navigateToFile:
-							'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.'
-						extensions: #('cmd' 'sh').
-					cmdFileRef
-						ifNotNil: [ "set the environment variable"
-							OSEnvironment current
-								setEnv: 'JDT2FAMIXCOMMAND'
-								value: cmdFileRef fullName.
-							"we want the string containing the entire path, not a file ref"
-							cmdFileRef fullName ] ].
-			pathToJDT2FamixCommand
-				ifNil: [ self
-						error:
-							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
-			"Create a new sub dir for the repos MSE dirs"
+		ifFalse: [ "Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
-			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
+			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath
+				, ' checkout ' , oid , ' -- . 2>' , gitErrors.
+			revPath asFileReference ensureCreateDirectory.
+			"self logCr: 'About to create directory: ', revPath ."
 			OSEnvironment current
-				setEnv: 'GIT_WORK_TREE'
-				value: checkoutDest fullName.
-			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-			command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
-				, ' -- . 2>"' , gitErrors fullName , '"'.
-			"Work_tree must exist"
-			checkoutDest ensureCreateDirectory.
+				setEnv: 'GIT_INDEX_FILE'
+				value: revPath , '/.git'.
+			"self logCr: 'About to execute command: ', command. result := 0."
 			result := LibC uniqueInstance system: command.
 			result = 0
-				ifFalse: [ self
-						abortWithErrorMessageFromFileReference: gitErrors asFileReference
-						title: 'Failed to execute: ' , command ]
+				ifFalse: [ gitErrors asFileReference ]
 				ifTrue: [ "Make an MSE file"
-					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '"  2> "' , jdt2FamixErrors fullName , '"'.
+					command := 'cd ' , revPath
+						, ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>' , jdt2FamixErrors.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
-						ifFalse: [ self
-								abortWithErrorMessageFromFileReference: jdt2FamixErrors
-								title: 'jdt2Famix terminated with errors' ]
+						ifFalse: [ self abortWithErrorMessageFromFileReference: jdt2FamixErrors asFileReference  title: 'jdt2Famix terminated with errors'. ]
 						ifTrue: [ "Move the file out of the directory"
 							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
-							"Clean up the directories and files"
-							"revPath asFileReference deleteAll"
-							"Dangerous if buggy..."
-							mseFromJDT2Famix exists
+							mseFile exists
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
-									mseFromJDT2Famix moveTo: mseDestination ] ] ].
-			OSEnvironment current removeKey: 'GIT_WORK_TREE' ].
+									mseFile moveTo: mseDestination ] ]
+					"Clean up the directories and files"
+					"revPath asFileReference deleteAll"	"Dangerous if buggy..." ] ].
 	^ mseDestination
 ]
 
@@ -1455,16 +1405,13 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 	"For each *_UIDs.csv file, generate a Moose MSE for the HEAD of repo"
 
-	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath pathToJDT2FamixCommand |
-	destPath := 'tmp/data_mining'.
-	gitErrors := 'tmp/errors_git'.
-	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
+	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath |
+	destPath := '/tmp/data_mining'.
+	gitErrors := '/tmp/errors_git'.
+	jdt2FamixErrors := '/tmp/errors_jdt2famix'.
 	working := FileSystem disk workingDirectory.
 	uidFiles := working allChildrenMatching: '*' , uidFileSuffix.
-	pathToJDT2FamixCommand := OSEnvironment current
-		at: 'JDT2FAMIXCOMMAND'
-		ifAbsent: [ nil ].
-	self ensureTmpDirectoryCreation.
+
 	"Create a new sub dir for the repos MSE dirs"
 	(working / 'MSE') ensureCreateDirectory.
 	uidFiles
@@ -1473,7 +1420,7 @@ GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 			"Create a new sub dir for the repos MSE files"
 			uidFileName := file basename.
 			repoName := uidFileName allButLast: uidFileSuffix size.
-			repoPath := 'tmp/tempClonesPharo/' , repoName.
+			repoPath := '/tmp/tempClonesPharo/' , repoName.
 			uid := 'HEAD'.
 			revPath := destPath , '/' , repoName , '_master/' , uid.
 			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , uid
@@ -1487,7 +1434,7 @@ GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 				ifFalse: [ gitErrors asFileReference ]
 				ifTrue: [ | mseFile mseDestination |
 					"Make an MSE file"
-					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
+					command := 'cd ' , revPath , ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>'
 						, jdt2FamixErrors.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
@@ -1511,21 +1458,15 @@ GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
 GMUtility class >> generateMSEFilesForEachUID: uidFileSuffix [
 "For each *_UIDs.csv file, generate a Moose MSE "
 
-| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath pathToJDT2FamixCommand |
-destPath := 'tmp/data_mining'.
-gitErrors := 'tmp/errors_git'.
-jdt2FamixErrors := 'tmp/errors_jdt2famix'.
+| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath |
+destPath := '/tmp/data_mining'.
+gitErrors := '/tmp/errors_git'.
+jdt2FamixErrors := '/tmp/errors_jdt2famix'.
 
 
 working := FileSystem disk workingDirectory.
 "uidFileSuffix := '_commits_UIDs.csv'."
 uidFiles := working allChildrenMatching: ('*', uidFileSuffix) .
-
-pathToJDT2FamixCommand := OSEnvironment current
-	at: 'JDT2FAMIXCOMMAND'
-	ifAbsent: [ nil ].
-
-self ensureTmpDirectoryCreation.
 
 "Create a new sub dir for the repos MSE dirs"
 (working / 'MSE') ensureCreateDirectory.
@@ -1562,8 +1503,7 @@ uidFiles do: [ :file |
 		ifTrue: [ 
 			| mseFile mseDestination |
 			"Make an MSE file"
-			command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
-				, jdt2FamixErrors.
+			command := 'cd ', revPath, ' && /jdt2famix-bin-1.0.12/jdt2famix.cmd 2>', jdt2FamixErrors.
 			result := LibC uniqueInstance system: command.
 			"self logCr: 'About to execute command: ', command. result := 0." 
 			result = 0 ifFalse: [ jdt2FamixErrors asFileReference ]
@@ -1748,16 +1688,15 @@ GMUtility class >> historyRevwalk: repo from: startTag to: endTag [
 { #category : #initialization }
 GMUtility class >> initialize [
 	"init the variables used in mining"
-	cloneRoot := 'tmp/tempClonesPharo/'.
-	self ensureTmpDirectoryCreation
+
+	cloneRoot := 'c:/tmp/tempClonesPharo/'.
 ]
 
 { #category : #'as yet unclassified' }
 GMUtility class >> isRInPath [
 	"Make sure RScript.exe can be found"
-	| result rCommand |
-	rCommand := self getLocalRCommand.
- 	result := LibC uniqueInstance system: rCommand, ' --version'.
+	| result |
+	result := LibC uniqueInstance system: 'RScript --version'.
 	^ result = 0
 ]
 
@@ -1920,7 +1859,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 		to: endOIDString.
 	selectedCommits := self generateSelectedCommits: commitMetadata.
 	pairsAndTransactions := self generatePairsAndTransactions: selectedCommits.
-	self ensureTmpDirectoryCreation.
+
 	"oid := GMUtility getOIDFromTag: newerTag on: loc."
 	mseFileRef := self generateMSEFileFor: startOIDString reponame: loc basename.
 	"mseFileRef := GMUtility generateMSEFileFor: 'HEAD' reponame: loc basename."
@@ -1941,7 +1880,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 		fromRevision: startOIDString.
 		
 	rResult := self generateLogicalCouplingPairsWithRSingleFile: removedTr.
-	rResult = 0 ifFalse: [ self abortWithErrorMessageFromFileReference: 'tmp/R.errors.txt' asFileReference title: 'R terminated with errors'. ].
+	rResult = 0 ifFalse: [ self abortWithErrorMessageFromFileReference: '/tmp/R.errors.txt' asFileReference title: 'R terminated with errors'. ].
 	
 	"TODO: pass the filename"
 	"rhino_HEAD_ClientImpPairs_only_clients_and_imps_TR_apriori_rules"

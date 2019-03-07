@@ -15,12 +15,6 @@ Metacello new
 
 Since this project uses `LibC system command` to run external tools, the baseline will also make sure that `Rscript` is in your path. Some functions require Java runtime, perl, and git, but those aren't verified on the install.
 
-### Environment variables
-
-The variable `JDT2FAMIXCOMMAND` must point to the script for parsing Java to MSE.
-
-# Sample execution
-
 For now, most of the functions are in the `GMUtility` class (the code is unstable). To mine interface client changes In a Playground, execute:
 
 ```Smalltalk
