@@ -940,6 +940,36 @@ GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> dependencyMatrixForMooseModel: aMooseModel [
+	"Create a dependency matrix D where D(i,j)=1 means that i depends on j, and D(i,j)=0 is independence."
+
+	"There is a dependency between classes i and j if 
+	  1) i extends or implements j,
+	  2) i uses j as member or variable,
+	  3) i references members or calls a method of j."
+
+	| d classes |
+	"Cyril F. helped immensely with crafting the class selection soas not to have strangeness"
+	classes := (aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub.
+	d := PMMatrix zerosRows: classes size cols: classes size.
+	"d := Array2D rows: classes size columns: classes size."
+	classes
+		doWithIndex: [ :classJ :j | 
+			| classJClients |
+			classJClients := classJ clientTypes reject: #isStub.
+			"clientTypes includes inheritance, so we can just put 1's in the array for each classJClient"
+			classJClients do: [ :classI |
+				| i |
+				"find index of classI in classes to find the column"
+				i := classes indexOf: classI.
+				self assert: (i ~= 0).
+				d at: i at: j put: 1.
+				 ]
+		].
+	^ d
+]
+
 { #category : #'file service' }
 GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
