@@ -918,6 +918,13 @@ GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
 ]
 
+{ #category : #pipeline }
+GMUtility class >> ensureTmpDirectoryCreation [
+	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.	
+	(FileLocator workingDirectory / 'tmp' / 'data_mining' ) ensureCreateDirectory.	
+	(FileLocator workingDirectory / 'tmp'/ 'tempClonesPharo') ensureCreateDirectory	
+]
+
 { #category : #'file service' }
 GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
