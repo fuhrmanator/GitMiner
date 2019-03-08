@@ -939,7 +939,7 @@ GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
 ]
 
-{ #category : #utilities }
+{ #category : #pipeline }
 GMUtility class >> ensureTmpDirectoryCreation [
 	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.
 	(FileLocator workingDirectory / 'tmp' / 'data_mining' ) ensureCreateDirectory.
