@@ -13,10 +13,11 @@ GMCommitFilter class >> filterCommitsOnRepository: url withRange: range [
 
 	| revisionNumber nCommits location handle revwalk newerCommit difference addedFiles atLeastOneJavaFile commitDataList projectName |
 	"Get project name from URL, accounting for cases where it ends in .git"
+	self ensureTmpDirectoryCreation.
 	projectName := (url splitOn: '/') last.
 	(projectName endsWith: '.git')
 		ifTrue: [ projectName := projectName allButLast: '.git' size ].
-	location := ('c:/tmp/tempClonesPharo/' , projectName) asFileReference.
+	location := ('tmp/tempClonesPharo/' , projectName) asFileReference.
 
 	"Clone repo locally if not already there"
 	location exists
