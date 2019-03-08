@@ -1699,6 +1699,11 @@ GMUtility class >> generateSelectedCommits: commitMetadataFile [
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> getLocalRCommand [
+	^ 'Rscript'
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> getOIDFromTag: tagString on: loc [
 	"based on example from https://ben.straub.cc/2013/06/03/refs-tags-and-branching/ "
 	| repoHandle gitRef result toReturn |
