@@ -10,18 +10,21 @@ Class {
 { #category : #baselines }
 BaselineOfGitMiner >> baseline: spec [
 	<baseline>
-	spec for: #common do: [ 
-		"Don't load Moose finally, it's heavy. Recommend users to start with CI image."
-		"spec baseline: 'Moose' with: [ 
-			spec repository: 'github://moosetechnology/Moose:development/src' ]."
-		spec baseline: 'NeoCSV' with: [ spec repository: 'github://svenvc/NeoCSV/repository' ].
-
-		spec preLoadDoIt: #verifyMooseInstalled.
-      spec postLoadDoIt: #launchVerifications.
-		"Packages" 
-		spec 
-		  package: 'GitMiner' with: [ spec requires: #('NeoCSV') ].
-		 ]
+	spec
+		for: #common
+		do:
+			[ "Don't load Moose finally, it's heavy. Recommend users to start with CI image."
+			spec
+				baseline: 'NeoCSV'
+					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];
+				baseline: 'PolyMath'
+					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ].
+			spec preLoadDoIt: #verifyMooseInstalled.
+			spec postLoadDoIt: #launchVerifications.
+			"Packages"
+			spec
+				package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];
+				package: 'GitMiner' with: [ spec requires: #('PolyMath') ] ]
 ]
 
 { #category : #baselines }
