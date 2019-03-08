@@ -2000,6 +2000,13 @@ GMUtility class >> mineProjectsIn: projectsFile [
 	
 ]
 
+{ #category : #pipeline }
+GMUtility class >> navigateToFile: userMessage extensions: ext [
+	"Ask the user to find something on the filesystem"
+	^ UIManager default chooseExistingFileReference: userMessage extensions: ext path: FileLocator home.
+
+]
+
 { #category : #'file service' }
 GMUtility class >> readSelectedCommitsFile: selectedCommitsFile [
 	| csvRecords csvInputStream |
