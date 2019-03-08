@@ -1,6 +1,6 @@
 # GitMiner
 
-Pharo smalltalk tools to mine (Java) Git Repos, work with R, Perl, git, etc. Tested only under Windows so far.
+Pharo smalltalk tools to mine (Java) Git Repos, work with R, Perl, git, etc. Tested mostly under Windows, but also works on MacOS and Linux versions (the paths should be relative to the image directory).
 
 ## Installation
 
