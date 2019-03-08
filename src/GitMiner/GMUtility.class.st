@@ -920,9 +920,7 @@ GMUtility class >> cloneRoot: anObject [
 
 { #category : #pipeline }
 GMUtility class >> ensureTmpDirectoryCreation [
-	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.	
-	(FileLocator workingDirectory / 'tmp' / 'data_mining' ) ensureCreateDirectory.	
-	(FileLocator workingDirectory / 'tmp'/ 'tempClonesPharo') ensureCreateDirectory	
+	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.	(FileLocator workingDirectory / 'tmp' / 'data_mining' ) ensureCreateDirectory. (FileLocator workingDirectory / 'tmp'/ 'tempClonesPharo') ensureCreateDirectory	
 ]
 
 { #category : #'file service' }
@@ -1937,6 +1935,13 @@ GMUtility class >> mineProjectsIn: projectsFile [
 				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
 	
+]
+
+{ #category : #pipeline }
+GMUtility class >> navigateToFile: userMessage extensions: ext [
+	"Ask the user to find something on the filesystem"
+	^ UIManager default chooseExistingFileReference: userMessage extensions: ext path: FileLocator home.
+
 ]
 
 { #category : #'file service' }
