@@ -8,6 +8,11 @@ Class {
 	#category : #GitMiner
 }
 
+{ #category : #initializing }
+GMCochangeMatrix class >> with: aPMMatrixAsHistory classes: aFAMIXClassGroup [ 
+	^self new cochangeMatrix: aPMMatrixAsHistory * (aPMMatrixAsHistory transpose); classes: aFAMIXClassGroup
+]
+
 { #category : #accessing }
 GMCochangeMatrix >> classes [
 	^ classes

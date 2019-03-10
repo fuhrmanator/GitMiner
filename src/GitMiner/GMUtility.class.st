@@ -875,10 +875,10 @@ GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: cl
 	| histMatrix i |
 	histMatrix := PMMatrix zerosRows: transactions size cols: classes size.
 	transactions doWithIndex: [ :t :j | "t is a GMCommitTransaction"
-		t committedFileNames do: [ :class |
-			i := classes indexOf: class.
+		t committedFileNames do: [ :classFileName |
+			i := self findClassIndexByFileName: classFileName InMooseClasses: classes.
 			self assert: (i ~= 0).
-			histMatrix at: i at: j put: 1.
+			histMatrix at: j at: i put: 1.
 			]
 		 ].
 	^histMatrix
@@ -936,7 +936,7 @@ GMUtility class >> cloneRoot: anObject [
 
 { #category : #'as yet unclassified' }
 GMUtility class >> cochangeMatrixFromChangeHistory: aChangeHistoryMatrix forClasses: classes [
-	^ GMCochangeMatrix new with: aChangeHistoryMatrix classes: classes
+	^ GMCochangeMatrix with: aChangeHistoryMatrix classes: classes
 ]
 
 { #category : #pipeline }
@@ -949,8 +949,7 @@ GMUtility class >> dependencyMatrixFromMooseModel: aMooseModel [
 	  3) i references members or calls a method of j."
 
  	| d classes |
-	"Cyril F. helped immensely with crafting the class selection soas not to have strangeness"
-	classes := (aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub.
+	classes := self mooseClassesForDependencyMining: aMooseModel.
 	d := PMMatrix zerosRows: classes size cols: classes size.
 	"d := Array2D rows: classes size columns: classes size."
 	classes
@@ -1251,6 +1250,13 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
 	"Mine whole left branch, from HEAD to (no stopping commit)"
 	^ self filterCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> findClassIndexByFileName: classFileName InMooseClasses: classes [
+	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
+	classes doWithIndex: [ :class :index | classFileName = class sourceAnchor fileName ifTrue: [^index] ].
+	^0 "not found"
 ]
 
 { #category : #'file service' }
@@ -1873,10 +1879,22 @@ GMUtility class >> loadCommitTransactions: transactionsFileReference [
 		addField;
 		upToEnd.
 
+	csvInputStream close.
 	"Get rid of the nil elements in the transactions"
 	^ transactionRecords 
 		collect: [ :transaction | 
 			GMCommitTransaction transactionFromRecord:  (transaction asCollection select: #isNotNil) ]
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> loadMooseModelFromMSE: mseFileRef [
+	"Load the moose Model with some error checking"
+	| mseStream mooseModel |
+	mseStream := mseFileRef readStream.
+	mseStream
+		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
+			mseStream close. ^mooseModel ]
+		ifNil: [ self error: 'Could not load MSE file into Moose: ' , mseFileRef asString ].
 ]
 
 { #category : #'file service' }
@@ -1948,7 +1966,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString [
 GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDString to: endOIDString [
 	"Pipeline to mine changes of clients of interfaces"
 
-	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult |
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult mseStream mooseModel classes commitTransactions changeHistoryMatrix cochangeMatrix |
 	loc := self cloneRepo: urlString.
 	commitMetadata := self
 		filterCommitsOnRepoLeftBranchOnly: loc
@@ -1971,6 +1989,14 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	"skip renamings"
 	renamedTransactionsFile := pairsAndTransactions second.
 
+	mooseModel := self loadMooseModelFromMSE: mseFileRef.
+	commitTransactions := self loadCommitTransactions: renamedTransactionsFile asFileReference.
+ 
+	classes := self mooseClassesForDependencyMining: mooseModel.
+	changeHistoryMatrix := self changeHistoryMatrixFromTransactions: commitTransactions classes: classes.
+	"I think the nxm is wrong in the cochange (it's only as wide as the number of transactions, rather than the number of classes)"
+	cochangeMatrix := self cochangeMatrixFromChangeHistory: changeHistoryMatrix forClasses: classes.
+	
 	removedTr := self
 		removeUnrelatedClassesFromTransactions: gitName
 		withTransactionsFile: renamedTransactionsFile 
@@ -2034,6 +2060,12 @@ GMUtility class >> mineProjectsIn: projectsFile [
 				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
 	
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> mooseClassesForDependencyMining: aMooseModel [
+	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
+	^(aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub.
 ]
 
 { #category : #pipeline }
