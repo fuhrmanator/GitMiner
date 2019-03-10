@@ -1402,7 +1402,7 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 			^ 1 ].
 	self ensureTmpDirectoryCreation.	
 	pathToRFiles := (self locationOfProjectRepo / 'R/') pathString.
-	self getLocalRCommand , ' "' , pathToRFiles
+	command := self getLocalRCommand , ' "' , pathToRFiles
 		, '/GenerateLogicalPairsFromTransactionsSingleFile.R" "' , filePath
 		, '" 2> /tmp/R.errors.txt'.
 	^ LibC uniqueInstance system: command
