@@ -871,6 +871,20 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: classes [
+	| histMatrix i |
+	histMatrix := PMMatrix zerosRows: transactions size cols: classes size.
+	transactions doWithIndex: [ :t :j | "t is a GMCommitTransaction"
+		t committedFileNames do: [ :class |
+			i := classes indexOf: class.
+			self assert: (i ~= 0).
+			histMatrix at: i at: j put: 1.
+			]
+		 ].
+	^histMatrix
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> cloneRepo: url [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
 
@@ -918,6 +932,11 @@ GMUtility class >> cloneRoot [
 { #category : #accessing }
 GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> cochangeMatrixFromChangeHistory: aChangeHistoryMatrix forClasses: classes [
+	^ GMCochangeMatrix new with: aChangeHistoryMatrix classes: classes
 ]
 
 { #category : #pipeline }
