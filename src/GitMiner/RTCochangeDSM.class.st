@@ -5,10 +5,13 @@ A Moose class group and inspect the following.""
 
 | mooseModel mseFileRef commitTransactions transactionsFileRef classes changeHistoryMatrix cochangeMatrix dsm |
 
-mseFileRef := GMUtility navigateToFile: 'Choose an MSE file' extensions: 'mse'.
+""mseFileRef := GMUtility navigateToFile: 'Choose an MSE file' extensions: #('mse').""
+mseFileRef := 'tmp/data_mining/FactoryVariants_master/HEAD.mse' asFileReference.
+
 mooseModel := GMUtility loadMooseModelFromMSE: mseFileRef.
 
-transactionsFileRef := GMUtility navigateToFile: 'Choose a *_commits_oids_UIDs_TR.csv file' extensions: 'csv'.
+""transactionsFileRef := GMUtility navigateToFile: 'Choose a *_commits_oids_UIDs_TR.csv file' extensions: #('csv').""
+transactionsFileRef := 'FactoryVariants_908c96e-END_commits_oids_UIDs_TR.csv' asFileReference.
 commitTransactions := GMUtility loadCommitTransactions: transactionsFileRef asFileReference.
  
 classes := GMUtility mooseClassesForDependencyMining: mooseModel.
@@ -19,7 +22,7 @@ dsm := RTCochangeDSM new.
 dsm objects: cochangeMatrix classes.
 dsm cochangeMatrix: cochangeMatrix.
 dsm rotation: 270.
-^dsm
+dsm view
 "
 Class {
 	#name : #RTCochangeDSM,
@@ -34,10 +37,10 @@ Class {
 RTCochangeDSM >> assocChanges: assoc [
 	"return the number of changes at the cell for the association"
 	| i j classes |
-	classes := self objects.
-	i := classes indexOf: assoc key.
-	j := classes indexOf: assoc value.
-	^ self cochangeMatrix at: i at: j
+	classes := self objects asOrderedCollection.
+	j := classes indexOf: assoc key.
+	i := classes indexOf: assoc value.
+	^ self cochangeMatrix cochangeMatrix at: i at: j
 ]
 
 { #category : #accessing }
