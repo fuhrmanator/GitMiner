@@ -877,12 +877,19 @@ GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: cl
 	transactions doWithIndex: [ :t :j | "t is a GMCommitTransaction"
 		t committedFileNames do: [ :classFileName |
 			| i |
-			i := self findClassIndexByFileName: classFileName InMooseClasses: classes.
+			i := self classIndexFromFileName: classFileName InMooseClasses: classes.
 			self assert: (i ~= 0).
 			histMatrix at: i at: j put: 1.
 			]
 		 ].
 	^histMatrix
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> classIndexFromFileName: classFileName InMooseClasses: classes [
+	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
+	classes doWithIndex: [ :class :index | classFileName = class sourceAnchor fileName ifTrue: [^index] ].
+	^0 "not found"
 ]
 
 { #category : #'as yet unclassified' }
@@ -1251,13 +1258,6 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDStr
 GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
 	"Mine whole left branch, from HEAD to (no stopping commit)"
 	^ self filterCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
-]
-
-{ #category : #'as yet unclassified' }
-GMUtility class >> findClassIndexByFileName: classFileName InMooseClasses: classes [
-	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
-	classes doWithIndex: [ :class :index | classFileName = class sourceAnchor fileName ifTrue: [^index] ].
-	^0 "not found"
 ]
 
 { #category : #'file service' }
@@ -1995,7 +1995,6 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
  
 	classes := self mooseClassesForDependencyMining: mooseModel.
 	changeHistoryMatrix := self changeHistoryMatrixFromTransactions: commitTransactions classes: classes.
-	"I think the nxm is wrong in the cochange (it's only as wide as the number of transactions, rather than the number of classes)"
 	cochangeMatrix := self cochangeMatrixFromChangeHistory: changeHistoryMatrix forClasses: classes.
 	
 	removedTr := self

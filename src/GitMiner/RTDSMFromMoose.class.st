@@ -23,12 +23,12 @@ Class {
 	#category : #GitMiner
 }
 
-{ #category : #accesing }
+{ #category : #accessing }
 RTDSMFromMoose >> clients [
 	^ clients
 ]
 
-{ #category : #accesing }
+{ #category : #accessing }
 RTDSMFromMoose >> clients: aOneArgBlock [
 	clients := aOneArgBlock
 ]
