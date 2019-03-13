@@ -19,10 +19,10 @@ changeHistoryMatrix := GMUtility changeHistoryMatrixFromTransactions: commitTran
 cochangeMatrix := GMUtility cochangeMatrixFromChangeHistory: changeHistoryMatrix forClasses: classes.
 
 dsm := RTCochangeDSM new.
-dsm objects: cochangeMatrix classes.
+dsm objects: classes.
 dsm cochangeMatrix: cochangeMatrix.
 dsm rotation: 270.
-dsm view
+^dsm
 "
 Class {
 	#name : #RTCochangeDSM,
@@ -57,7 +57,14 @@ RTCochangeDSM >> cochangeMatrix: anObject [
 RTCochangeDSM >> initialize [
 	super initialize.
 	"classes := #yourself."
+	self interaction
+		addExclusiveInteraction:
+			(RTPopup new
+				text: [ :assoc | 
+					assoc key asString , '->' , assoc value asString , ' ('
+						, (self assocChanges: assoc) asString , ')' ]).
 	self shape
-		"put a red box if there's a client association (opposite of dependency)"
-		if: [ :assoc | (self assocChanges: assoc) > 0 ] fillColor: Color red.
+		if: [ :assoc | (self assocChanges: assoc) > 0 ]
+		fillColor: Color red
+	"put a red box if there's a client association (opposite of dependency)"
 ]
