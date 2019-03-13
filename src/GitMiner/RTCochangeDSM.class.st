@@ -37,7 +37,7 @@ Class {
 RTCochangeDSM >> assocChanges: assoc [
 	"return the number of changes at the cell for the association"
 	| i j classes |
-	classes := self objects asOrderedCollection.
+	classes := self cochangeMatrix classes.
 	j := classes indexOf: assoc key.
 	i := classes indexOf: assoc value.
 	^ self cochangeMatrix cochangeMatrix at: i at: j
@@ -60,15 +60,4 @@ RTCochangeDSM >> initialize [
 	self shape
 		"put a red box if there's a client association (opposite of dependency)"
 		if: [ :assoc | (self assocChanges: assoc) > 0 ] fillColor: Color red.
-]
-
-{ #category : #testing }
-RTCochangeDSM >> isAssocClient: assoc [
-	"flip key/value in this logic from isAssocDependent (to correct for clientTypes showing clients rather than dependencies)"
-	| v |
-	v := clients rtValue: assoc value.
-	v = assoc key ifTrue: [ ^ true ].
-	^ v isCollection
-		ifTrue: [ v includes: assoc key ]
-		ifFalse: [ false ]
 ]
