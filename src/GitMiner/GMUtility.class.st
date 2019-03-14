@@ -1271,7 +1271,7 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
 GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"For the given MSE file, mine the client-implementation pairs info"
 
-	| results clientImplementationsFile interfacesFile |
+	| results clientImplementationsFile interfacesFile implementationsFile interfaceNames implementationNames |
 	[ :job | 
 	job title: 'Mining client-implementation pairs...'.
 	results := GMInterfaceMiner
@@ -1281,9 +1281,14 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"Save results to .CSV"
 	job
 		title: 'Saving files...'.
-	interfacesFile := self writeInterfaces: results second file: mseFileRef.
+	interfaceNames := (results second collect: [ :interface | interface mooseName ]) asSortedCollection.
+	interfacesFile := self writeInterfaces: interfaceNames file: mseFileRef.
 	job
-		progress: 0.5.
+		progress: 0.3.
+	implementationNames := (results third collect: [ :imp | imp mooseName ]) asSortedCollection.
+	implementationsFile := self writeImplementations: implementationNames file: mseFileRef.
+	job
+		progress: 0.6.
 	clientImplementationsFile := self writeClientImplementationPairs: results first file: mseFileRef ]
 		asJob run.
 	^ clientImplementationsFile
@@ -2228,7 +2233,28 @@ GMUtility class >> writeCommitTransactions: transactionRecords to: selectedCommi
 ]
 
 { #category : #writing }
-GMUtility class >> writeInterfaces: results file: mseFileRef [
+GMUtility class >> writeImplementations: implementations file: mseFileRef [
+	"Save results to file"
+
+	| fileName projectName |
+	projectName := mseFileRef parent basename allButLast: '_master' size.
+	fileName := projectName , '_' , mseFileRef basenameWithoutExtension
+		, '_' , 'Implementations' , '.csv'.
+	[ :job | 
+	job title: 'Writing implementations.'.
+	fileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			implementations
+				do: [ :interface | 
+					stream
+						nextPutAll: interface mooseName ;
+						cr ] ] ] asJob run.
+	^ fileName
+]
+
+{ #category : #writing }
+GMUtility class >> writeInterfaces: interfaces file: mseFileRef [
 	"Save results to file"
 
 	| fileName projectName |
@@ -2237,14 +2263,14 @@ GMUtility class >> writeInterfaces: results file: mseFileRef [
 		, '_' , 'Interfaces' , '.csv'.
 	[ :job | 
 	job title: 'Writing interfaces.'.
-	FileStream
-		forceNewFileNamed: fileName
-		do: [ :csvStream | 
-			(NeoCSVWriter on: csvStream)
-				nextPut:
-					#('Interface');
-				addFields: #(first);
-				nextPutAll: results ] ] asJob run.
+	fileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			interfaces
+				do: [ :interface | 
+					stream
+						nextPutAll: interface mooseName ;
+						cr ] ] ] asJob run.
 	^ fileName
 ]
 

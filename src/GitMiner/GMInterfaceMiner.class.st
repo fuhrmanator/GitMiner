@@ -67,7 +67,7 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 			"Stubs are rejected because they're not under control of the project"
 			localImplementations := interface directSubclasses
 				reject: [ :cls | cls isInterface | cls isStub ].
-			implementations add: localImplementations.
+			implementations addAll: localImplementations.
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
@@ -107,6 +107,6 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 										implementation: imp) ] ] ]
 		displayingProgress: 'Mining: Classifying interface clients'.
 	^ {listOfResults.
-	interfaces size.
+	interfaces.
 	implementations}
 ]
