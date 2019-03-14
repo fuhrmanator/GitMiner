@@ -1459,6 +1459,11 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 				ifNil: [ self
 						error:
 							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
+			[ :job | 
+			job
+				progress: 1 / 3;
+				title: 'Checking out copy of repo at ' , oid.
+
 			"Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
 			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
@@ -1478,6 +1483,9 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
 						, '"  2> "' , jdt2FamixErrors fullName , '"'.
+					job
+						title: 'Generating MSE file... ' , command;
+						progress: 2 / 3.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
@@ -1492,7 +1500,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 							mseFromJDT2Famix exists
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
-									mseFromJDT2Famix moveTo: mseDestination ] ] ].
+									mseFromJDT2Famix moveTo: mseDestination ] ] ] ] asJob run.
 			OSEnvironment current removeKey: 'GIT_WORK_TREE' ].
 	^ mseDestination
 ]
