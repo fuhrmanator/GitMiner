@@ -873,16 +873,23 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 { #category : #'as yet unclassified' }
 GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: classes [
 	| histMatrix |
-	histMatrix := PMMatrix zerosRows: classes size cols: transactions size.
-	transactions doWithIndex: [ :t :j | "t is a GMCommitTransaction"
-		t committedFileNames do: [ :classFileName |
-			| i |
-			i := self classIndexFromFileName: classFileName InMooseClasses: classes.
-			self assert: (i ~= 0).
-			histMatrix at: i at: j put: 1.
-			]
-		 ].
-	^histMatrix
+	histMatrix := PMMatrix
+		zerosRows: classes size
+		cols: transactions size.
+	transactions
+		doWithIndex: [ :t :j | 
+			"t is a GMCommitTransaction"
+			t committedFileNames
+				do: [ :classFileName | 
+					| i |
+					i := self
+						classIndexFromFileName: classFileName
+						InMooseClasses: classes.
+					"self assert: (i ~= 0)."
+					"i = 0 means that a class was not found (deleted, renamed?)"
+					i > 0
+						ifTrue: [ histMatrix at: i at: j put: 1 ] ] ].
+	^ histMatrix
 ]
 
 { #category : #'as yet unclassified' }
