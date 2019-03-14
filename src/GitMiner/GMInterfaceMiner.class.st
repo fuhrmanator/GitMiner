@@ -25,14 +25,27 @@ GMInterfaceMiner class >> localClientsFrom: interface [
 ]
 
 { #category : #'client implementation analysis' }
+GMInterfaceMiner class >> makeEntryForProtectedGroup: isProtected client: client interface: interface implementation: imp [
+	"makes an array element with the info"
+
+	^ {client mooseName.
+	client sourceAnchor fileName.
+	interface mooseName.	"this is sometimes a stub, so can't get source always"
+	imp mooseName.
+	imp sourceAnchor fileName.
+	isProtected	"protected"}
+]
+
+{ #category : #'client implementation analysis' }
 GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: ifPrefix [
-	| mseStream interfaces listOfResults mooseModel |
-	mseStream := mseFileRef readStream.
+	| mseStream interfaces implementations listOfResults mooseModel |
 	listOfResults := LinkedList new.
+	implementations := Set new.
+	mseStream := mseFileRef readStream.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
 			mseStream close ]
-		ifNil: [ 0 halt ].
+		ifNil: [ self error: 'The MSE file ' , mseFileRef , ' is not valid.' ].
 
 	"Find implementations and clients for each interface"
 	"Limit interfaces to those starting with prefix"
@@ -45,8 +58,8 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 				progress: count / mooseModel allClasses size;
 				title: 'Collecting interfaces'.
 			each isInterface
-				& ((ifPrefix isEmpty) | (each container mooseName beginsWith: ifPrefix)) ]) asSet ]
-		asJob run.
+				& (ifPrefix isEmpty | (each container mooseName beginsWith: ifPrefix)) ])
+		asSet ] asJob run.
 	interfaces
 		do: [ :interface | 
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
@@ -54,6 +67,7 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 			"Stubs are rejected because they're not under control of the project"
 			localImplementations := interface directSubclasses
 				reject: [ :cls | cls isInterface | cls isStub ].
+			implementations add: localImplementations.
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
 			"Classify protected and unprotected clients"
@@ -75,7 +89,7 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 							listOfResults
 								add:
 									(self
-										protectedGroup: true
+										makeEntryForProtectedGroup: true
 										client: client
 										interface: interface
 										implementation: imp) ] ].
@@ -87,22 +101,12 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 							listOfResults
 								add:
 									(self
-										protectedGroup: false
+										makeEntryForProtectedGroup: false
 										client: client
 										interface: interface
 										implementation: imp) ] ] ]
 		displayingProgress: 'Mining: Classifying interface clients'.
-	^ listOfResults
-]
-
-{ #category : #'client implementation analysis' }
-GMInterfaceMiner class >> protectedGroup: isProtected client: client interface: interface implementation: imp [
-	"makes an array element with the info"
-
-	^ {client mooseName.
-	client sourceAnchor fileName.
-	interface mooseName.	"this is sometimes a stub, so can't get source always"
-	imp mooseName.
-	imp sourceAnchor fileName.
-	isProtected	"protected"}
+	^ {listOfResults.
+	interfaces size.
+	implementations}
 ]

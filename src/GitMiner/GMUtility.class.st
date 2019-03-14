@@ -1271,7 +1271,7 @@ GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
 GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"For the given MSE file, mine the client-implementation pairs info"
 
-	| results file |
+	| results clientImplementationsFile interfacesFile |
 	[ :job | 
 	job title: 'Mining client-implementation pairs...'.
 	results := GMInterfaceMiner
@@ -1280,38 +1280,13 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"results size = 0 ifTrue: 0halt."	"-> no interfaces will yield this"
 	"Save results to .CSV"
 	job
-		title: 'Saving file...';
+		title: 'Saving files...'.
+	interfacesFile := self writeInterfaces: results second file: mseFileRef.
+	job
 		progress: 0.5.
-	file := self writeClientImplementationPairs: results file: mseFileRef ]
+	clientImplementationsFile := self writeClientImplementationPairs: results first file: mseFileRef ]
 		asJob run.
-	^ file
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateClientImplementationPairsFiles: extension [
-	"For every MSE file in the data_mining directory tree, mine the client-implementation pairs info"
-
-	| mseDirRoot mseDirs |
-	mseDirRoot := FileLocator workingDirectory  / 'tmp' / 'data_mining'.
-	mseDirs := mseDirRoot directories.
-	mseDirs
-		do: [ :dir | 
-			| mseFiles results projectName |
-			projectName := dir basename asString allButLast: '_master' size.
-			mseFiles := dir allChildrenMatching: '*.mse'.
-			mseFiles
-				do: [ :mseFile | 
-					results := GMInterfaceMiner mineClientImplementationPairs: mseFile withPrefix: ''.
-					"results size = 0 ifTrue: 0halt." "-> no interfaces will yield this"
-					"Save results to .CSV"
-					FileStream
-						forceNewFileNamed: projectName , '_', mseFile basenameWithoutExtension , '_' , 'ClientImpPairs' , '.csv'
-						do: [ :csvStream | 
-							(NeoCSVWriter on: csvStream)
-								nextPut: #('Client' 'ClientFile' 'Interface' 'Implementation' 'ImplementationFile' 'Protected');
-								addFields: #(first second third fourth fifth sixth);
-								nextPutAll: results ] ] ]
-		displayingProgress: [ :dir | 'Processing directory ' , dir fullName , '...' ]
+	^ clientImplementationsFile
 ]
 
 { #category : #'file service' }
@@ -2250,6 +2225,27 @@ GMUtility class >> writeCommitTransactions: transactionRecords to: selectedCommi
 						nextPutAll: rec;
 						cr ] ].
 	^ outFileName
+]
+
+{ #category : #writing }
+GMUtility class >> writeInterfaces: results file: mseFileRef [
+	"Save results to file"
+
+	| fileName projectName |
+	projectName := mseFileRef parent basename allButLast: '_master' size.
+	fileName := projectName , '_' , mseFileRef basenameWithoutExtension
+		, '_' , 'Interfaces' , '.csv'.
+	[ :job | 
+	job title: 'Writing interfaces.'.
+	FileStream
+		forceNewFileNamed: fileName
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut:
+					#('Interface');
+				addFields: #(first);
+				nextPutAll: results ] ] asJob run.
+	^ fileName
 ]
 
 { #category : #'file service' }
