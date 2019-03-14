@@ -782,14 +782,24 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Create protected set"
 	"Create unprotected set"
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew |
+	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
+	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
+	implementationsExtension := '_' , startOIDString , '_Implementations.csv'.
 	linkString := '->'.
 	results := OrderedCollection new.
 
 	subprojectName := project , '_' , (startOIDString truncate: 7) , '-' , (endOIDString truncate: 7 ellipsis: '' ).
 	self flag: 'should not recreate path to ClientImpPairs, it should be passed as argument.'.
 	clientImpFile := FileLocator workingDirectory / (project , clientImpExtension).
+	interfacesFile := FileLocator workingDirectory / (project , interfacesExtension ).
+	implementationsFile := FileLocator workingDirectory / (project , implementationsExtension).
+
+	"Read in CSV of interfaces"
+	interfaces := interfacesFile contents lines.
+
+	"Read in CSV of implementations"
+	implementations := implementationsFile contents lines.
 
 	"Read in CSV of commit history pairs"
 	lcInputStream := 	commitHistoryPairsFile asFileReference readStream.
@@ -846,6 +856,8 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
+			interfaces size.
+			implementations size.
 			historicalCouplingBag size.
 			protectedCouplingSet size.
 			unprotectedCouplingSet size.
@@ -863,9 +875,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
+							#('Project' 'Interfaces' 'Implementations' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
 			streamWriter
-				addFields: #(first second third fourth fifth sixth);
+				addFields: #(first second third fourth fifth sixth seventh eighth);
 				nextPutAll: results ].
 	^ results
 ]
