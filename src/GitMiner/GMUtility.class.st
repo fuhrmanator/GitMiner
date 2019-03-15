@@ -857,14 +857,14 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withARulesFile: tr
 ]
 
 { #category : #pipeline }
-GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: commitHistoryPairsFile from: startOIDString to: endOIDString [
+GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: commitHistoryPairsFile from: startOIDString to: endOIDString selectedCommitsFile: selectedCommitsFile [
 	"take the pairs file (commits) and client-implementation pairs and find intersections"
 	"Read commit history pairs"
 	"Read structural coupling pairs"
 	"Create protected set"
 	"Create unprotected set"
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew |
+	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew  |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
 	implementationsExtension := '_' , startOIDString , '_Implementations.csv'.
@@ -938,6 +938,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
+			selectedCommitsFile contents lines size -1.
 			interfaces size.
 			implementations size.
 			historicalCouplingBag size.
@@ -2041,7 +2042,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 
-	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString 
+	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: selectedCommits
 ]
 
 { #category : #'file service' }
