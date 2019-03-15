@@ -115,6 +115,88 @@ GMUtility class >> abortWithErrorMessageFromFileReference: fileRef title: title 
 	
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> annotateCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
+	"For all commits in a range specified by Git tags, add metadata according to what is important in the mining"
+
+	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit startCommitShortOID endCommitShortOID |
+	projectName := location path basename.
+	repoHandle := LGitRepository on: location.
+	repoHandle open.
+	commitDataList := LinkedList new.
+
+	startCommit := repoHandle revparse: startOIDString.
+	"Make a shortened OID (7 chars)"
+	startCommitShortOID := self shortOID: startCommit name.
+
+	endOIDString isEmpty ifTrue: [ 
+		"Find commit with no parent"
+		endCommit := nil.
+		endCommitShortOID := 'END'.
+	] ifFalse: [ 
+		endCommit := repoHandle revparse: endOIDString. 
+		"Make a shortened OID (7 chars)"
+		endCommitShortOID := self shortOID: endCommit name.
+	].
+
+	"Walk through to count commits for progress bar"
+	nCommits := 0.
+	commit := startCommit.
+	[ (commit hasParents) & (commit ~= endCommit) ]
+		whileTrue: [ nCommits := nCommits + 1.
+			commit := commit parents first ].
+	"nCommits > 2000
+		ifTrue: [ (UIManager
+				confirm:
+					'This range has ' , nCommits asString
+						, ' commits. Are you sure you want to mine it?')
+				ifFalse: [ UIManager default abort: 'User aborted.' title: 'Mining stopped.'.
+					self error: 'need to terminate Mining pipeline.'
+					 ] ]."
+			
+	"Get commit ids that have:
+  - no added files (only changed files)
+  - 10 or fewer files
+  - at least one .java file."
+	relativeRevNumber := 0.
+	commit := startCommit.
+	parentCommit := startCommit parents first.
+	[ :job | 
+	[ (parentCommit hasParents) & (parentCommit ~= endCommit) ]
+		whileTrue: [ | addedFiles difference atLeastOneJavaFile diffFiles |
+			relativeRevNumber := relativeRevNumber + 1.
+			difference := parentCommit tree diffTo: commit tree.
+			diffFiles := difference files.
+			job
+				progress: relativeRevNumber / nCommits;
+				title:
+					'Analyzing revision ' , (commit name truncateTo: 8) , ': '''
+						, (commit message truncateTo: 25) , ''' ('
+						, difference numberOfDeltas asString , ' files, isMerge=='
+						, commit isMerge asString , ') ' , relativeRevNumber asString
+						, '/' , nCommits asString.
+			addedFiles := Set new.
+			diffFiles
+				do:
+					[ :file | commit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
+			atLeastOneJavaFile := difference files
+				anySatisfy: [ :file | file endsWith: '.java' ].
+			commitDataList
+				add:
+					{commit name.
+					(nCommits - relativeRevNumber + 1).	"Revwalk goes from latest to earliest"
+					(Character space join: addedFiles).
+					difference numberOfDeltas.
+					atLeastOneJavaFile.
+					(Character space join: diffFiles)}.
+			commit := parentCommit.
+			parentCommit := commit parents first ] ] asJob run.
+	outFile := projectName , '_' , startCommitShortOID , '-'
+		, endCommitShortOID, '_WithMiningMetadata.csv'.
+	self writeCommitResults: commitDataList to: outFile.
+	^ outFile
+]
+
 { #category : #'file service' }
 GMUtility class >> applyRenamingsToTransactions: projectsFile [
 	"comment stating purpose of message"
@@ -1191,92 +1273,10 @@ GMUtility class >> filterCommitsOnRepo: location withRange: range [
 	^outFile
 ]
 
-{ #category : #'as yet unclassified' }
-GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location from: startOIDString to: endOIDString [
-	"selects commits from a range specified by Git tags"
-
-	| repoHandle commitDataList nCommits relativeRevNumber projectName outFile commit parentCommit startCommit endCommit startCommitShortOID endCommitShortOID |
-	projectName := location path basename.
-	repoHandle := LGitRepository on: location.
-	repoHandle open.
-	commitDataList := LinkedList new.
-
-	startCommit := repoHandle revparse: startOIDString.
-	"Make a shortened OID (7 chars)"
-	startCommitShortOID := self shortOID: startCommit name.
-
-	endOIDString isEmpty ifTrue: [ 
-		"Find commit with no parent"
-		endCommit := nil.
-		endCommitShortOID := 'END'.
-	] ifFalse: [ 
-		endCommit := repoHandle revparse: endOIDString. 
-		"Make a shortened OID (7 chars)"
-		endCommitShortOID := self shortOID: endCommit name.
-	].
-
-	"Walk through to count commits for progress bar"
-	nCommits := 0.
-	commit := startCommit.
-	[ (commit hasParents) & (commit ~= endCommit) ]
-		whileTrue: [ nCommits := nCommits + 1.
-			commit := commit parents first ].
-	"nCommits > 2000
-		ifTrue: [ (UIManager
-				confirm:
-					'This range has ' , nCommits asString
-						, ' commits. Are you sure you want to mine it?')
-				ifFalse: [ UIManager default abort: 'User aborted.' title: 'Mining stopped.'.
-					self error: 'need to terminate Mining pipeline.'
-					 ] ]."
-			
-	"Get commit ids that have:
-  - no added files (only changed files)
-  - 10 or fewer files
-  - at least one .java file."
-	relativeRevNumber := 0.
-	commit := startCommit.
-	parentCommit := startCommit parents first.
-	[ :job | 
-	[ (parentCommit hasParents) & (parentCommit ~= endCommit) ]
-		whileTrue: [ | addedFiles difference atLeastOneJavaFile diffFiles |
-			relativeRevNumber := relativeRevNumber + 1.
-			difference := parentCommit tree diffTo: commit tree.
-			diffFiles := difference files.
-			job
-				progress: relativeRevNumber / nCommits;
-				title:
-					'Analyzing revision ' , (commit name truncateTo: 8) , ': '''
-						, (commit message truncateTo: 25) , ''' ('
-						, difference numberOfDeltas asString , ' files, isMerge=='
-						, commit isMerge asString , ') ' , relativeRevNumber asString
-						, '/' , nCommits asString.
-			addedFiles := Set new.
-			diffFiles
-				do:
-					[ :file | commit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
-			atLeastOneJavaFile := difference files
-				anySatisfy: [ :file | file endsWith: '.java' ].
-			commitDataList
-				add:
-					{commit name.
-					(nCommits - relativeRevNumber + 1).	"Revwalk goes from latest to earliest"
-					(Character space join: addedFiles).
-					difference numberOfDeltas.
-					atLeastOneJavaFile.
-					(Character space join: diffFiles)}.
-			commit := parentCommit.
-			parentCommit := commit parents first ] ] asJob run.
-	outFile := projectName , '_' , startCommitShortOID , '-'
-		, endCommitShortOID, '_commits_oids.csv'.
-	self writeCommitResults: commitDataList to: outFile.
-	^ outFile
-]
-
 { #category : #pipeline }
 GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
 	"Mine whole left branch, from HEAD to (no stopping commit)"
-	^ self filterCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
+	^ self annotateCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
 ]
 
 { #category : #'file service' }
@@ -1734,7 +1734,7 @@ commitFiles do: [ :file |
 	"Write out the list of UIDs for the selected commits"
 	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_UIDs.csv'."
 	FileStream
-		forceNewFileNamed: (file basenameWithoutExtension) , '_UIDs.csv'
+		forceNewFileNamed: (file basenameWithoutExtension) , '_selected.csv'
 		do: [ :csvStream | 
 			(NeoCSVWriter on: csvStream)
 				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
@@ -1977,7 +1977,7 @@ GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDStrin
 	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult mseStream mooseModel classes commitTransactions changeHistoryMatrix cochangeMatrix |
 	loc := self cloneRepo: urlString.
 	commitMetadata := self
-		filterCommitsOnRepoLeftBranchOnly: loc
+		annotateCommitsOnRepoLeftBranchOnly: loc
 		from: startOIDString
 		to: endOIDString.
 	selectedCommits := self generateSelectedCommits: commitMetadata.
@@ -2032,7 +2032,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile |
 	loc := GMUtility cloneRepo: urlString.
 	commitMetadata := GMUtility
-		filterCommitsOnRepoLeftBranchOnly: loc
+		annotateCommitsOnRepoLeftBranchOnly: loc
 		from: startOIDString
 		to: endOIDString.
 	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
@@ -2290,7 +2290,7 @@ GMUtility class >> writeInterfaces: interfaces file: mseFileRef [
 GMUtility class >> writeSelectedCommits: selectedCommits file: fileName [
 	| file selCommitsFileName |
 	file := fileName asFileReference.
-	selCommitsFileName := file basenameWithoutExtension , '_UIDs.csv'.
+	selCommitsFileName := file basenameWithoutExtension , '_selected.csv'.
 	selCommitsFileName asFileReference
 		ensureDelete;
 		writeStreamDo: [ :csvStream | 
