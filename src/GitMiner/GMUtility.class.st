@@ -938,7 +938,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
-			selectedCommitsFile contents lines size -1.
+			selectedCommitsFile asFileReference contents lines size -1.
 			interfaces size.
 			implementations size.
 			historicalCouplingBag size.
@@ -958,9 +958,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Interfaces' 'Implementations' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
+							#('Project' 'Selected commits' 'Interfaces' 'Implementations' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
 			streamWriter
-				addFields: #(first second third fourth fifth sixth seventh eighth);
+				addFields: #(first second third fourth fifth sixth seventh eighth ninth);
 				nextPutAll: results ].
 	^ results
 ]
