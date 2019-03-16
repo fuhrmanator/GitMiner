@@ -1,6 +1,20 @@
 "
-Class with homeless methods... To be refactored into an API.
- 
+""Class with homeless methods... To be refactored into an API.""
+--------------
+| urls |
+
+urls := #(
+'https://github.com/iluwatar/java-design-patterns'
+'https://github.com/elastic/elasticsearch'
+'https://github.com/ReactiveX/RxJava'
+'https://github.com/spring-projects/spring-boot'
+'https://github.com/square/retrofit'
+'https://github.com/square/okhttp'
+'https://github.com/google/guava'
+'https://github.com/spring-projects/spring-framework'
+'https://github.com/PhilJay/MPAndroidChart'
+).
+urls do: [ :url | GMUtility mineClientChangesNoARules: (url splitOn: '/') last url: url ] displayingProgress: [:url | 'Mining project: ', url ]. 
 --------------
 
 GMUtility mineClientChanges: 'cassandra' url: 'https://github.com/apache/cassandra' from: '3dcde0821a40eb2bc633082916d8f3ff861efdb5' to: '50560aaf0f2d395271ade59ba9b900a84cae70f1'.
@@ -1419,10 +1433,11 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
+	| working destPath repoPath gitErrors jdt2FamixOutput jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
 	working := FileSystem disk workingDirectory.
 	destPath := Path * 'tmp' / 'data_mining'.
 	gitErrors := working / 'tmp' / 'errors_git'.
+	jdt2FamixOutput := working / 'tmp' / 'output_jdt2famix'.
 	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
 	checkoutDest := working
 		resolve: destPath / (repoName , '_master') / oid.
@@ -1475,9 +1490,9 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '"  2> "' , jdt2FamixErrors fullName , '"'.
+						, '" > "' , jdt2FamixOutput fullName , '" 2> "' , jdt2FamixErrors fullName , '"'. 0halt.
 					job
-						title: 'Generating MSE file... ' , command;
+						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
 					result := LibC uniqueInstance system: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
