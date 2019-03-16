@@ -1490,7 +1490,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '" > "' , jdt2FamixOutput fullName , '" 2> "' , jdt2FamixErrors fullName , '"'. 0halt.
+						, '" > "' , jdt2FamixOutput fullName , '" 2> "' , jdt2FamixErrors fullName , '"'. 
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
