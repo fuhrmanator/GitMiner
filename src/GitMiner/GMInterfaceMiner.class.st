@@ -50,7 +50,9 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 	"Find implementations and clients for each interface"
 	"Limit interfaces to those starting with prefix"
 	[ :job | 
-	| count |
+	| count classes classesFile |
+	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
+	classesFile := self writeClasses: classes file: mseFileRef.
 	count := 0.
 	interfaces := (mooseModel allClasses
 		select: [ :each | 

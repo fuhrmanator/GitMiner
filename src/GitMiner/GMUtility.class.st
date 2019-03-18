@@ -878,9 +878,10 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Create protected set"
 	"Create unprotected set"
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew  |
+	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew  classesExtension classesFile classes |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
+	classesExtension := '_' , startOIDString , '_Classes.csv'.
 	implementationsExtension := '_' , startOIDString , '_Implementations.csv'.
 	linkString := '->'.
 	results := OrderedCollection new.
@@ -888,8 +889,12 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	subprojectName := project , '_' , (startOIDString truncate: 7) , '-' , (endOIDString truncate: 7 ellipsis: '' ).
 	self flag: 'should not recreate path to ClientImpPairs, it should be passed as argument.'.
 	clientImpFile := FileLocator workingDirectory / (project , clientImpExtension).
+	classesFile := FileLocator workingDirectory / (project , classesExtension ).
 	interfacesFile := FileLocator workingDirectory / (project , interfacesExtension ).
 	implementationsFile := FileLocator workingDirectory / (project , implementationsExtension).
+
+	"Read in CSV of classes"
+	classes := classesFile contents lines.
 
 	"Read in CSV of interfaces"
 	interfaces := interfacesFile contents lines.
@@ -952,6 +957,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	results
 		add:
 			{subprojectName.
+			classes size.
 			selectedCommitsFile asFileReference contents lines size -1.
 			interfaces size.
 			implementations size.
@@ -961,7 +967,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			historicalProtectedIntersectionBag size.
 			historicalProtectedIntersectionBag asSet size.
 			historicalUnprotectedIntersectionBag size.
-			historicalUnprotectedIntersectionBag asSet size}.
+			historicalUnprotectedIntersectionBag asSet size.
+			(historicalProtectedIntersectionBag asSet size / protectedCouplingSet size) asFloat.
+			(historicalUnprotectedIntersectionBag asSet size / unprotectedCouplingSet size) asFloat}.
 	"Append results to .CSV"
 	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
 	isOutFileNew := outRef exists not.
@@ -974,7 +982,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Selected_commits' 'Interfaces' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|') ].
+							#('Project' 'Classes' 'Selected_commits' 'Interfaces' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|') ].
 			streamWriter
 				addFields: #(first second third fourth fifth sixth seventh eighth ninth);
 				nextPutAll: results ].
@@ -2201,6 +2209,27 @@ GMUtility class >> writeClassPairs: logicalCouplingRecords file: fromFileName [
 				addFields: #(first second third fourth fifth);
 				nextPutAll: logicalCouplingRecords ].
 	^ newFileName
+]
+
+{ #category : #writing }
+GMUtility class >> writeClasses: classes file: mseFileRef [
+	"Save results to file"
+
+	| fileName projectName |
+	projectName := mseFileRef parent basename allButLast: '_master' size.
+	fileName := projectName , '_' , mseFileRef basenameWithoutExtension
+		, '_' , 'Classes' , '.csv'.
+	[ :job | 
+	job title: 'Writing classes.'.
+	fileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			classes
+				do: [ :aFamixTClass | 
+					stream
+						nextPutAll: aFamixTClass mooseName ;
+						cr ] ] ] asJob run.
+	^ fileName
 ]
 
 { #category : #writing }
