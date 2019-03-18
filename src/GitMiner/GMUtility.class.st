@@ -959,7 +959,9 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			protectedCouplingSet size.
 			unprotectedCouplingSet size.
 			historicalProtectedIntersectionBag size.
-			historicalUnprotectedIntersectionBag size}.
+			historicalProtectedIntersectionBag asSet size.
+			historicalUnprotectedIntersectionBag size.
+			historicalUnprotectedIntersectionBag asSet size}.
 	"Append results to .CSV"
 	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
 	isOutFileNew := outRef exists not.
@@ -972,7 +974,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Selected commits' 'Interfaces' 'Implementations' '|historical Coupling|' '|Protected Structural Coupling|' '|Unprotected Structural Coupling|' '|historical Coupling ^ Protected Structural Coupling|' '|historical Coupling ^ Unprotected Structural Coupling|') ].
+							#('Project' 'Selected_commits' 'Interfaces' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|') ].
 			streamWriter
 				addFields: #(first second third fourth fifth sixth seventh eighth ninth);
 				nextPutAll: results ].
