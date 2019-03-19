@@ -67,8 +67,9 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
+			"AnonymouseClasses are rejected because they're inside a file (and won't ever be committed as a separate file)"			
 			localImplementations := interface directSubclasses
-				reject: [ :cls | cls isInterface | cls isStub ].
+				reject: [ :cls | cls isInterface | cls isStub | cls isAnonymousClass ].
 			implementations addAll: localImplementations.
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 

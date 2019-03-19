@@ -873,25 +873,38 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withARulesFile: tr
 { #category : #pipeline }
 GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: commitHistoryPairsFile from: startOIDString to: endOIDString selectedCommitsFile: selectedCommitsFile [
 	"take the pairs file (commits) and client-implementation pairs and find intersections"
+
 	"Read commit history pairs"
+
 	"Read structural coupling pairs"
+
 	"Create protected set"
+
 	"Create unprotected set"
+
 	"Calculate intersections"
-	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew  classesExtension classesFile classes |
+
+	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew classesExtension classesFile classes clientSet |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
 	classesExtension := '_' , startOIDString , '_Classes.csv'.
-	implementationsExtension := '_' , startOIDString , '_Implementations.csv'.
+	implementationsExtension := '_' , startOIDString
+		, '_Implementations.csv'.
 	linkString := '->'.
 	results := OrderedCollection new.
-
-	subprojectName := project , '_' , (startOIDString truncate: 7) , '-' , (endOIDString truncate: 7 ellipsis: '' ).
-	self flag: 'should not recreate path to ClientImpPairs, it should be passed as argument.'.
-	clientImpFile := FileLocator workingDirectory / (project , clientImpExtension).
-	classesFile := FileLocator workingDirectory / (project , classesExtension ).
-	interfacesFile := FileLocator workingDirectory / (project , interfacesExtension ).
-	implementationsFile := FileLocator workingDirectory / (project , implementationsExtension).
+	subprojectName := project , '_' , (startOIDString truncate: 7) , '-'
+		, (endOIDString truncate: 7 ellipsis: '').
+	self
+		flag:
+			'should not recreate path to ClientImpPairs, it should be passed as argument.'.
+	clientImpFile := FileLocator workingDirectory
+		/ (project , clientImpExtension).
+	classesFile := FileLocator workingDirectory
+		/ (project , classesExtension).
+	interfacesFile := FileLocator workingDirectory
+		/ (project , interfacesExtension).
+	implementationsFile := FileLocator workingDirectory
+		/ (project , implementationsExtension).
 
 	"Read in CSV of classes"
 	classes := classesFile contents lines.
@@ -903,16 +916,21 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	implementations := implementationsFile contents lines.
 
 	"Read in CSV of commit history pairs"
-	lcInputStream := 	commitHistoryPairsFile asFileReference readStream.
+	lcInputStream := commitHistoryPairsFile asFileReference readStream.
 	lcRecords := (NeoCSVReader on: lcInputStream)
 		separator: $,;
 		skipHeader;
 		"Project Class_1 Class_2 Commit_ID Revision_number"
-			addField; "ruleNumber"
-			addField; "Class_1"
-			addField; "Class_2"
-			addField; "Commit_ID"
-			addIntegerField; "Revision_number"
+			addField;
+		"ruleNumber"
+			addField;
+		"Class_1"
+			addField;
+		"Class_2"
+			addField;
+		"Commit_ID"
+			addIntegerField;
+		"Revision_number"
 			upToEnd.
 
 	"Create a bag of historical coupling -- occurrences of each entry will be counted"
@@ -927,39 +945,29 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 
 	"Bag allows us to count occurrences"
 	protectedCouplingSet := Set new.
-	scRecords
-		do: [ :each | 
-			each sixth
-				ifTrue: [ protectedCouplingSet add: each second , linkString , each fifth ] ].
-	"Transcript
-				show: 'Protected coupling set size: ' , protectedCouplingSet size asString;
-				cr."
 	unprotectedCouplingSet := Set new.
+	clientSet := Set new.
 	scRecords
 		do: [ :each | 
-			each sixth
-				ifFalse: [ unprotectedCouplingSet add: each second , linkString , each fifth ] ].
-	"Transcript
-				show: 'Unprotected coupling set size: ' , unprotectedCouplingSet size asString;
-				cr."
-	historicalProtectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: protectedCouplingSet.
-	historicalUnprotectedIntersectionBag := historicalCouplingBag intersectionKeepingOccurrences: unprotectedCouplingSet.
-	"Transcript
-				show: 'Intersection of historical coupling and protected coupling set size:' , historicalProtectedIntersection size asString;
-				cr."
-	"						, (' ' join: historicalProtectedIntersection); cr."
-	"Transcript
-				show:
-					'Intersection of historical coupling and unprotected coupling set size: '
-						, historicalUnprotectedIntersection size asString;
-				cr."
-	"						, (' ' join: historicalUnprotectedIntersection); cr"
+			| isProtected client implementation |
+			client := each second.
+			clientSet add: client.
+			implementation := each fifth.
+			(isProtected := each sixth
+				ifTrue: [ protectedCouplingSet ]
+				ifFalse: [ unprotectedCouplingSet ])
+				add: each second , linkString , each fifth ].
+	historicalProtectedIntersectionBag := historicalCouplingBag
+		intersectionKeepingOccurrences: protectedCouplingSet.
+	historicalUnprotectedIntersectionBag := historicalCouplingBag
+		intersectionKeepingOccurrences: unprotectedCouplingSet.
 	results
 		add:
 			{subprojectName.
+			(selectedCommitsFile asFileReference contents lines size - 1).
 			classes size.
-			selectedCommitsFile asFileReference contents lines size -1.
 			interfaces size.
+			clientSet size.
 			implementations size.
 			historicalCouplingBag size.
 			protectedCouplingSet size.
@@ -968,10 +976,13 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			historicalProtectedIntersectionBag asSet size.
 			historicalUnprotectedIntersectionBag size.
 			historicalUnprotectedIntersectionBag asSet size.
-			(historicalProtectedIntersectionBag asSet size / protectedCouplingSet size) asFloat.
-			(historicalUnprotectedIntersectionBag asSet size / unprotectedCouplingSet size) asFloat}.
+			(historicalProtectedIntersectionBag asSet size
+				/ protectedCouplingSet size) asFloat.
+			(historicalUnprotectedIntersectionBag asSet size
+				/ unprotectedCouplingSet size) asFloat}.
 	"Append results to .CSV"
-	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv' asFileReference.
+	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv'
+		asFileReference.
 	isOutFileNew := outRef exists not.
 	outRef
 		writeStreamDo: [ :csvStream | 
@@ -982,9 +993,10 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Classes' 'Selected_commits' 'Interfaces' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|') ].
+							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|' '|H^P|/|P|' '|H^U|/|U|') ].
 			streamWriter
-				addFields: #(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth);
+				addFields:
+					#(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth);
 				nextPutAll: results ].
 	^ results
 ]

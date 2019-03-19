@@ -9,6 +9,14 @@ SequenceableCollection >> eleventh [
 ]
 
 { #category : #'*GitMiner' }
+SequenceableCollection >> fifteenth [
+	"Answer the fifteenth element of the receiver.
+	Raise an error if there are not enough elements."
+
+	^ self at: 15
+]
+
+{ #category : #'*GitMiner' }
 SequenceableCollection >> fourteenth [
 	"Answer the fourteenth element of the receiver.
 	Raise an error if there are not enough elements."
