@@ -54,7 +54,7 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
 	classesFile := GMUtility writeClasses: classes file: mseFileRef.
 	count := 0.
-	candidateClasses := mooseModel allModelClasses.
+	candidateClasses := mooseModel allClasses.
 	interfaces := (candidateClasses
 		select: [ :each | 
 			job
