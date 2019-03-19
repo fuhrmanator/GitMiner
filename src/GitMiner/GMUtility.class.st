@@ -995,7 +995,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 						nextPut:
 							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|' '|H^P|/|P|' '|H^U|/|U|') ].
 			streamWriter
-				addFields:
+				addRawFields:
 					#(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth);
 				nextPutAll: results ].
 	^ results
