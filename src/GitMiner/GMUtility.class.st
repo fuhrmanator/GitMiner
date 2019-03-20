@@ -976,10 +976,14 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			historicalProtectedIntersectionBag asSet size.
 			historicalUnprotectedIntersectionBag size.
 			historicalUnprotectedIntersectionBag asSet size.
-			(historicalProtectedIntersectionBag asSet size
-				/ protectedCouplingSet size) asFloat round: 3.
-			(historicalUnprotectedIntersectionBag asSet size
-				/ unprotectedCouplingSet size) asFloat round: 3}.
+			(protectedCouplingSet isEmpty
+				ifTrue: [ 'N/A' ]
+				ifFalse: [ (historicalProtectedIntersectionBag asSet size
+						/ protectedCouplingSet size) asFloat * 100 round: 1 ]).
+			(unprotectedCouplingSet isEmpty
+				ifTrue: [ 'N/A' ]
+				ifFalse: [ (historicalUnprotectedIntersectionBag asSet size
+						/ unprotectedCouplingSet size) asFloat * 100 round: 1 ])}.
 	"Append results to .CSV"
 	outRef := 'Historical_Dependency_and_Structural_Dependency_results.csv'
 		asFileReference.
