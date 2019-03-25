@@ -51,6 +51,11 @@ GMGitHubGraphQLQuery >> doGraphiQLQuery: graphiQLQueryString [
 ]
 
 { #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> endCursorFromJSONDict: resultDic [ 
+	^ (((resultDic at: 'data') at: 'search') at: 'pageInfo') at: 'endCursor' 
+]
+
+{ #category : #'as yet unclassified' }
 GMGitHubGraphQLQuery >> makeFirstBlockQuery: blockSize queryString: queryString [ 
 	^ '{
   "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
@@ -68,6 +73,26 @@ GMGitHubGraphQLQuery >> makeFollowingBlockQuery: blockSize after: endCursorStrin
     "query": "' , queryString , '"
   }
 }'
+]
+
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> projectCountFromJSONDict: resultDic [ 
+	^((resultDic at: 'data') at: 'search') at: 'repositoryCount'
+]
+
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> projectsFromJSONDict: resultDic [ 
+	| projectsFetchedCollection |
+	projectsFetchedCollection := ((resultDic at: 'data') at: 'search') at: 'nodes'.
+	^ (projectsFetchedCollection collect: [ :p | 
+	 Dictionary newFrom: { 
+		#nameWithOwner->(p at: 'nameWithOwner') . 
+		#forkCount->(p at: 'forkCount') . 
+		#closedIssuesCount->((p at: 'issues') at: 'totalCount') . 
+		#mergePullRequestsCount->((p at: 'pullRequests') at: 'totalCount') . 
+		#stargazersCount->((p at: 'stargazers') at: 'totalCount') 
+	 } 
+  ]) asOrderedCollection
 ]
 
 { #category : #accessing }
