@@ -38,6 +38,38 @@ GMGitHubGraphQLQuery >> doGraphQLQuery: graphQLquery [
 	post
 ]
 
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> doGraphiQLQuery: graphiQLQueryString [ 
+	"This method expects a query copied from the GraphiQL Tool (which includes variables) using 'Copy to clipboard' option, and already escapes the double-quotes properly."	
+	^ZnClient new
+		url: 'https://api.github.com/graphql';
+		headerAt: 'Authorization' put: 'bearer ', self token; 
+		entity: (ZnEntity 
+        with: graphiQLQueryString
+        type: ZnMimeType applicationJson);
+	post
+]
+
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> makeFirstBlockQuery: blockSize queryString: queryString [ 
+	^ '{
+  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
+  "variables": {
+    "query": "' , queryString , '"
+  }
+}'
+]
+
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> makeFollowingBlockQuery: blockSize after: endCursorString queryString: queryString [ 
+	^ '{
+  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', after: \"' , endCursorString , '\", query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
+  "variables": {
+    "query": "' , queryString , '"
+  }
+}'
+]
+
 { #category : #accessing }
 GMGitHubGraphQLQuery >> token [
 	^ token
