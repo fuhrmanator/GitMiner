@@ -83,9 +83,13 @@ working / 'resultFromGraphiQL.json' writeStreamDo: [ :stream | stream nextPutAll
 	projectCount := self projectCountFromJSONDict: resultDic.
 	endCursor := self endCursorFromJSONDict: resultDic.
 	projects := self projectsFromJSONDict: resultDic.
+	Transcript
+		show: 'Got ' , projects size asString , ' new projects.';
+		cr.
 	count := blockSize.
 	[ endCursor isNotNil ]
-		whileTrue: [ Transcript
+		whileTrue: [ | newProjects |
+			Transcript
 				show: 'Querying again for blocks after ' , count asString;
 				cr.
 			builtQuery := self
@@ -96,7 +100,11 @@ working / 'resultFromGraphiQL.json' writeStreamDo: [ :stream | stream nextPutAll
 			resultDic := NeoJSONReader fromString: resultJSON.
 			self checkErrors: resultDic.
 			endCursor := self endCursorFromJSONDict: resultDic.
-			projects := projects , (self projectsFromJSONDict: resultDic).
+			newProjects := self projectsFromJSONDict: resultDic.
+			Transcript
+				show: 'Got ' , newProjects size asString , ' new projects.';
+				cr.
+			projects := projects , newProjects.
 			count := count + blockSize ].
 	^ projects
 ]
