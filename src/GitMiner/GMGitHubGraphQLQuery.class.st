@@ -24,6 +24,11 @@ GMGitHubGraphQLQuery class >> example [
 	Transcript show: 'Issue count query result: ', resultJSON; cr.
 ]
 
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> checkErrors: resultDic [ 
+	(resultDic keys includes: 'errors') ifTrue: [ self error: ((resultDic at: 'errors' ) first at: 'message') ].
+]
+
 { #category : #accessing }
 GMGitHubGraphQLQuery >> doGraphQLQuery: graphQLquery [  
 	| escaper | 
