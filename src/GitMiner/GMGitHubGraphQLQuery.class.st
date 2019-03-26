@@ -1,5 +1,31 @@
 "
 I represent a query in GitHub's GraphQL API (REST). I depend on ZnClient.
+
+-------
+
+""Get project list""
+queryInstance := GMGitHubGraphQLQuery new token: 'GET_YOUR_OWN_TOKEN_FROM'.
+searchQuery := 'language:java forks:>=500 sort:stars size:>=15000'.
+projects := queryInstance getProjectDataForSearchQuery: searchQuery.
+
+results := queryInstance doGraphQLQuery: 'query {  viewer {    login  }  rateLimit {    limit    cost    remaining    resetAt  }}'.
+
+queryInstance writeProjects: projects toCSV: 'project_list.csv'.
+
+projectKeys := projects first keys.
+projectValues := projects collect: [ :p | p values ].
+
+projectRank := [ :p | p fourth + p fifth ].
+
+sortedProjectList := SortedCollection
+         sortBlock: [ :p1 :p2 | (projectRank value: p2) <= (projectRank value: p1) ].
+
+sortedProjectList addAll: projectValues.
+sortedProjectList inspect.
+
+queryInstance writeProjectsKeys: projectKeys values: sortedProjectList toCSV: 'ranked_project_list.csv'
+
+sortedProjectNames := (sortedProjectList collect: [:p | p third]) asArray.
 "
 Class {
 	#name : #GMGitHubGraphQLQuery,
