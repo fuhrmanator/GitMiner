@@ -65,6 +65,9 @@ GMGitHubGraphQLQuery >> getProjectDataForSearchQuery: searchQuery [
 	"Make multiple GitHub GraphQL queries to get an entire list of projects "
 
 	| blockSize resultJSON resultDic builtQuery projectCount endCursor projects count |
+	Transcript
+		show: 'About to batch queries for ''' , searchQuery , '''.';
+		cr.
 	blockSize := 100.
 	resultJSON := self doGraphQLQuery: 'query { viewer { login }}'.	"Log in"
 	resultDic := NeoJSONReader fromString: resultJSON.
@@ -81,6 +84,11 @@ GMGitHubGraphQLQuery >> getProjectDataForSearchQuery: searchQuery [
 	"working := FileSystem disk workingDirectory.
 working / 'resultFromGraphiQL.json' writeStreamDo: [ :stream | stream nextPutAll: resultJSON ]."
 	projectCount := self projectCountFromJSONDict: resultDic.
+	Transcript
+		show:
+			'Query results say there are ' , projectCount asString
+				, ' projects that match.';
+		cr.
 	endCursor := self endCursorFromJSONDict: resultDic.
 	projects := self projectsFromJSONDict: resultDic.
 	Transcript
