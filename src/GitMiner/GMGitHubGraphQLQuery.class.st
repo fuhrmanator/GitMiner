@@ -166,3 +166,19 @@ GMGitHubGraphQLQuery >> token [
 GMGitHubGraphQLQuery >> token: anObject [
 	token := anObject
 ]
+
+{ #category : #writing }
+GMGitHubGraphQLQuery >> writeProjects: projects toCSV: csvFileName [
+	"Save the crunched projects data to a CSV"
+
+| projectKeys projectValues |
+projectKeys := projects first keys.
+projectValues := projects collect: [ :p | p values ].
+
+FileStream
+		forceNewFileNamed: csvFileName
+		do: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: projectKeys;
+				nextPutAll: projectValues ].
+]
