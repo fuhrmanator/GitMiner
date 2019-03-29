@@ -125,7 +125,8 @@ GMUtility class >> abortWithErrorMessageFromFileReference: fileRef title: title 
 	displayText := fileRef readStreamEncoded: 'cp-1250' do: [ :stream |
         stream upToEnd ].
 	"UIManager default abort: displayText title: title."
-	self error: displayText
+	AssertionFailure signal: displayText withTag: #GitMinerException.
+	"self error: displayText"
 	
 ]
 
