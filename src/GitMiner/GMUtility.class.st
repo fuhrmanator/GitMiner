@@ -196,7 +196,7 @@ GMUtility class >> annotateCommitsOnRepoLeftBranchOnly: location from: startOIDS
 			diffFiles
 				do:
 					[ :file | commit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
-			atLeastOneJavaFile := difference files
+			atLeastOneJavaFile := diffFiles
 				anySatisfy: [ :file | file endsWith: '.java' ]. 
 			commitDataList
 				add:
