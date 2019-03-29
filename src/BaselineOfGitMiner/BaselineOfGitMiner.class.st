@@ -20,7 +20,7 @@ BaselineOfGitMiner >> baseline: spec [
 				baseline: 'NeoCSV'
 					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];
 				baseline: 'PolyMath'
-					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ].
+					with: [ spec loads: 'Core'; repository: 'github://PolyMathOrg/PolyMath:master/src' ].
 			spec preLoadDoIt: #verifyMooseInstalled.
 			spec postLoadDoIt: #launchVerifications.
 			"Packages"
