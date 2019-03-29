@@ -181,7 +181,9 @@ GMUtility class >> annotateCommitsOnRepoLeftBranchOnly: location from: startOIDS
 		whileTrue: [ | addedFiles difference atLeastOneJavaFile diffFiles |
 			relativeRevNumber := relativeRevNumber + 1.
 			difference := parentCommit tree diffTo: commit tree.
-			diffFiles := difference files.
+			"diffFiles := difference files." "This sometimes returns an empty set despite numberOfDeltas > 0"
+			diffFiles := (1 to: difference numberOfDeltas) collect: [ :i | (difference deltaAt: i) oldFile path ].
+			self assert: diffFiles size equals: difference numberOfDeltas.
 			job
 				progress: relativeRevNumber / nCommits;
 				title:
@@ -195,7 +197,7 @@ GMUtility class >> annotateCommitsOnRepoLeftBranchOnly: location from: startOIDS
 				do:
 					[ :file | commit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
 			atLeastOneJavaFile := difference files
-				anySatisfy: [ :file | file endsWith: '.java' ].
+				anySatisfy: [ :file | file endsWith: '.java' ]. 
 			commitDataList
 				add:
 					{commit name.
