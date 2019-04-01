@@ -1092,6 +1092,79 @@ GMUtility class >> cochangeMatrixFromChangeHistory: aChangeHistoryMatrix forClas
 	^ GMCochangeMatrix with: aChangeHistoryMatrix classes: classes
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> commits: commitsFile withoutInterfaces: cimpPairsFile [
+	| commits interfaces interfacesMoose commitsWithoutInterfaces interfacesFile interfacesExtension startOIDString project commitMetadataFile |
+
+	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
+
+	"Load commits"
+	commits := GMUtility loadCommitMetadataFile: commitsFile.
+		
+	"Load interfaces"
+	interfacesFile := FileLocator workingDirectory
+		/ (project , interfacesExtension).
+	interfacesMoose := interfacesFile contents lines.
+	"Get interface set with just interface name, which looks like: 
+	 'com::baeldung::dao::repositories::ItemTypeRepository' 
+	 as 'ItemTypeRepository'"
+	interfaces := (interfacesMoose collect: [ :interface | (interface splitOn: '::') last ]) asSet.
+	"Make sure we didn't lose anything"
+	self assert: interfaces size equals: interfacesMoose size.
+
+	"Remove commits that contain interfaces"
+	commitsWithoutInterfaces := commits reject: [ :commit | 
+		| committedFiles rejectCommit |
+		rejectCommit := true.
+		committedFiles := commit third.
+		committedFiles detect: [ :file | 
+			| sFile | 
+			sFile := (file splitOn: '/') last allButLast: '.java' size.
+			interfaces includes: sFile] ifNone: [ rejectCommit := false "don't reject" ].
+		rejectCommit.
+		].
+
+  ^ self writeSelectedCommits: commitsWithoutInterfaces file: commitMetadataFile
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> commitswithoutInterfaces: commitsFile project: project start: startOIDString [
+	| commits interfaces commitsWithoutInterfaces interfacesFile interfacesExtension commitMetadataFile |
+	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
+
+	"Load commits"
+	commits := GMUtility loadCommitMetadataFile: commitsFile.
+
+	"Load interfaces"
+	interfacesFile := FileLocator workingDirectory
+		/ (project , interfacesExtension).
+	interfaces := interfacesFile contents lines.
+	"Get interface set with just interface name, which looks like: 
+	 'com::baeldung::dao::repositories::ItemTypeRepository' 
+	 as 'ItemTypeRepository'"
+	"interfaces := (interfacesMoose
+		collect: [ :interface | (interface splitOn: '::') last ]) asSet."
+	"Make sure we didn't lose anything"
+	"self assert: interfaces size equals: interfacesMoose size."
+
+	"Remove commits that contain interfaces"
+	commitsWithoutInterfaces := commits
+		reject: [ :commit | 
+			| committedFiles rejectCommit |
+			rejectCommit := true.
+			committedFiles := commit third.
+			committedFiles
+				detect: [ :file | 
+					| sFile |
+					sFile := (file splitOn: '/') last allButLast: '.java' size.
+					interfaces includes: sFile ]
+				ifNone: [ rejectCommit := false	"don't reject" ].
+			rejectCommit ].
+	^ self
+		writeSelectedCommits: commitsWithoutInterfaces
+		file: ((commitsFile allButLast: '.csv') , '_sansIF.csv' )
+]
+
 { #category : #pipeline }
 GMUtility class >> dependencyMatrixFromMooseModel: aMooseModel [
 	"Create a dependency matrix D where D(i,j)=1 means that i depends on j, and D(i,j)=0 is independence."
@@ -1337,7 +1410,7 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"Save results to .CSV"
 	job
 		title: 'Saving files...'.
-	interfaceNames := (results second collect: [ :interface | interface mooseName ]) asSortedCollection.
+	interfaceNames := (results second collect: [ :interface | interface sourceAnchor fileName ]) asSortedCollection.
 	interfacesFile := self writeInterfaces: interfaceNames file: mseFileRef.
 	job
 		progress: 0.3.
@@ -2074,7 +2147,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString [
 GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: startOIDString to: endOIDString [
 	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
 
-	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile |
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces |
 	loc := GMUtility cloneRepo: urlString.
 	commitMetadata := GMUtility
 		annotateCommitsOnRepoLeftBranchOnly: loc
@@ -2087,9 +2160,9 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 	
 	self flag: 'remove commits with interfaces, since cochange is practically moot'.
-	"commitsWithoutInterfaces := GMUtility commits: selectedCommits withoutInterfaces: cimpFile."
+	commitsWithoutInterfaces := GMUtility commitswithoutInterfaces: selectedCommits project: gitName start: startOIDString. 
 
-	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: selectedCommits
+	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: commitsWithoutInterfaces.
 ]
 
 { #category : #'file service' }
