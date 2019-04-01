@@ -2156,9 +2156,6 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 
 	pairsAndTransactions := GMUtility generatePairsAndTransactions: commitsWithoutInterfaces.
 
-	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
-	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
-	
 	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: commitsWithoutInterfaces.
 ]
 
