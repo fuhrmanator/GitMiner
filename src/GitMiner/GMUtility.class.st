@@ -1129,11 +1129,11 @@ GMUtility class >> commits: commitsFile withoutInterfaces: cimpPairsFile [
 
 { #category : #'as yet unclassified' }
 GMUtility class >> commitswithoutInterfaces: commitsFile project: project start: startOIDString [
-	| commits interfaces commitsWithoutInterfaces interfacesFile interfacesExtension commitMetadataFile |
+	| commits interfaces commitsWithoutInterfaces interfacesFile interfacesExtension |
 	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
 
 	"Load commits"
-	commits := GMUtility loadCommitMetadataFile: commitsFile.
+	commits := GMUtility readSelectedCommitsFile: commitsFile.
 
 	"Load interfaces"
 	interfacesFile := FileLocator workingDirectory
@@ -1150,19 +1150,12 @@ GMUtility class >> commitswithoutInterfaces: commitsFile project: project start:
 	"Remove commits that contain interfaces"
 	commitsWithoutInterfaces := commits
 		reject: [ :commit | 
-			| committedFiles rejectCommit |
-			rejectCommit := true.
-			committedFiles := commit third.
-			(committedFiles splitOn: ' ')
-				detect: [ :file | 
-					| sFile |
-					sFile := (file splitOn: '/') last allButLast: '.java' size.
-					interfaces includes: sFile ]
-				ifNone: [ rejectCommit := false	"don't reject" ].
-			rejectCommit ].
+			| committedFiles |
+			committedFiles := commit third splitOn: ' '.
+			(committedFiles intersection: interfaces) isNotEmpty ].
 	^ self
-		writeSelectedCommits: commitsWithoutInterfaces
-		file: ((commitsFile allButLast: ('.csv' size)) , '_sansIF.csv' )
+		rewriteSelectedCommits: commitsWithoutInterfaces
+		file: commitsFile
 ]
 
 { #category : #pipeline }
@@ -2154,14 +2147,18 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 		from: startOIDString
 		to: endOIDString.
 	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
-	pairsAndTransactions := GMUtility generatePairsAndTransactions: selectedCommits.
+
+	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
+	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+
+	self flag: 'remove commits with interfaces, since cochange is practically moot'.
+	commitsWithoutInterfaces := GMUtility commitswithoutInterfaces: selectedCommits project: gitName start: startOIDString. 
+
+	pairsAndTransactions := GMUtility generatePairsAndTransactions: commitsWithoutInterfaces.
 
 	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 	
-	self flag: 'remove commits with interfaces, since cochange is practically moot'.
-	commitsWithoutInterfaces := GMUtility commitswithoutInterfaces: selectedCommits project: gitName start: startOIDString. 
-
 	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: commitsWithoutInterfaces.
 ]
 
@@ -2282,6 +2279,22 @@ GMUtility class >> removeUnrelatedClassesFromTransactions: project withTransacti
 			 ]
 		].
 	^self writeCommitTransactions: cTransactions  to: file basenameWithoutExtension , '_only_clients_and_imps.csv'
+]
+
+{ #category : #'file service' }
+GMUtility class >> rewriteSelectedCommits: selectedCommits file: fileName [
+	"E.g. when a subsequent filter has been applied to commit data that's already in 3 columns"
+	| file selCommitsFileName |
+	file := fileName asFileReference.
+	selCommitsFileName := file basenameWithoutExtension , '_selected.csv'.
+	selCommitsFileName asFileReference
+		ensureDelete;
+		writeStreamDo: [ :csvStream | 
+			(NeoCSVWriter on: csvStream)
+				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
+				addFields: #(first second third);
+				nextPutAll: selectedCommits ].
+	^ selCommitsFileName
 ]
 
 { #category : #'as yet unclassified' }
