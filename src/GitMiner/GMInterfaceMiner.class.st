@@ -61,9 +61,10 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 				progress: count / candidateClasses size;
 				title: 'Collecting interfaces'.
 			each isInterface
-				and: [ each isStub not
-						and: [ ifPrefix isEmpty
-								or: [ each container mooseName beginsWith: ifPrefix ] ] ] ])
+				and: [ each numberOfMethods > 0
+						and: [ each isStub not
+								and: [ ifPrefix isEmpty
+										or: [ each container mooseName beginsWith: ifPrefix ] ] ] ] ])
 		asSet ] asJob run.
 	interfaces
 		do: [ :interface | 

@@ -2085,6 +2085,9 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 
 	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+	
+	self flag: 'remove commits with interfaces, since cochange is practically moot'.
+	"commitsWithoutInterfaces := GMUtility commits: selectedCommits withoutInterfaces: cimpFile."
 
 	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: selectedCommits
 ]
