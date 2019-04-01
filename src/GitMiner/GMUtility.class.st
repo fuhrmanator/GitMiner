@@ -1153,7 +1153,7 @@ GMUtility class >> commitswithoutInterfaces: commitsFile project: project start:
 			| committedFiles rejectCommit |
 			rejectCommit := true.
 			committedFiles := commit third.
-			committedFiles
+			(committedFiles splitOn: ' ')
 				detect: [ :file | 
 					| sFile |
 					sFile := (file splitOn: '/') last allButLast: '.java' size.
@@ -1162,7 +1162,7 @@ GMUtility class >> commitswithoutInterfaces: commitsFile project: project start:
 			rejectCommit ].
 	^ self
 		writeSelectedCommits: commitsWithoutInterfaces
-		file: ((commitsFile allButLast: '.csv') , '_sansIF.csv' )
+		file: ((commitsFile allButLast: ('.csv' size)) , '_sansIF.csv' )
 ]
 
 { #category : #pipeline }
