@@ -1564,8 +1564,8 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
 			[ :job | 
 			job
-				progress: 1 / 3;
-				title: 'Checking out copy of repo at ' , oid.
+				title: 'To create MSE file, checking out copy of repo at ' , oid;
+				progress: 1 / 3.
 
 			"Create a new sub dir for the repos MSE dirs"
 			(working / 'MSE') ensureCreateDirectory.
@@ -1585,7 +1585,8 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '" > "' , jdt2FamixOutput fullName , '" 2> "' , jdt2FamixErrors fullName , '"'. 
+						, '" > "' , jdt2FamixOutput fullName , '" 2> "'
+						, jdt2FamixErrors fullName , '"'.
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
