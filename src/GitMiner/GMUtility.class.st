@@ -1403,11 +1403,11 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 	"Save results to .CSV"
 	job
 		title: 'Saving files...'.
-	interfaceNames := (results second collect: [ :interface | interface sourceAnchor fileName ]) asSortedCollection.
+	interfaceNames := (results second collect: [:c | c sourceAnchor fileName ]) asSortedCollection.
 	interfacesFile := self writeInterfaces: interfaceNames file: mseFileRef.
 	job
 		progress: 0.3.
-	implementationNames := (results third collect: [ :imp | imp mooseName ]) asSortedCollection.
+	implementationNames := (results third collect: [:c | c sourceAnchor fileName ]) asSortedCollection.
 	implementationsFile := self writeImplementations: implementationNames file: mseFileRef.
 	job
 		progress: 0.6.
@@ -2187,7 +2187,7 @@ GMUtility class >> mineProjectsIn: projectsFile [
 { #category : #'as yet unclassified' }
 GMUtility class >> mooseClassesForDependencyMining: aMooseModel [
 	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
-	^(aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub.
+	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass.
 ]
 
 { #category : #pipeline }
@@ -2332,7 +2332,7 @@ GMUtility class >> writeClasses: classes file: mseFileRef [
 			classes
 				do: [ :aFamixTClass | 
 					stream
-						nextPutAll: aFamixTClass mooseName ;
+						nextPutAll: aFamixTClass sourceAnchor fileName ;
 						cr ] ] ] asJob run.
 	^ fileName
 ]
@@ -2410,9 +2410,9 @@ GMUtility class >> writeImplementations: implementations file: mseFileRef [
 		ensureDelete;
 		writeStreamDo: [ :stream | 
 			implementations
-				do: [ :interface | 
+				do: [ :c | 
 					stream
-						nextPutAll: interface mooseName ;
+						nextPutAll: c ;
 						cr ] ] ] asJob run.
 	^ fileName
 ]
@@ -2433,7 +2433,7 @@ GMUtility class >> writeInterfaces: interfaces file: mseFileRef [
 			interfaces
 				do: [ :interface | 
 					stream
-						nextPutAll: interface mooseName ;
+						nextPutAll: interface ;
 						cr ] ] ] asJob run.
 	^ fileName
 ]

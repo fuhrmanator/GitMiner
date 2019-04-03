@@ -50,21 +50,18 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 	"Find implementations and clients for each interface"
 	"Limit interfaces to those starting with prefix"
 	[ :job | 
-	| count candidateClasses classes classesFile |
+	| count classes classesFile |
+	job title: 'Collecting interfaces'.
 	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
 	classesFile := GMUtility writeClasses: classes file: mseFileRef.
 	count := 0.
-	candidateClasses := mooseModel allClasses.
-	interfaces := (candidateClasses
+	interfaces := (classes
 		select: [ :each | 
-			job
-				progress: count / candidateClasses size;
-				title: 'Collecting interfaces'.
+			job progress: count / classes size.
 			each isInterface
 				and: [ each numberOfMethods > 0
-						and: [ each isStub not
-								and: [ ifPrefix isEmpty
-										or: [ each container mooseName beginsWith: ifPrefix ] ] ] ] ])
+						and: [ ifPrefix isEmpty
+								or: [ each container mooseName beginsWith: ifPrefix ] ] ] ])
 		asSet ] asJob run.
 	interfaces
 		do: [ :interface | 
@@ -73,7 +70,7 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 			"Stubs are rejected because they're not under control of the project"
 			"AnonymouseClasses are rejected because they're inside a file (and won't ever be committed as a separate file)"
 			localImplementations := interface directSubclasses
-				reject: [ :cls | cls isInterface | cls isStub | cls isAnonymousClass ].
+				reject: [ :cls | cls isInterface	| cls isStub | cls isAnonymousClass ].
 			implementations addAll: localImplementations.
 			localClients := (self localClientsFrom: interface) reject: #isStub.
 
