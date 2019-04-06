@@ -1533,7 +1533,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	destPath := Path * 'tmp' / 'data_mining'.
 	gitErrors := working / 'tmp' / 'errors_git'.
 	verveineJ5Options := '-- -o ' , oid
-		, '.mse .'.
+		, '.mse -alllocals -localaccesses -anchor assoc -autocp .'.
 	jdt2FamixOutput := working / 'tmp' / 'output_jdt2famix'.
 	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
 	checkoutDest := working
