@@ -1033,7 +1033,7 @@ GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: cl
 { #category : #'as yet unclassified' }
 GMUtility class >> classIndexFromFileName: classFileName InMooseClasses: classes [
 	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
-	classes doWithIndex: [ :class :index | classFileName = class sourceAnchor fileName ifTrue: [^index] ].
+	classes doWithIndex: [ :class :index | classFileName = (GMUtility normalizedFileName: class sourceAnchor fileName) ifTrue: [^index] ].
 	^0 "not found"
 ]
 
@@ -1401,18 +1401,23 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 		withPrefix: ''.
 	"results size = 0 ifTrue: 0halt."	"-> no interfaces will yield this"
 	"Save results to .CSV"
-	job
-		title: 'Saving files...'.
-	interfaceNames := (results second collect: [:c | c sourceAnchor fileName ]) asSortedCollection.
-	interfacesFile := self writeInterfaces: interfaceNames file: mseFileRef.
-	job
-		progress: 0.3.
-	implementationNames := (results third collect: [:c | c sourceAnchor fileName ]) asSortedCollection.
-	implementationsFile := self writeImplementations: implementationNames file: mseFileRef.
-	job
-		progress: 0.6.
-	clientImplementationsFile := self writeClientImplementationPairs: results first file: mseFileRef ]
-		asJob run.
+	job title: 'Saving files...'.
+	interfaceNames := (results second
+		collect: [ :c | GMUtility normalizedFileName: c sourceAnchor fileName ])
+		asSortedCollection.
+	interfacesFile := self
+		writeInterfaces: interfaceNames
+		file: mseFileRef.
+	job progress: 0.3.
+	implementationNames := (results third
+		collect: [ :c | c sourceAnchor fileName ]) asSortedCollection.
+	implementationsFile := self
+		writeImplementations: implementationNames
+		file: mseFileRef.
+	job progress: 0.6.
+	clientImplementationsFile := self
+		writeClientImplementationPairs: results first
+		file: mseFileRef ] asJob run.
 	^ clientImplementationsFile
 ]
 
@@ -2246,6 +2251,17 @@ GMUtility class >> navigateToFile: userMessage extensions: ext [
 
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> normalizedFileName: fileName [
+	"Fix the namings since files from git logs don't have a './' at the start"
+
+	| fixedName |
+	fixedName := fileName.
+	(fixedName beginsWith: './')
+		ifTrue: [ fixedName := fixedName allButFirst: 2 ].
+	^ fixedName
+]
+
 { #category : #'file service' }
 GMUtility class >> readSelectedCommitsFile: selectedCommitsFile [
 	| csvRecords csvInputStream |
@@ -2380,8 +2396,9 @@ GMUtility class >> writeClasses: classes file: mseFileRef [
 		writeStreamDo: [ :stream | 
 			classes
 				do: [ :aFamixTClass | 
+ 
 					stream
-						nextPutAll: aFamixTClass sourceAnchor fileName ;
+						nextPutAll: (GMUtility normalizedFileName: aFamixTClass sourceAnchor fileName) ;
 						cr ] ] ] asJob run.
 	^ fileName
 ]
