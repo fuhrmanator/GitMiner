@@ -1410,7 +1410,7 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 		file: mseFileRef.
 	job progress: 0.3.
 	implementationNames := (results third
-		collect: [ :c | c sourceAnchor fileName ]) asSortedCollection.
+		collect: [ :c | GMUtility normalizedFileName: c sourceAnchor fileName ]) asSortedCollection.
 	implementationsFile := self
 		writeImplementations: implementationNames
 		file: mseFileRef.
