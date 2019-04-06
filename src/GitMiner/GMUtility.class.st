@@ -2166,6 +2166,48 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: commitsWithoutInterfaces.
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> mineFixedProjectListWithLog [
+	| working |
+	working := FileSystem disk workingDirectory.
+	OSEnvironment current
+		setEnv: 'JDT2FAMIXCOMMAND'
+		value: '/mnt/c/verveineJ5/verveinej.sh'.
+
+	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
+
+	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
+	'Mining.log' asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			GMGitHubGraphQLQuery hardCodedProjectList
+				do: [ :ownerAndName | 
+					| pName |
+					pName := (ownerAndName splitOn: '/') last.
+					"Check if files exist for project - if so, don't do mining"
+					(working / (pName , '_HEAD_Interfaces.csv')) exists
+						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
+							GMUtility
+								mineClientChangesNoARules: pName
+								url: 'https://github.com/' , ownerAndName ]
+								on: AssertionFailure
+								do: [ :exception | 
+									exception tag = #GitMinerException
+										ifTrue: [ stream
+												nextPutAll: 'Mining exception processing project ' , ownerAndName;
+												crlf.
+											stream
+												nextPutAll: exception messageText;
+												crlf.
+											stream flush ]
+										ifFalse: [ stream
+												nextPutAll: 'caught unknown AssertionFailure exception.';
+												crlf.
+											0 halt ] ] ]
+						ifTrue: [ "Skip the mining" ] ]
+				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
+]
+
 { #category : #'file service' }
 GMUtility class >> mineProjectsIn: projectsFile [
 	"For all repos in the 'projects.csv' file do a mining operation"
