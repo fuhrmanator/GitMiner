@@ -1528,10 +1528,12 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors jdt2FamixOutput jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
+	| working destPath repoPath gitErrors verveineJ5Options jdt2FamixOutput jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
 	working := FileSystem disk workingDirectory.
 	destPath := Path * 'tmp' / 'data_mining'.
 	gitErrors := working / 'tmp' / 'errors_git'.
+	verveineJ5Options := '-- -o ' , oid
+		, '.mse .'.
 	jdt2FamixOutput := working / 'tmp' / 'output_jdt2famix'.
 	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
 	checkoutDest := working
@@ -1567,26 +1569,30 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 				title: 'To create MSE file, checking out copy of repo at ' , oid;
 				progress: 1 / 3.
 
-			"Create a new sub dir for the repos MSE dirs"
-			(working / 'MSE') ensureCreateDirectory.
-			"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
-			OSEnvironment current
-				setEnv: 'GIT_WORK_TREE'
-				value: checkoutDest fullName.
-			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-			command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
-				, ' -- . 2>"' , gitErrors fullName , '"'.
-			"Work_tree must exist"
-			checkoutDest ensureCreateDirectory.
-			result := LibC uniqueInstance system: command.
+
+			"Don't do checkout if the checkout already exists"
+			checkoutDest exists
+				ifFalse: [ "Create a new sub dir for the repos MSE dirs"
+					"(working / 'MSE') ensureCreateDirectory."
+					"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
+					OSEnvironment current
+						setEnv: 'GIT_WORK_TREE'
+						value: checkoutDest fullName.
+					"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
+					command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
+						, ' -- . 2>"' , gitErrors fullName , '"'.
+					"Work_tree must exist"
+					checkoutDest ensureCreateDirectory.
+					result := LibC uniqueInstance system: command ]
+				ifTrue: [ result := 0 ].
 			result = 0
 				ifFalse: [ self
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
 					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '" > "' , jdt2FamixOutput fullName , '" 2> "'
-						, jdt2FamixErrors fullName , '"'.
+						, '" > "' , jdt2FamixOutput fullName , '"' , verveineJ5Options
+						, ' 2> "' , jdt2FamixErrors fullName , '"'.
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
