@@ -29,10 +29,10 @@ GMInterfaceMiner class >> makeEntryForProtectedGroup: isProtected client: client
 	"makes an array element with the info"
 
 	^ {client mooseName.
-	client sourceAnchor fileName.
+	GMUtility normalizedFileName: client sourceAnchor fileName.
 	interface mooseName.	"this is sometimes a stub, so can't get source always"
 	imp mooseName.
-	imp sourceAnchor fileName.
+	GMUtility normalizedFileName: imp sourceAnchor fileName.
 	isProtected	"protected"}
 ]
 
