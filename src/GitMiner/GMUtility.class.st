@@ -2202,14 +2202,18 @@ GMUtility class >> mineFixedProjectListWithLog [
 								do: [ :exception | 
 									exception tag = #GitMinerException
 										ifTrue: [ stream
-												nextPutAll: 'Mining exception processing project ' , ownerAndName;
+												nextPutAll:
+													DateAndTime now asString , ': Mining exception processing project '
+														, ownerAndName;
 												crlf.
 											stream
 												nextPutAll: exception messageText;
 												crlf.
 											stream flush ]
 										ifFalse: [ stream
-												nextPutAll: 'caught unknown AssertionFailure exception.';
+												nextPutAll:
+													DateAndTime now asString
+														, ': Caught unknown AssertionFailure exception.';
 												crlf.
 											0 halt ] ] ]
 						ifTrue: [ "Skip the mining"
