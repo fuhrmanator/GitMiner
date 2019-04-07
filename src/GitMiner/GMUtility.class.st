@@ -2189,6 +2189,9 @@ GMUtility class >> mineFixedProjectListWithLog [
 				do: [ :ownerAndName | 
 					| pName |
 					pName := (ownerAndName splitOn: '/') last.
+					stream
+						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
+						crlf.
 					"Check if files exist for project - if so, don't do mining"
 					(working / (pName , '_HEAD_Interfaces.csv')) exists
 						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
@@ -2209,7 +2212,12 @@ GMUtility class >> mineFixedProjectListWithLog [
 												nextPutAll: 'caught unknown AssertionFailure exception.';
 												crlf.
 											0 halt ] ] ]
-						ifTrue: [ "Skip the mining" ] ]
+						ifTrue: [ "Skip the mining"
+							stream
+								nextPutAll:
+									DateAndTime now asString
+										, ': skipping since found .csv files for project';
+								crlf ] ]
 				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
 ]
 
