@@ -42,6 +42,9 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 	listOfResults := LinkedList new.
 	implementations := Set new.
 	mseStream := mseFileRef readStream.
+	[ :job | 
+	| count classes classesFile |
+	job title: 'Loading MSE file: ' , mseFileRef fullPath fullName.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
 			mseStream close ]
@@ -49,8 +52,6 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 
 	"Find implementations and clients for each interface"
 	"Limit interfaces to those starting with prefix"
-	[ :job | 
-	| count classes classesFile |
 	job title: 'Collecting interfaces'.
 	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
 	classesFile := GMUtility writeClasses: classes file: mseFileRef.
@@ -72,7 +73,8 @@ GMInterfaceMiner class >> mineClientImplementationPairs: mseFileRef withPrefix: 
 			localImplementations := interface directSubclasses
 				reject: [ :cls | cls isInterface | cls isStub | cls isAnonymousClass ].
 			implementations addAll: localImplementations.
-			localClients := (self localClientsFrom: interface) reject: [ :client | client sourceAnchor isNil ].
+			localClients := (self localClientsFrom: interface)
+				reject: [ :client | client sourceAnchor isNil ].
 
 			"Classify protected and unprotected clients"
 			classesReferencingLocalImplementations := (localImplementations
