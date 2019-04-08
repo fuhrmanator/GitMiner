@@ -1045,12 +1045,25 @@ GMUtility class >> cloneRepo: url [
 	"Get project name from URL, accounting for cases where it ends in .git"
 	"Clone repo locally if not already there"
 	projectName := self extractProjectNameFromURL: url.
-	location := (self cloneRoot, projectName) asFileReference.
+	location := (self cloneRoot , projectName) asFileReference.
 	location exists
-		ifFalse: [ IceGitClone new
+		ifFalse: [ "IceGitClone new
 				location: location;
 				url: url;
-				execute ].
+				execute"
+			| cloneCommand working cloneDir gitErrors result |
+			working := FileSystem disk workingDirectory.
+			cloneDir := working / 'tmp' / 'tempClonesPharo'.
+			gitErrors := working / 'tmp' / 'errors_gitClone'.
+			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
+			cloneCommand := 'cd ' , cloneDir fullName , ' && git clone ' , url , ' 2>"'
+				, gitErrors fullName , '"'.
+			result := LibC uniqueInstance system: cloneCommand.
+			result = 0
+				ifFalse: [ self
+						abortWithErrorMessageFromFileReference: gitErrors asFileReference
+						title: 'Failed to execute: ' , cloneCommand ] ].
+	self assert: location exists.
 	^ location
 ]
 
@@ -2153,22 +2166,43 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
 
 	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces |
+	[ :job | 
+	job title: 'Cloning repo...'.
 	loc := GMUtility cloneRepo: urlString.
+	job progress: 1/6.
+	job title: 'Gathering commit data...'.
 	commitMetadata := GMUtility
 		annotateCommitsOnRepoLeftBranchOnly: loc
 		from: startOIDString
 		to: endOIDString.
+	job progress: 2/6.
+	job title: 'Selecting commits...'.
 	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
-
-	mseFileRef := GMUtility generateMSEFileFor: startOIDString reponame: loc basename.
+	job progress: 3/6.
+	job title: 'Generating MSE file...'.
+	mseFileRef := GMUtility
+		generateMSEFileFor: startOIDString
+		reponame: loc basename.
+	job progress: 4/6.
+	job title: 'Generating client-implementation pairs...'.
 	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
-
-	self flag: 'remove commits with interfaces, since cochange is practically moot'.
-	commitsWithoutInterfaces := GMUtility commitswithoutInterfaces: selectedCommits project: gitName start: startOIDString. 
-
-	pairsAndTransactions := GMUtility generatePairsAndTransactions: commitsWithoutInterfaces.
-
-	GMUtility calculateCouplingIntersectionsFor: gitName withPairsFile: pairsAndTransactions first from: startOIDString to: endOIDString selectedCommitsFile: commitsWithoutInterfaces.
+	job title: 'Removing commits with interfaces'.
+	commitsWithoutInterfaces := GMUtility
+		commitswithoutInterfaces: selectedCommits
+		project: gitName
+		start: startOIDString.
+	job progress: 5/6.
+	job title: 'Generating pairs and transactions...'.
+	pairsAndTransactions := GMUtility
+		generatePairsAndTransactions: commitsWithoutInterfaces.
+	job progress: 5/6.
+	job title: 'Calculating final stats...'.
+	GMUtility
+		calculateCouplingIntersectionsFor: gitName
+		withPairsFile: pairsAndTransactions first
+		from: startOIDString
+		to: endOIDString
+		selectedCommitsFile: commitsWithoutInterfaces ] asJob run
 ]
 
 { #category : #'as yet unclassified' }
