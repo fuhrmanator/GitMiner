@@ -1,7 +1,7 @@
 "
-I represent a query in GitHub's GraphQL API (REST). I depend on ZnClient.
+""I represent a query in GitHub's GraphQL API (REST). I depend on ZnClient.
 
--------
+-------""
 
 ""Get project list""
 queryInstance := GMGitHubGraphQLQuery new token: 'GET_YOUR_OWN_TOKEN_FROM_GITHUB'.
@@ -11,14 +11,19 @@ projects := queryInstance getProjectDataForSearchQuery: searchQuery.
 ""Filter only projects with 95% Java""
 strongJavaProjects := queryInstance strongJavaProjects: projects strength: 0.95.
 
+""Check usage""
 results := queryInstance doGraphQLQuery: 'query {  viewer {    login  }  rateLimit {    limit    cost    remaining    resetAt  }}'.
 
-queryInstance writeProjects: projects toCSV: 'project_list.csv'.
+queryInstance writeProjects: strongJavaProjects toCSV: 'project_list_95pctJava.csv'.
 
-projectKeys := projects first keys.
-projectValues := projects collect: [ :p | p values ].
+strongJavaProjects first.
+strongJavaProjects first values.
 
-projectRank := [ :p | p fourth + p fifth ].
+projectKeys := strongJavaProjects first keys.
+projectValues := strongJavaProjects collect: [ :p | p values ].
+
+""Forks and stargazers are sixth and seventh""
+projectRank := [ :p | p sixth + p seventh ].
 
 sortedProjectList := SortedCollection
          sortBlock: [ :p1 :p2 | (projectRank value: p2) <= (projectRank value: p1) ].
@@ -26,9 +31,13 @@ sortedProjectList := SortedCollection
 sortedProjectList addAll: projectValues.
 sortedProjectList inspect.
 
-queryInstance writeProjectsKeys: projectKeys values: sortedProjectList toCSV: 'ranked_project_list.csv'
+queryInstance writeProjectsKeys: projectKeys values: sortedProjectList toCSV: 'ranked_Java_project_list.csv'.
 
-sortedProjectNames := (sortedProjectList collect: [:p | p third]) asArray.
+""fourth is the project owner/name""
+sortedProjectNames := (sortedProjectList collect: [:p | p fourth]) asArray.
+
+""Print (^P) sortedProjectNames and copy/paste it into #hardCodedProjectList""
+
 "
 Class {
 	#name : #GMGitHubGraphQLQuery,
@@ -61,7 +70,13 @@ GMGitHubGraphQLQuery class >> hardCodedCrashingProjectList [
 
 { #category : #queries }
 GMGitHubGraphQLQuery class >> hardCodedProjectList [
-	^ #('iluwatar/java-design-patterns' 'spring-projects/spring-boot' 'elastic/elasticsearch' 'spring-projects/spring-framework' 'ReactiveX/RxJava' 'apache/incubator-dubbo' 'kdn251/interviews' 'square/okhttp' 'google/guava' 'PhilJay/MPAndroidChart' 'eugenp/tutorials' 'bumptech/glide' 'Blankj/AndroidUtilCode' 'zxing/zxing' 'airbnb/lottie-android' 'netty/netty' 'proxyee-down-org/proxyee-down' 'square/leakcanary' 'nostra13/Android-Universal-Image-Loader' 'alibaba/druid' 'libgdx/libgdx' 'scwang90/SmartRefreshLayout' 'CymChad/BaseRecyclerViewAdapterHelper' 'shuzheng/zheng' 'facebook/fresco' 'chrisbanes/PhotoView' 'SeleniumHQ/selenium' 'apache/kafka' 'jenkinsci/jenkins' 'ctripcorp/apollo' 'jfeinstein10/SlidingMenu' 'google/ExoPlayer' 'mybatis/mybatis-3' 'DrKLO/Telegram' 'arduino/Arduino' 'deeplearning4j/deeplearning4j' 'hankcs/HanLP' 'b3log/symphony' 'apache/hadoop' 'signalapp/Signal-Android' 'aosp-mirror/platform_frameworks_base' 'bazelbuild/bazel' 'androidannotations/androidannotations' 'openzipkin/zipkin' 'macrozheng/mall' 'apache/flink' 'mikepenz/MaterialDrawer' 'react-native-community/lottie-react-native' 'realm/realm-java' 'prestodb/presto' 'dianping/cat' 'CarGuo/GSYVideoPlayer' 'checkstyle/checkstyle' 'jeasonlzy/okhttp-OkGo' 'code4craft/webmagic' 'JakeWharton/ActionBarSherlock' 'vondear/RxTool' 'naver/pinpoint' 'eclipse-vertx/vert.x' 'nathanmarz/storm' 'lipangit/JiaoZiVideoPlayer' 'wasabeef/recyclerview-animators' 'alibaba/ARouter' 'Tencent/VasSonic' 'firebase/quickstart-android' 'xuxueli/xxl-job' 'junit-team/junit4' 'dropwizard/dropwizard' 'aporter/coursera-android' 'dyc87112/SpringBoot-Learning' 'mockito/mockito' 'YoKeyword/Fragmentation' 'AppIntro/AppIntro' 'Yalantis/uCrop' 'lingochamp/FileDownloader' 'iBotPeaches/Apktool' 'apache/zookeeper' 'roughike/BottomBar' 'apache/incubator-druid' 'apache/incubator-shardingsphere' 'apache/storm' 'florent37/MaterialViewPager' 'b3log/solo' 'MyCATApache/Mycat-Server' 'google/guice' 'rzwitserloot/lombok' 'hongyangAndroid/okhttputils' 'Tencent/QMUI_Android' 'wasabeef/glide-transformations' 'Activiti/Activiti' 'codecentric/spring-boot-admin' 'commonsguy/cw-omnibus' 'apache/incubator-skywalking' 'apereo/cas' 'alibaba/atlas' 'stanfordnlp/CoreNLP' 'Netflix/SimianArmy' 'daniulive/SmarterStreaming' 'adambard/learnxinyminutes-docs' 'wyouflf/xUtils' 'neo4j/neo4j' 'facebook/facebook-android-sdk' 'hs-web/hsweb-framework' 'nhaarman/ListViewAnimations' 'grpc/grpc-java' 'naman14/Timber' 'apache/cassandra' 'asLody/VirtualApp' 'OpenRefine/OpenRefine' 'yixia/VitamioBundle' 'qiurunze123/miaosha' 'NLPchina/ansj_seg' 'elasticjob/elastic-job-lite' 'hackware1993/MagicIndicator' 'janishar/mit-deep-learning-book-pdf' 'antlr/antlr4' 'careercup/CtCI-6th-Edition' 'motianhuo/wechat' 'amlcurran/ShowcaseView' 'aa112901/remusic' 'Qihoo360/RePlugin' 'smuyyh/BookReader' 'zaproxy/zaproxy' 'Nightonke/BoomMenu' 'alibaba/nacos' 'spring-projects/spring-security' 'k9mail/k-9' 'AsyncHttpClient/async-http-client' 'chentao0707/SimplifyReader' 'hibernate/hibernate-orm' 'linlinjava/litemall' 'apache/zeppelin' 'gabrielemariotti/cardslib' 'bigbluebutton/bigbluebutton' 'Alluxio/alluxio' 'processing/processing' 'thinkaurelius/titan' 'izzyleung/ZhihuDailyPurify' 'java-native-access/jna' 'apache/camel' 'pardom-zz/ActiveAndroid' 'alibaba/jstorm' 'DuGuQiuBai/Java' 'robolectric/robolectric' 'owncloud/android' 'jersey/jersey' 'sohutv/cachecloud' 'keycloak/keycloak' 'h2oai/h2o-3' 'wuhaoyu1990/MagicCamera' 'openhab/openhab1-addons' 'DreaminginCodeZH/Douya' 'castorflex/SmoothProgressBar' 'TechEmpower/FrameworkBenchmarks' 'mybatis/generator' 'purplecabbage/phonegap-plugins' 'apache/tomcat' 'HotBitmapGG/bilibili-android-client' 'bitcoinj/bitcoinj' 'Angel-ML/angel' 'aws/aws-sdk-java' 'spring-cloud/spring-cloud-netflix' 'apache/hive' 'firebase/FirebaseUI-Android' 'Exrick/xmall' 'youlookwhat/CloudReader' 'runelite/runelite' 'OpenTSDB/opentsdb' 'TommyLemon/Android-ZBLibrary' 'looly/hutool' 'springfox/springfox' 'apache/hbase' 'SonarSource/sonarqube' 'nicolasgramlich/AndEngine' 'gephi/gephi' 'xcltapestry/XCL-Charts' 'MinecraftForge/MinecraftForge' 'apache/beam' 'apache/groovy' 'siacs/Conversations' 'roncoo/roncoo-pay' 'pentaho/pentaho-kettle' 'apache/lucene-solr' 'hazelcast/hazelcast' 'psaravan/JamsMusicPlayer' 'wildfly/wildfly' 'survivingwithandroid/Surviving-with-android' 'knowm/XChange' 'qii/weiciyuan' 'apache/cordova-android' 'brianfrankcooper/YCSB' 'Wizcorp/phonegap-facebook-plugin' 'eclipse/jetty.project' 'jiangqqlmj/FastDev4Android' 'ftctechnh/ftc_app' 'MovingBlocks/Terasology' 'liferay/liferay-portal' 'vert-x3/vertx-examples' 'apache/shiro' 'CrawlScript/WebCollector' 'kiegroup/drools' 'rovo89/XposedInstaller' 'apache/ignite' 'guolindev/booksource' 'katzer/cordova-plugin-local-notifications' 'cucumber/cucumber-jvm' 'azkaban/azkaban' 'mongodb/mongo-java-driver' 'NLPIR-team/NLPIR' 'phonegap/phonegap-plugin-push' 'openmrs/openmrs-core' 'wordpress-mobile/WordPress-Android' 'apache/nutch' 'openhab/openhab2-addons' 'bitcoin-wallet/bitcoin-wallet' 'Bukkit/Bukkit' 'deeplearning4j/dl4j-examples' 'igniterealtime/Openfire' 'xubinux/xbin-store' 'apache/flume' 'liquibase/liquibase' 'xuhuisheng/lemon' 'apache/maven' 'liferay/liferay-plugins' 'geoserver/geoserver' 'TEAMMATES/teammates' 'apache/nifi' 'baichengzhou/SpringMVC-Mybatis-Shiro-redis-0.2' 'apache/activemq' 'spring-projects/spring-batch' 'GoogleCloudPlatform/java-docs-samples' 'shopizer-ecommerce/shopizer' 'ysc/QuestionAnsweringSystem' 'apache/ambari' 'xamarin/recipes' 'aporter/coursera-android-labs' 'jboss-developer/jboss-eap-quickstarts' 'CyanogenMod/android_frameworks_base' 'mit-cml/appinventor-sources' 'wildfly/quickstart' 'se-edu/addressbook-level4' 'essentials/Essentials' 'sphinx02/AppStarter' 'rakeshcusat/Code4Reference' 'abstrakraft/android_build') asSet
+	^ #('iluwatar/java-design-patterns' 'spring-projects/spring-boot' 'elastic/elasticsearch' 'spring-projects/spring-framework' 'ReactiveX/RxJava' 'apache/incubator-dubbo' 'kdn251/interviews' 'google/guava' 'PhilJay/MPAndroidChart' 'bumptech/glide' 'zxing/zxing' 'netty/netty' 'nostra13/Android-Universal-Image-Loader' 'alibaba/druid' 'scwang90/SmartRefreshLayout' 'CymChad/BaseRecyclerViewAdapterHelper' 'chrisbanes/PhotoView' 'mybatis/mybatis-3' 'google/ExoPlayer' 'jfeinstein10/SlidingMenu' 'hankcs/HanLP' 'signalapp/Signal-Android' 'macrozheng/mall' 'androidannotations/androidannotations' 'mikepenz/MaterialDrawer' 'prestodb/presto' 'CarGuo/GSYVideoPlayer' 'checkstyle/checkstyle' 'jeasonlzy/okhttp-OkGo' 'JakeWharton/ActionBarSherlock' 'vondear/RxTool' 'eclipse-vertx/vert.x' 'lipangit/JiaoZiVideoPlayer' 'dyc87112/SpringBoot-Learning' 'xuxueli/xxl-job' 'junit-team/junit4' 'dropwizard/dropwizard' 'mockito/mockito' 'YoKeyword/Fragmentation' 'aporter/coursera-android' 'Yalantis/uCrop' 'iBotPeaches/Apktool' 'lingochamp/FileDownloader' 'apache/incubator-druid' 'apache/incubator-shardingsphere' 'roughike/BottomBar' 'florent37/MaterialViewPager' 'MyCATApache/Mycat-Server' 'google/guice' 'Tencent/QMUI_Android' 'hongyangAndroid/okhttputils' 'apache/incubator-skywalking' 'Activiti/Activiti' 'stanfordnlp/CoreNLP' 'Netflix/SimianArmy' 'wyouflf/xUtils' 'hs-web/hsweb-framework' 'facebook/facebook-android-sdk' 'grpc/grpc-java' 'nhaarman/ListViewAnimations' 'naman14/Timber' 'apache/cassandra' 'java-decompiler/jd-gui' 'yixia/VitamioBundle' 'hackware1993/MagicIndicator' 'janishar/mit-deep-learning-book-pdf' 'NLPchina/ansj_seg' 'careercup/CtCI-6th-Edition' 'motianhuo/wechat' 'amlcurran/ShowcaseView' 'aa112901/remusic' 'alibaba/nacos' 'smuyyh/BookReader' 'Justson/AgentWeb' 'spring-projects/spring-security' 'Nightonke/BoomMenu' 'AsyncHttpClient/async-http-client' 'hibernate/hibernate-orm' 'chentao0707/SimplifyReader' 'gabrielemariotti/cardslib' 'processing/processing' 'apache/camel' 'DuGuQiuBai/Java' 'pardom-zz/ActiveAndroid' 'alibaba/jstorm' 'robolectric/robolectric' 'owncloud/android' 'jersey/jersey' 'openhab/openhab1-addons' 'DreaminginCodeZH/Douya' 'castorflex/SmoothProgressBar' 'apache/tomcat' 'bitcoinj/bitcoinj' 'HotBitmapGG/bilibili-android-client' 'aws/aws-sdk-java' 'Exrick/xmall' 'TommyLemon/Android-ZBLibrary' 'runelite/runelite' 'youlookwhat/CloudReader' 'looly/hutool' 'OpenTSDB/opentsdb' 'apache/hbase' 'gephi/gephi' 'nicolasgramlich/AndEngine' 'xcltapestry/XCL-Charts' 'MinecraftForge/MinecraftForge' 'pentaho/pentaho-kettle' 'siacs/Conversations' 'roncoo/roncoo-pay' 'apache/lucene-solr' 'hazelcast/hazelcast' 'psaravan/JamsMusicPlayer' 'wildfly/wildfly' 'survivingwithandroid/Surviving-with-android' 'knowm/XChange' 'brianfrankcooper/YCSB' 'qii/weiciyuan' 'eclipse/jetty.project' 'jiangqqlmj/FastDev4Android' 'ftctechnh/ftc_app' 'MovingBlocks/Terasology' 'kiegroup/drools' 'CrawlScript/WebCollector' 'guolindev/booksource' 'rovo89/XposedInstaller' 'cucumber/cucumber-jvm' 'openmrs/openmrs-core' 'openhab/openhab2-addons' 'bitcoin-wallet/bitcoin-wallet' 'Bukkit/Bukkit' 'apache/flume' 'apache/maven' 'liferay/liferay-plugins' 'spring-projects/spring-batch' 'apache/activemq' 'GoogleCloudPlatform/java-docs-samples' 'ysc/QuestionAnsweringSystem' 'aporter/coursera-android-labs' 'se-edu/addressbook-level4' 'essentials/Essentials' 'sphinx02/AppStarter')
+]
+
+{ #category : #queries }
+GMGitHubGraphQLQuery class >> hardCodedVerveineJCrashingProjectList [
+	"These are projects that crash when you try to parse them with JDT2Famix"
+	^ #('apache/beam' 'aws/aws-sdk-java' 'apache/hive' 'apache/groovy') asSet
 ]
 
 { #category : #queries }
@@ -200,7 +215,7 @@ GMGitHubGraphQLQuery >> projectsFromJSONDict: resultDic [
   ]) asOrderedCollection
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #queries }
 GMGitHubGraphQLQuery >> strongJavaProjects: projects strength: threshold [
 	"threshold is a number between 0 and 1 as to the ratio of Java code in the project"
 
