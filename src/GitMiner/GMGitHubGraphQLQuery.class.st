@@ -4,9 +4,12 @@ I represent a query in GitHub's GraphQL API (REST). I depend on ZnClient.
 -------
 
 ""Get project list""
-queryInstance := GMGitHubGraphQLQuery new token: 'GET_YOUR_OWN_TOKEN_FROM'.
+queryInstance := GMGitHubGraphQLQuery new token: 'GET_YOUR_OWN_TOKEN_FROM_GITHUB'.
 searchQuery := 'language:java forks:>=500 sort:stars size:>=15000'.
 projects := queryInstance getProjectDataForSearchQuery: searchQuery.
+
+""Filter only projects with 95% Java""
+strongJavaProjects := queryInstance strongJavaProjects: projects strength: 0.95.
 
 results := queryInstance doGraphQLQuery: 'query {  viewer {    login  }  rateLimit {    limit    cost    remaining    resetAt  }}'.
 
@@ -157,7 +160,7 @@ working / 'resultFromGraphiQL.json' writeStreamDo: [ :stream | stream nextPutAll
 { #category : #queries }
 GMGitHubGraphQLQuery >> makeFirstBlockQuery: blockSize queryString: queryString [ 
 	^ '{
-  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
+  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        languages(first: 50, orderBy: {field: SIZE, direction: DESC}) {\n          totalSize\n          totalCount\n          edges {\n            size\n            node {\n              name\n            }\n          }\n        }\n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
   "variables": {
     "query": "' , queryString , '"
   }
@@ -167,7 +170,7 @@ GMGitHubGraphQLQuery >> makeFirstBlockQuery: blockSize queryString: queryString 
 { #category : #queries }
 GMGitHubGraphQLQuery >> makeFollowingBlockQuery: blockSize after: endCursorString queryString: queryString [ 
 	^ '{
-  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', after: \"' , endCursorString , '\", query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
+  "query": "query topRepos($query: String!) {\n  search(first: ', blockSize asString, ', after: \"' , endCursorString , '\", query: $query, type: REPOSITORY) {\n    repositoryCount\n    pageInfo {\n      endCursor\n    }\n    nodes {\n      ... on Repository {\n        nameWithOwner \n        languages(first: 50, orderBy: {field: SIZE, direction: DESC}) {\n          totalSize\n          totalCount\n          edges {\n            size\n            node {\n              name\n            }\n          }\n        }\n        pullRequests (states:MERGED) {\n          totalCount\n        }\n        stargazers {\n          totalCount\t\n        }\n        forkCount\n        issues(states:CLOSED){ totalCount}\n      }\n    }\n  }\n}\n",
   "variables": {
     "query": "' , queryString , '"
   }
@@ -189,9 +192,22 @@ GMGitHubGraphQLQuery >> projectsFromJSONDict: resultDic [
 		#forkCount->(p at: 'forkCount') . 
 		#closedIssuesCount->((p at: 'issues') at: 'totalCount') . 
 		#mergePullRequestsCount->((p at: 'pullRequests') at: 'totalCount') . 
-		#stargazersCount->((p at: 'stargazers') at: 'totalCount') 
+		#stargazersCount->((p at: 'stargazers') at: 'totalCount') .
+		#languagesTotalSize->((p at: 'languages') at: 'totalSize') .
+		"The following relies on the fact that Java is the first language due to the search criteria being Java - perhaps not ideal"
+		#languagesTotalJava->(((p at: 'languages') at: 'edges') first at: 'size' )		
 	 } 
   ]) asOrderedCollection
+]
+
+{ #category : #'as yet unclassified' }
+GMGitHubGraphQLQuery >> strongJavaProjects: projects strength: threshold [
+	"threshold is a number between 0 and 1 as to the ratio of Java code in the project"
+
+	^ projects
+		select: [ :p | 
+			(p at: 'languagesTotalJava') asInteger
+				/ (p at: 'languagesTotalSize') asInteger >= threshold ]
 ]
 
 { #category : #accessing }
