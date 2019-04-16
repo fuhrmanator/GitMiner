@@ -887,7 +887,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 
 	"Calculate intersections"
 
-	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew classesExtension classesFile classes clientSet |
+	| subprojectName clientImpExtension linkString interfaces implementations interfacesExtension implementationsExtension interfacesFile implementationsFile results clientImpFile lcInputStream lcRecords scRecords historicalCouplingBag protectedCouplingSet unprotectedCouplingSet historicalProtectedIntersectionBag historicalUnprotectedIntersectionBag outRef isOutFileNew classesExtension classesFile classes clientSet mergedProtectedCouplingSet protectedPairToInterfaceDic mergedHistoricalCouplingBag mergedHistoricalProtectedIntersectionBag |
 	clientImpExtension := '_' , startOIDString , '_ClientImpPairs.csv'.
 	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
 	classesExtension := '_' , startOIDString , '_Classes.csv'.
@@ -949,17 +949,38 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 	"Bag allows us to count occurrences"
 	protectedCouplingSet := Set new.
 	unprotectedCouplingSet := Set new.
+	mergedProtectedCouplingSet := Set new.
+	protectedPairToInterfaceDic := Dictionary new.
 	clientSet := Set new.
 	scRecords
 		do: [ :each | 
-			| isProtected client implementation |
+			| isProtected client interface implementation setToAdd |
 			client := each second.
-			clientSet add: client.
+			interface := each third.
 			implementation := each fifth.
-			(isProtected := each sixth
-				ifTrue: [ protectedCouplingSet ]
-				ifFalse: [ unprotectedCouplingSet ])
-				add: each second , linkString , each fifth ].
+			clientSet add: client.
+			isProtected := each sixth
+				ifTrue: [ | pCoupling pICoupling |
+					pCoupling := client , linkString , implementation.
+					pICoupling := client , linkString , interface.
+					"Merge couplings with the interface"
+					mergedProtectedCouplingSet add: pICoupling.
+					"Set a dictionary entry to point to the merged link"
+					"Used later to find merges from cochanges "
+					protectedPairToInterfaceDic at: pCoupling put: pICoupling.
+					setToAdd := protectedCouplingSet ]
+				ifFalse: [ setToAdd := unprotectedCouplingSet ].
+			setToAdd add: each second , linkString , each fifth ].
+
+	"Calculate merged cochange"
+	mergedHistoricalCouplingBag := (historicalCouplingBag
+		collect: [ :each | 
+			| pCoupling pICoupling |
+			pCoupling := each.
+			pICoupling := protectedPairToInterfaceDic at: pCoupling ifAbsent: [ Transcript logCr: 'missing co-change: ', pCoupling ] ]) asBag.
+	"Calculate the intersections"
+	mergedHistoricalProtectedIntersectionBag := mergedHistoricalCouplingBag
+		intersectionKeepingOccurrences: mergedProtectedCouplingSet.
 	historicalProtectedIntersectionBag := historicalCouplingBag
 		intersectionKeepingOccurrences: protectedCouplingSet.
 	historicalUnprotectedIntersectionBag := historicalCouplingBag
@@ -974,15 +995,22 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			implementations size.
 			historicalCouplingBag size.
 			protectedCouplingSet size.
+			mergedProtectedCouplingSet size.
 			unprotectedCouplingSet size.
 			historicalProtectedIntersectionBag size.
 			historicalProtectedIntersectionBag asSet size.
+			mergedHistoricalProtectedIntersectionBag size.
+			mergedHistoricalProtectedIntersectionBag asSet size.
 			historicalUnprotectedIntersectionBag size.
 			historicalUnprotectedIntersectionBag asSet size.
 			(protectedCouplingSet isEmpty
 				ifTrue: [ 'N/A' ]
 				ifFalse: [ (historicalProtectedIntersectionBag asSet size
 						/ protectedCouplingSet size) asFloat * 100 round: 1 ]).
+			(mergedProtectedCouplingSet isEmpty
+				ifTrue: [ 'N/A' ]
+				ifFalse: [ (mergedHistoricalProtectedIntersectionBag asSet size
+						/ mergedProtectedCouplingSet size) asFloat * 100 round: 1 ]).
 			(unprotectedCouplingSet isEmpty
 				ifTrue: [ 'N/A' ]
 				ifFalse: [ (historicalUnprotectedIntersectionBag asSet size
@@ -1000,10 +1028,10 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' '|H|' '|P|' '|U|' '|H^P|(ms)' '|H^P|' '|H^U|(ms)' '|H^U|' '|H^P|/|P|' '|H^U|/|U|') ].
+							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' '|H|' '|P|' '|P_m|' '|U|' '|H^P|(ms)' '|H^P|' '|H^P_m|(ms)' '|H^P_m|' '|H^U|(ms)' '|H^U|' '|H^P|/|P|' '|H^P_m|/|P_m|' '|H^U|/|U|') ].
 			streamWriter
 				addRawFields:
-					#(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth);
+					#(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth);
 				nextPutAll: results ].
 	^ results
 ]

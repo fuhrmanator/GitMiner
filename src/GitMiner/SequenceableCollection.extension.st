@@ -1,6 +1,14 @@
 Extension { #name : #SequenceableCollection }
 
 { #category : #'*GitMiner' }
+SequenceableCollection >> eighteenth [
+	"Answer the eightteenth element of the receiver.
+	Raise an error if there are not enough elements."
+
+	^ self at: 18
+]
+
+{ #category : #'*GitMiner' }
 SequenceableCollection >> eleventh [
 	"Answer the eleventh element of the receiver.
 	Raise an error if there are not enough elements."
@@ -22,6 +30,30 @@ SequenceableCollection >> fourteenth [
 	Raise an error if there are not enough elements."
 
 	^ self at: 14
+]
+
+{ #category : #'*GitMiner' }
+SequenceableCollection >> nineteenth [
+	"Answer the nineteenth element of the receiver.
+	Raise an error if there are not enough elements."
+
+	^ self at: 19
+]
+
+{ #category : #'*GitMiner' }
+SequenceableCollection >> seventeenth [
+	"Answer the seventeenth element of the receiver.
+	Raise an error if there are not enough elements."
+
+	^ self at: 17
+]
+
+{ #category : #'*GitMiner' }
+SequenceableCollection >> sixteenth [
+	"Answer the sixteenth element of the receiver.
+	Raise an error if there are not enough elements."
+
+	^ self at: 16
 ]
 
 { #category : #'*GitMiner' }
