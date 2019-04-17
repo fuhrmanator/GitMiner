@@ -2313,6 +2313,60 @@ GMUtility class >> mineProjectsIn: projectsFile [
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> mineTestProjectWithLog [
+	| working |
+	working := FileSystem disk workingDirectory.
+	OSEnvironment current
+		setEnv: 'JDT2FAMIXCOMMAND'
+		value: '/mnt/c/verveineJ5/verveinej.sh'.
+
+	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
+
+	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
+	'Mining.log' asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			#('fuhrmanator/FactoryVariants')
+				do: [ :ownerAndName | 
+					| pName |
+					pName := (ownerAndName splitOn: '/') last.
+					stream
+						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
+						crlf.
+					"Check if files exist for project - if so, don't do mining"
+					(working / (pName , '_HEAD_Interfaces.csv')) exists
+						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
+							GMUtility
+								mineClientChangesNoARules: pName
+								url: 'https://github.com/' , ownerAndName ]
+								on: AssertionFailure
+								do: [ :exception | 
+									exception tag = #GitMinerException
+										ifTrue: [ stream
+												nextPutAll:
+													DateAndTime now asString , ': Mining exception processing project '
+														, ownerAndName;
+												crlf.
+											stream
+												nextPutAll: exception messageText;
+												crlf.
+											stream flush ]
+										ifFalse: [ stream
+												nextPutAll:
+													DateAndTime now asString
+														, ': Caught unknown AssertionFailure exception.';
+												crlf.
+											0 halt ] ] ]
+						ifTrue: [ "Skip the mining"
+							stream
+								nextPutAll:
+									DateAndTime now asString
+										, ': skipping since found .csv files for project';
+								crlf ] ]
+				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> mooseClassesForDependencyMining: aMooseModel [
 	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
 	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass.
