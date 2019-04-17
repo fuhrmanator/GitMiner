@@ -970,7 +970,7 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 					protectedPairToInterfaceDic at: pCoupling put: pICoupling.
 					setToAdd := protectedCouplingSet ]
 				ifFalse: [ setToAdd := unprotectedCouplingSet ].
-			setToAdd add: each second , linkString , each fifth ].
+			setToAdd add: client , linkString , implementation ].
 
 	"Calculate merged cochange"
 	mergedHistoricalCouplingBag := (historicalCouplingBag
