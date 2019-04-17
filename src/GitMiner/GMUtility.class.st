@@ -2632,6 +2632,109 @@ GMUtility class >> writeInterfaces: interfaces file: mseFileRef [
 	^ fileName
 ]
 
+{ #category : #writing }
+GMUtility class >> writePlantUMLOutputFor: scList toFile: plantUMLFile [
+	| pumlHistory writeOnce interfaces clients implementations |
+	pumlHistory := Set new.
+	writeOnce := [ :lineToWrite :stream | 
+	(pumlHistory includes: lineToWrite)
+		ifFalse: [ pumlHistory add: lineToWrite.
+			stream
+				nextPutAll: lineToWrite;
+				cr ] ].
+	interfaces := (scList collect: #third) asSet.
+	implementations := (scList collect: #fourth) asSet.
+	clients := (scList collect: #first) asSet.
+	FileStream
+		forceNewFileNamed: plantUMLFile
+		do: [ :stream | 
+			stream
+				nextPutAll: '@startuml';
+				cr.
+			stream
+				nextPutAll: 'skinparam style strictuml';
+				cr.
+			stream
+				nextPutAll: 'hide empty members';
+				cr.
+			stream
+				nextPutAll: 'skinparam backgroundColor transparent';
+				cr.
+			stream
+				nextPutAll: 'skinparam classBorderColor transparent';
+				cr.
+			stream
+				nextPutAll: 'skinparam classArrowColor lightgreen';
+				cr.
+			stream
+				nextPutAll: 'left to right direction';
+				cr.
+			stream
+				nextPutAll: '''scale 0.1';
+				cr.
+			stream
+				nextPutAll: 'set namespaceSeparator ::';
+				cr.
+			stream
+				nextPutAll:
+					'''This file generated from Pharo/Smalltalk, C. Fuhrman, École de technologie supérieure';
+				cr.
+
+			"All interfaces"
+			interfaces
+				do: [ :interface | 
+					| color |
+					color := '#lightblue'.
+					"Special case where interface is also a client"
+					(clients includes: interface)
+						ifTrue: [ color := '#lightblue/lightgreen' ].
+					stream
+						nextPutAll: 'interface "' , interface , '" ' , color;
+						cr ].
+			"All clients"
+			clients
+				do: [ :client | 
+					(interfaces includes: client)
+						ifFalse: [ | color |
+							color := '#lightgreen'.
+							"Special case where client is also an implementation"
+							(implementations includes: client)
+								ifTrue: [ color := '#lightgreen/yellow' ].
+							stream
+								nextPutAll: 'class "' , client , '" ' , color;
+								cr ] ].
+			"All implementations"
+			implementations
+				do: [ :implementation | 
+					"Special case where client is also an implementation"
+					(clients includes: implementation)
+						ifFalse: [ stream
+								nextPutAll: 'class "' , implementation , '" #yellow';
+								cr ] ].
+			scList
+				do: [ :e | 
+					| isProtected client interface implementation line |
+					client := e first.
+					interface := e third.
+					implementation := e fourth.
+					isProtected := e sixth.
+					"Implements an interface"
+					line := '"' , implementation , '" .[' , '#lightblue' , '].|> "'
+						, interface , '"'.
+					writeOnce value: line value: stream.
+
+					"Client coupling to implementation"
+					line := '"' , client , '" --> "' , interface , '"'.
+					writeOnce value: line value: stream.
+					isProtected
+						ifFalse: [ line := '"' , client , '" .[' , '#red' , '].> "' , implementation
+								, '"'.
+							writeOnce value: line value: stream ] ].
+			stream
+				nextPutAll: '@enduml';
+				cr ]
+]
+
 { #category : #'file service' }
 GMUtility class >> writeSelectedCommits: selectedCommits file: fileName [
 	| file selCommitsFileName |
