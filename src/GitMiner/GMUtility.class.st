@@ -977,7 +977,10 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 		collect: [ :each | 
 			| pCoupling pICoupling |
 			pCoupling := each.
-			pICoupling := protectedPairToInterfaceDic at: pCoupling ifAbsent: [ Transcript logCr: 'missing co-change: ', pCoupling ] ]) asBag.
+			pICoupling := protectedPairToInterfaceDic
+				at: pCoupling
+				ifAbsent: [ Transcript logCr: 'missing co-change: ' , pCoupling ] ])
+		asBag.
 	"Calculate the intersections"
 	mergedHistoricalProtectedIntersectionBag := mergedHistoricalCouplingBag
 		intersectionKeepingOccurrences: mergedProtectedCouplingSet.
@@ -1028,11 +1031,11 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 			isOutFileNew
 				ifTrue: [ streamWriter
 						nextPut:
-							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' '|H|' '|P|' '|P_m|' '|U|' '|H^P|(ms)' '|H^P|' '|H^P_m|(ms)' '|H^P_m|' '|H^U|(ms)' '|H^U|' '|H^P|/|P|' '|H^P_m|/|P_m|' '|H^U|/|U|') ].
+							#('Project' 'Selected_commits' 'Classes' 'Interfaces' 'Clients' 'Implementations' 'HSize' 'PSize' 'P_gSize' 'USize' 'HPSizeM' 'HPSize' 'HP_gSizeM' 'HP_gSize' 'HUSizeM' 'HUSize' 'CPD' 'CGPD' 'CUD') ].
 			streamWriter
-				addRawFields:
-					#(first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth);
-				nextPutAll: results ].
+				addRawFieldsAt: (1 to: 19);
+				"#(second third fourth fifth sixth seventh eighth ninth tenth eleventh twelvth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth);"
+					nextPutAll: results ].
 	^ results
 ]
 
@@ -2310,6 +2313,60 @@ GMUtility class >> mineProjectsIn: projectsFile [
 				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
 		asJob run
 	
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> mineProjectsWithLog: projects [
+	| working |
+	working := FileSystem disk workingDirectory.
+	OSEnvironment current
+		setEnv: 'JDT2FAMIXCOMMAND'
+		value: '/mnt/c/verveineJ5/verveinej.sh'.
+
+	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
+
+	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
+	'Mining.log' asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			projects
+				do: [ :ownerAndName | 
+					| pName |
+					pName := (ownerAndName splitOn: '/') last.
+					stream
+						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
+						crlf.
+					"Check if files exist for project - if so, don't do mining"
+					(working / (pName , '_HEAD_Interfaces.csv')) exists
+						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
+							GMUtility
+								mineClientChangesNoARules: pName
+								url: 'https://github.com/' , ownerAndName ]
+								on: AssertionFailure
+								do: [ :exception | 
+									exception tag = #GitMinerException
+										ifTrue: [ stream
+												nextPutAll:
+													DateAndTime now asString , ': Mining exception processing project '
+														, ownerAndName;
+												crlf.
+											stream
+												nextPutAll: exception messageText;
+												crlf.
+											stream flush ]
+										ifFalse: [ stream
+												nextPutAll:
+													DateAndTime now asString
+														, ': Caught unknown AssertionFailure exception.';
+												crlf.
+											0 halt ] ] ]
+						ifTrue: [ "Skip the mining"
+							stream
+								nextPutAll:
+									DateAndTime now asString
+										, ': skipping since found .csv files for project';
+								crlf ] ]
+				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
 ]
 
 { #category : #'as yet unclassified' }
