@@ -2238,7 +2238,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 
 { #category : #'as yet unclassified' }
 GMUtility class >> mineFixedProjectListWithLog [
-	| working |
+	| working projectList |
 	working := FileSystem disk workingDirectory.
 	OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
@@ -2246,11 +2246,11 @@ GMUtility class >> mineFixedProjectListWithLog [
 
 	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
 
-	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
+	projectList := (GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedVerveineJCrashingProjectList) difference: GMGitHubGraphQLQuery hardCodedExcludedProjectList.
 	'Mining.log' asFileReference
 		ensureDelete;
 		writeStreamDo: [ :stream | 
-			GMGitHubGraphQLQuery hardCodedProjectList
+			projectList
 				do: [ :ownerAndName | 
 					| pName |
 					pName := (ownerAndName splitOn: '/') last.
