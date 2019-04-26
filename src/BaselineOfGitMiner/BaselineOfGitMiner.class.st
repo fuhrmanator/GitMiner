@@ -25,6 +25,7 @@ BaselineOfGitMiner >> baseline: spec [
 			spec postLoadDoIt: #launchVerifications.
 			"Packages"
 			spec
+				package: 'GitMiner-Tests' with: [ spec requires: #('GitMiner') ];
 				package: 'GitMiner' with: [ spec requires: #('NeoJSON') ];
 				package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];
 				package: 'GitMiner' with: [ spec requires: #('PolyMath') ] ]
