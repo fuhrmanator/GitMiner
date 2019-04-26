@@ -33,10 +33,38 @@ Class {
 		'pathToRepo',
 		'fromTag',
 		'toTag',
-		'commitFilter'
+		'commitFilter',
+		'url',
+		'rootForClone'
 	],
 	#category : #GitMiner
 }
+
+{ #category : #'as yet unclassified' }
+GMRepoMine >> cloneRepo [
+	"clone a repo of a project (if it doesn't already exist) and return its handle "
+
+	| location |
+	"Get project name from URL, accounting for cases where it ends in .git"
+	"Clone repo locally if not already there"
+	location := self rootForClone / self projectName.
+	location exists
+		ifFalse: [ | cloneCommand working cloneDir gitErrors result |
+			working := FileSystem disk workingDirectory.
+			cloneDir := self rootForClone.
+			cloneDir ensureCreateDirectory.
+			gitErrors := working / 'tmp' / 'errors_gitClone'.
+			gitErrors ensureCreateFile.
+			
+			cloneCommand := 'cd "' , cloneDir fullName , '" && git clone '
+				, url , ' 2>"' , gitErrors fullName , '"'.
+			result := LibC uniqueInstance system: cloneCommand.
+			result = 0
+				ifFalse: [ GMUtility
+						abortWithErrorMessageFromFileReference: gitErrors asFileReference
+						title: 'Failed to execute: ' , cloneCommand ] ].
+	^ location
+]
 
 { #category : #accessing }
 GMRepoMine >> commitFilter [
@@ -69,6 +97,27 @@ GMRepoMine >> pathToRepo: anObject [
 ]
 
 { #category : #accessing }
+GMRepoMine >> projectName [
+	"get the project name for the RepoMine"
+
+	| projectName |
+	projectName := (url splitOn: '/') last.
+	(projectName endsWith: '.git')
+		ifTrue: [ projectName := projectName allButLast: '.git' size ].
+	^ projectName
+]
+
+{ #category : #accessing }
+GMRepoMine >> rootForClone [
+	^ rootForClone
+]
+
+{ #category : #accessing }
+GMRepoMine >> rootForClone: path [
+	rootForClone := path
+]
+
+{ #category : #accessing }
 GMRepoMine >> toTag [
 	^ toTag
 ]
@@ -76,4 +125,14 @@ GMRepoMine >> toTag [
 { #category : #accessing }
 GMRepoMine >> toTag: anObject [
 	toTag := anObject
+]
+
+{ #category : #accessing }
+GMRepoMine >> url [
+	^ url
+]
+
+{ #category : #'as yet unclassified' }
+GMRepoMine >> url: aString [ 
+	url := aString.
 ]
