@@ -9,7 +9,7 @@ GMRepoMineTest >> testCloneRepo [
 
 	| mine url location |
 	url := 'https://github.com/fuhrmanator/FactoryVariants'.
-	mine := GMRepoMine fromURL: 'https://github.com/fuhrmanator/FactoryVariants'.
+	mine := GMRepoMine fromURL: url.
 	"delete the test repo if it exists"
 	location := mine rootForClone / mine projectName.
 	location ensureDeleteAll.
@@ -26,9 +26,29 @@ GMRepoMineTest >> testCreationFromURL [
 
 	| mine url |
 	url := 'https://github.com/fuhrmanator/FactoryVariants'.
-	mine := GMRepoMine fromURL: 'https://github.com/fuhrmanator/FactoryVariants'.
+	mine := GMRepoMine fromURL: url.
 	self assert: mine rootForClone equals: (FileSystem disk workingDirectory / 'tmp' / 'tempClonesPharo').
 	self assert: mine url equals: url.
+]
+
+{ #category : #tests }
+GMRepoMineTest >> testGitHubProjectName [
+
+	| mine url |
+	url := 'https://github.com/fuhrmanator/FactoryVariants'.
+	mine := GMRepoMine fromURL: url.
+	self assert: mine gitHubProjectName equals: 'fuhrmanator.FactoryVariants'.
+
+]
+
+{ #category : #tests }
+GMRepoMineTest >> testProjectName [
+
+	| mine url |
+	url := 'https://github.com/fuhrmanator/FactoryVariants'.
+	mine := GMRepoMine fromURL: url.
+	self assert: mine projectName equals: 'FactoryVariants'.
+
 ]
 
 { #category : #tests }
@@ -37,7 +57,17 @@ GMRepoMineTest >> testRootForClone [
 	| mine url root |
 	root := FileSystem workingDirectory / 'myTemp'.
 	url := 'https://github.com/fuhrmanator/FactoryVariants'.
-	mine := GMRepoMine fromURL: 'https://github.com/fuhrmanator/FactoryVariants' rootForClone: root.
+	mine := GMRepoMine fromURL: url rootForClone: root.
 	self assert: mine rootForClone equals: root.
+
+]
+
+{ #category : #tests }
+GMRepoMineTest >> testUrl [
+
+	| mine url |
+	url := 'https://github.com/fuhrmanator/FactoryVariants'.
+	mine := GMRepoMine fromURL: url.
+	self assert: mine url equals: url.
 
 ]

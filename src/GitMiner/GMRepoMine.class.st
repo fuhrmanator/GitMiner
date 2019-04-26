@@ -86,6 +86,14 @@ GMRepoMine >> fromTag: anObject [
 	fromTag := anObject
 ]
 
+{ #category : #'as yet unclassified' }
+GMRepoMine >> gitHubProjectName [
+	"get the owner + project name from a github URL"
+	| ownerName |
+	ownerName := (url splitOn: '/') nextToLast.
+	^ ownerName , '.' , self projectName 
+]
+
 { #category : #accessing }
 GMRepoMine >> pathToRepo [
 	^ pathToRepo
