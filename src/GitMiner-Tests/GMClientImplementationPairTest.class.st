@@ -3,7 +3,9 @@ Class {
 	#superclass : #TestCase,
 	#instVars : [
 		'classes',
-		'mooseModel'
+		'mooseModel',
+		'aClient',
+		'anImplementation'
 	],
 	#category : #'GitMiner-Tests'
 }
@@ -13,37 +15,35 @@ GMClientImplementationPairTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
 
 	| mseFile mseStream |
+	super setUp.
 	mseFile := FileSystem disk workingDirectory / 'pharo-local'
 		/ 'iceberg' / 'fuhrmanator' / 'GitMiner' / 'tests'
 		/ 'FactoryVariants.mse'.
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
-	classes := mooseModel allWithSubTypesOf: FamixTClass
+	classes := mooseModel allWithSubTypesOf: FamixTClass.
+	aClient := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
+	anImplementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
+
 ]
 
 { #category : #tests }
 GMClientImplementationPairTest >> testAsString [
 	"comment stating purpose of message"
 
-	| pair aClient implementation |
+	| pair |
 
-	aClient := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
-	implementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
-	
-	pair := GMClientImplementationPair from: aClient and: implementation.
-	self assert: pair asString equals: (aClient sourceAnchor fileName) , '->' , (implementation sourceAnchor fileName).
+	pair := GMClientImplementationPair from: aClient and: anImplementation.
+	self assert: pair asString equals: (aClient sourceAnchor fileName) , '->' , (anImplementation sourceAnchor fileName).
 ]
 
 { #category : #tests }
 GMClientImplementationPairTest >> testClient [
 	"comment stating purpose of message"
 
-	| pair aClient implementation |
-
-	aClient := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
-	implementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
+	| pair |
 	
-	pair := GMClientImplementationPair from: aClient and: implementation.
+	pair := GMClientImplementationPair from: aClient and: anImplementation.
 	self assert: pair client equals: aClient.
 ]
 
@@ -51,12 +51,9 @@ GMClientImplementationPairTest >> testClient [
 GMClientImplementationPairTest >> testCreateFrom [
 	"comment stating purpose of message"
 
-	| pair client implementation |
+	| pair |
 
-	client := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
-	implementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
-	
-	pair := GMClientImplementationPair from: client and: implementation.
+	pair := GMClientImplementationPair from: aClient and: anImplementation.
 	self assert: pair isNotNil.
 	self deny: pair isClass.
 ]
@@ -65,11 +62,8 @@ GMClientImplementationPairTest >> testCreateFrom [
 GMClientImplementationPairTest >> testImplementation [
 	"comment stating purpose of message"
 
-	| pair aClient implementation |
+	| pair |
 
-	aClient := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
-	implementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
-	
-	pair := GMClientImplementationPair from: aClient and: implementation.
-	self assert: pair implementation equals: implementation.
+	pair := GMClientImplementationPair from: aClient and: anImplementation.
+	self assert: pair implementation equals: anImplementation.
 ]

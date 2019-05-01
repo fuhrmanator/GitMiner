@@ -3,6 +3,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'mseFile',
+		'mooseModel',
 		'listOfResults',
 		'implementations',
 		'interfaces',
@@ -19,6 +20,29 @@ GMInterfaceMine class >> fromMSE: aFileReference [
 	^mine
 ]
 
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> clientsForImplementation: anImplementation [
+	| interfacesForImplementation |
+	"Find interfaces of the implementation"
+	interfacesForImplementation := self
+		interfacesForImplementation: anImplementation.
+	"Find clients for all the interfaces"
+	^ self clientsForInterfaces: interfacesForImplementation
+]
+
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> clientsForInterfaces: theInterfaces [
+	| clients |
+	clients := Set new.
+	theInterfaces
+		do: [ :i | 
+			| localClients |
+			localClients := (self localClientsFrom: i)
+				reject: [ :client | client sourceAnchor isNil ].
+			clients addAll: localClients ].
+	^ clients
+]
+
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
@@ -30,6 +54,11 @@ GMInterfaceMine >> interfaces [
 	^ interfaces
 ]
 
+{ #category : #'As yet unclassified' }
+GMInterfaceMine >> interfacesForImplementation: aFAMIXClass [ 
+	^((aFAMIXClass superInheritances collect: #superclass) select: #isInterface) reject: #isStub.
+]
+
 { #category : #'as yet unclassified' }
 GMInterfaceMine >> isLoaded [
 	^isLoaded
@@ -37,12 +66,12 @@ GMInterfaceMine >> isLoaded [
 
 { #category : #'as yet unclassified' }
 GMInterfaceMine >> load [
-	| mseStream mooseModel |
+	| mseStream |
 	listOfResults := LinkedList new.
 	implementations := Set new.
 	mseStream := mseFile readStream.
 	[ :job | 
-	| count classes classesFile |
+	| count classes |
 	job title: 'Loading MSE file: ' , mseFile fullPath fullName.
 	mseStream
 		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
@@ -50,13 +79,12 @@ GMInterfaceMine >> load [
 		ifNil: [ self error: 'The MSE file ' , mseFile , ' is not valid.' ].
 
 	"Find implementations and clients for each interface"
-	"Limit interfaces to those starting with prefix"
 	job title: 'Collecting interfaces'.
 	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
-	"classesFile := GMUtility writeClasses: classes file: mseFile."
 	count := 0.
 	interfaces := (classes
 		select: [ :each | 
+			count := count + 1.
 			job progress: count / classes size.
 			each isInterface and: [ each numberOfMethods > 0 ] ]) asSet ] asJob
 		run.
@@ -108,7 +136,7 @@ GMInterfaceMine >> load [
 										interface: interface
 										implementation: imp) ] ] ]
 		displayingProgress: 'Mining: Classifying interface clients'.
-		isLoaded := true.
+	isLoaded := true
 ]
 
 { #category : #'as yet unclassified' }
