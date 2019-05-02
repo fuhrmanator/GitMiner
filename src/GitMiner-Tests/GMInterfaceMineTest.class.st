@@ -28,6 +28,7 @@ GMInterfaceMineTest >> setUp [
 
 	| mseStream |
 	super setUp.
+	"The MSE string could be put into a test method and loaded that way so the tests can run in CI."
 	mseFile := FileSystem disk workingDirectory / 'pharo-local'
 		/ 'iceberg' / 'fuhrmanator' / 'GitMiner' / 'tests'
 		/ 'FactoryVariants.mse'.
@@ -97,6 +98,24 @@ GMInterfaceMineTest >> testClientsForImplementation [
 ]
 
 { #category : #tests }
+GMInterfaceMineTest >> testClientsForInterfaces [
+	| iMine |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	self
+		assert:
+			(iMine
+				clientsForInterfaces: (Set withAll: {(self classFromMooseName: 'simple_factory::IProduct')}))
+		equals:
+			(Set
+				withAll:
+					{(self classFromMooseName: '<Default Package>::ClientNoFactoryMain').
+					(self
+						classFromMooseName: '<Default Package>::ClientOfFactoryMain').
+					(self classFromMooseName: 'simple_factory::SimpleFactory')})
+]
+
+{ #category : #tests }
 GMInterfaceMineTest >> testCreationFromMSE [
 	"create a mine from an mseFile"
 	| iMine  |
@@ -112,7 +131,7 @@ GMInterfaceMineTest >> testInterfaces [
 	| iMine interfaceMooseNames |
 	iMine := GMInterfaceMine fromMSE: mseFile.
 	iMine load.
-	"Can't compare entities because MooseID can change"
+	"mooseIDs are (sadly) different in this test, so we only check equality with mooseName"
 	interfaceMooseNames := iMine interfaces collect: #mooseName.
 	self
 		assert: interfaceMooseNames
@@ -133,6 +152,27 @@ GMInterfaceMineTest >> testInterfaces [
 			(self
 				classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Veggies')}) collect: #mooseName).
 				
+]
+
+{ #category : #tests }
+GMInterfaceMineTest >> testInterfacesForImplementation [
+	| iMine frozenClams frozenClamsInterfaces |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	self
+		assert: (iMine clientsForImplementation: anImplementation)
+		equals: anImplementationsClients.
+	frozenClams := self
+		classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::FrozenClams'.
+	frozenClamsInterfaces := Set
+		withAll:
+			{
+			(self
+				classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Clams')}.
+	self
+		assert: (iMine interfacesForImplementation: frozenClams)
+		equals: frozenClamsInterfaces.
+	"Need to test an implementation that implements multiple interfaces (not yet in MSE?)"
 ]
 
 { #category : #tests }

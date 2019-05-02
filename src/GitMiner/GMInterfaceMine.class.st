@@ -56,7 +56,7 @@ GMInterfaceMine >> interfaces [
 
 { #category : #'As yet unclassified' }
 GMInterfaceMine >> interfacesForImplementation: aFAMIXClass [ 
-	^((aFAMIXClass superInheritances collect: #superclass) select: #isInterface) reject: #isStub.
+	^(((aFAMIXClass directSuperclasses) select: #isInterface) reject: #isStub) asSet
 ]
 
 { #category : #'as yet unclassified' }
