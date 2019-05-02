@@ -80,7 +80,7 @@ GMInterfaceMine >> load [
 
 	"Find implementations and clients for each interface"
 	job title: 'Collecting interfaces'.
-	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
+	classes := self mooseClassesForDependencyMining: mooseModel.
 	count := 0.
 	interfaces := (classes
 		select: [ :each | 
@@ -162,6 +162,12 @@ GMInterfaceMine >> makeEntryForProtectedGroup: isProtected client: client interf
 	imp mooseName.
 	GMUtility normalizedFileName: imp sourceAnchor fileName.
 	isProtected	"protected"}
+]
+
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> mooseClassesForDependencyMining: aMooseModel [ 
+	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
+	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass
 ]
 
 { #category : #'as yet unclassified' }
