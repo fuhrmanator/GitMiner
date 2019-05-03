@@ -64,6 +64,16 @@ GMInterfaceMine >> famixClassesFromCommittedClasses: committedClassesCollection 
 	^famixClasses 
 ]
 
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> implementationsFromCommittedClasses: aCollection [ 
+
+	| committedMooseClasses committedImplementations |
+	committedMooseClasses := self famixClassesFromCommittedClasses: aCollection.
+	"find out if these are implementations"
+	committedImplementations := committedMooseClasses intersection: implementations.
+	^ committedImplementations
+]
+
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
@@ -88,8 +98,8 @@ GMInterfaceMine >> isLoaded [
 { #category : #'as yet unclassified' }
 GMInterfaceMine >> load [
 	| mseStream |
-	listOfResults := LinkedList new.
-	implementations := Set new.
+	implementations := Set new..
+	listOfResults := LinkedList new..
 	mseStream := mseFile readStream.
 	[ :job | 
 	| count classes |
@@ -109,6 +119,15 @@ GMInterfaceMine >> load [
 			job progress: count / classes size.
 			each isInterface and: [ each numberOfMethods > 0 ] ]) asSet ] asJob
 		run.
+
+	self loadClientsAndImplementations.
+
+	isLoaded := true
+]
+
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> loadClientsAndImplementations [
+	"Find the clients and implementations for each interface"	
 	interfaces
 		do: [ :interface | 
 			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
@@ -157,7 +176,6 @@ GMInterfaceMine >> load [
 										interface: interface
 										implementation: imp) ] ] ]
 		displayingProgress: 'Mining: Classifying interface clients'.
-	isLoaded := true
 ]
 
 { #category : #'as yet unclassified' }
