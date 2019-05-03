@@ -1552,7 +1552,7 @@ GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile ms
 			committedClasses := committedFiles
 				select: [ :each | each endsWith: '.java' ].
 			iMine := GMInterfaceMine fromMSE: mseFile.
-			implementations := iMine implementationsFromClasses: committedClasses.
+			implementations := iMine implementationsFromCommittedClasses: committedClasses.
 
 			"classPairs := committedClasses combinations
 				select: [ :each | each size = 2 ]."
