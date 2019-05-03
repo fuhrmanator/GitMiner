@@ -1466,6 +1466,116 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 ]
 
 { #category : #'file service' }
+GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile [
+	"For each commit
+		For each class that's an implementation in the commit
+			potP := generate pairs for P
+			potU := generate pairs for U
+			actP := actual pairs for P (already calculated 'ClientImpPairs.csv' )
+			actU := actual pairs for U (already calculated 'ClientImpPairs.csv')
+			
+	"
+	| selectedCommitsFileRef commitRecords logicalCouplingRecords project commitTransactions cp ct |
+	selectedCommitsFileRef := selectedCommitsFile asFileReference.
+	project := selectedCommitsFileRef basenameWithoutExtension.
+	commitRecords := self readSelectedCommitsFile: selectedCommitsFile.
+
+
+	commitRecords
+		do: [ :rec | 
+			| committedFiles committedClasses classPairs uid revNum |
+			uid := rec first.
+			revNum := rec second.
+			committedFiles := rec third splitOn: Character space.
+			committedClasses := committedFiles
+				select: [ :each | each endsWith: '.java' ].
+			classPairs := committedClasses combinations
+				select: [ :each | each size = 2 ].
+			"Note: this won't create pair-entries for commits with only one java file."
+			
+			classPairs
+				do: [ :pair | 
+					"Add the pair twice - logical coupling could be either direction"
+					logicalCouplingRecords
+						addFirst:
+							{project.
+							pair first.
+							pair second.
+							uid.
+							revNum}.
+					logicalCouplingRecords
+						addFirst:
+							{project.
+							pair second.
+							pair first.
+							uid.
+							revNum} ] ]
+		displayingProgress: 'Generating implementation-oriented changes...'.
+		
+	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
+	[ :job | 
+	job title: 'Writing class pairs.'.
+	cp := self
+		writeClassPairs: logicalCouplingRecords
+		file: selectedCommitsFile.
+	job
+		progress: 0.5;
+		title: 'Writing transactions.'.
+	"Generates a 'transactions' (basket) style file for arules in R"
+	ct := self
+		writeCommitTransactions: commitTransactions
+		to: selectedCommitsFile ] asJob run.
+	^ Array with: cp with: ct
+]
+
+{ #category : #'file service' }
+GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile mse: mseFile [
+	"For each commit
+		For each class that's an implementation in the commit
+			potP := generate pairs for P
+			potU := generate pairs for U
+			actP := actual pairs for P (already calculated 'ClientImpPairs.csv' )
+			actU := actual pairs for U (already calculated 'ClientImpPairs.csv')
+			
+	"
+
+	| selectedCommitsFileRef commitRecords logicalCouplingRecords project commitTransactions cp ct implementations |
+	selectedCommitsFileRef := selectedCommitsFile asFileReference.
+	project := selectedCommitsFileRef basenameWithoutExtension.
+	commitRecords := self readSelectedCommitsFile: selectedCommitsFile.
+	commitRecords
+		do: [ :rec | 
+			| committedFiles committedClasses iMine uid revNum |
+			uid := rec first.
+			revNum := rec second.
+			committedFiles := rec third splitOn: Character space.
+			committedClasses := committedFiles
+				select: [ :each | each endsWith: '.java' ].
+			iMine := GMInterfaceMine fromMSE: mseFile.
+			implementations := iMine implementationsFromClasses: committedClasses.
+
+			"classPairs := committedClasses combinations
+				select: [ :each | each size = 2 ]."
+			"Note: this won't create pair-entries for commits with only one java file." ]
+		displayingProgress: 'Generating implementation-oriented changes...'.
+
+	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
+	[ :job | 
+	job title: 'Writing class pairs.'.
+	cp := self
+		writeClassPairs: logicalCouplingRecords
+		file: selectedCommitsFile.
+	job
+		progress: 0.5;
+		title: 'Writing transactions.'.
+	"Generates a 'transactions' (basket) style file for arules in R"
+	ct := self
+		writeCommitTransactions: commitTransactions
+		to: selectedCommitsFile ] asJob run.
+	^ Array with: cp with: ct
+]
+
+{ #category : #'file service' }
 GMUtility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnding [
 	"take files ending with '_commits_UIDs.csv' and create the logical coupling candidate pairs and transaction files"
 
@@ -2196,7 +2306,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString [
 GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: startOIDString to: endOIDString [
 	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
 
-	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces |
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces implementationOrientedChanges |
 	[ :job | 
 	job title: 'Cloning repo...'.
 	loc := GMUtility cloneRepo: urlString.
@@ -2226,7 +2336,11 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	job title: 'Generating pairs and transactions...'.
 	pairsAndTransactions := GMUtility
 		generatePairsAndTransactions: commitsWithoutInterfaces.
-	job progress: 5/6.
+	job progress: 5.5/6.
+	job title: 'Calculating alternate stats...'.
+	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces.
+
+	job progress: 6/6.
 	job title: 'Calculating final stats...'.
 	GMUtility
 		calculateCouplingIntersectionsFor: gitName

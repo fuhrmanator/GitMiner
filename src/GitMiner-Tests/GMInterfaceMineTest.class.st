@@ -125,6 +125,60 @@ GMInterfaceMineTest >> testCreationFromMSE [
 ]
 
 { #category : #tests }
+GMInterfaceMineTest >> testFAMIXClassesFromCommittedClasses [
+	| iMine commitClasses implementations |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	commitClasses := {'src/no_factory/ProductA.java'.
+	'src/ClientNoFactoryMain.java'}.
+	implementations := iMine
+		famixClassesFromCommittedClasses: commitClasses.
+	"mooseIDs are (sadly) different in this test, so we only check equality with mooseName"
+	self
+		assert: (implementations collect: #mooseName) asSet
+		equals:
+			((Set
+				withAll:
+					{(self classFromMooseName: 'no_factory::ProductA').
+					(self
+						classFromMooseName: '<Default Package>::ClientNoFactoryMain')})
+				collect: #mooseName)
+]
+
+{ #category : #tests }
+GMInterfaceMineTest >> testImplementationsFromCommittedClasses [
+	| iMine interfaceMooseNames commitClasses implementations |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	classes := {'src/no_factory/ProductA.java'.
+	'src/ClientNoFactoryMain.java'}.
+	implementations := iMine implementationsFromCommittedClasses: commitClasses.
+	"mooseIDs are (sadly) different in this test, so we only check equality with mooseName"
+	interfaceMooseNames := iMine interfaces collect: #mooseName.
+	self
+		assert: interfaceMooseNames
+		equals:
+			((Set
+				withAll:
+					{(self classFromMooseName: 'simple_factory::IProduct').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::PizzaIngredientFactory').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Clams').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Dough').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Pepperoni').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Sauce').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Cheese').
+					(self
+						classFromMooseName: 'headfirst::designpatterns::factory::pizzaaf::Veggies')})
+				collect: #mooseName)
+]
+
+{ #category : #tests }
 GMInterfaceMineTest >> testInterfaces [
 	"create a mine from an mseFile"
 

@@ -43,6 +43,27 @@ GMInterfaceMine >> clientsForInterfaces: theInterfaces [
 	^ clients
 ]
 
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> famixClassFromCommittedClass: aCommittedClassFileNameString [
+	"Find the moose class that corresponds to the filename in a commit"
+
+	| mooseClasses mooseClass |
+	mooseClasses := GMUtility mooseClassesForDependencyMining: mooseModel.
+	mooseClass := mooseClasses
+		select: [ :c | 
+			c sourceAnchor isNotNil
+				and: [ (GMUtility normalizedFileName: c sourceAnchor fileName) = aCommittedClassFileNameString ] ].
+	^ mooseClass first "it's a group, return the first one"
+]
+
+{ #category : #'as yet unclassified' }
+GMInterfaceMine >> famixClassesFromCommittedClasses: committedClassesCollection [ 
+	"Find the Moose classes that correspond to the filenames (committed classes)"
+	| famixClasses |
+	famixClasses := committedClassesCollection collect: [ :cc | self famixClassFromCommittedClass: cc ]. 
+	^famixClasses 
+]
+
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
