@@ -1539,14 +1539,14 @@ GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile ms
 			
 	"
 
-	| selectedCommitsFileRef commitRecords logicalCouplingRecords project commitTransactions cp ct implementations |
+	| selectedCommitsFileRef commitRecords project implementations |
 	selectedCommitsFileRef := selectedCommitsFile asFileReference.
 	project := selectedCommitsFileRef basenameWithoutExtension.
 	commitRecords := self readSelectedCommitsFile: selectedCommitsFile.
 	commitRecords
 		do: [ :rec | 
-			| committedFiles committedClasses iMine uid revNum |
-			uid := rec first.
+			| committedFiles committedClasses iMine oid revNum |
+			oid := rec first.
 			revNum := rec second.
 			committedFiles := rec third splitOn: Character space.
 			committedClasses := committedFiles
@@ -1559,20 +1559,7 @@ GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile ms
 			"Note: this won't create pair-entries for commits with only one java file." ]
 		displayingProgress: 'Generating implementation-oriented changes...'.
 
-	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-	[ :job | 
-	job title: 'Writing class pairs.'.
-	cp := self
-		writeClassPairs: logicalCouplingRecords
-		file: selectedCommitsFile.
-	job
-		progress: 0.5;
-		title: 'Writing transactions.'.
-	"Generates a 'transactions' (basket) style file for arules in R"
-	ct := self
-		writeCommitTransactions: commitTransactions
-		to: selectedCommitsFile ] asJob run.
-	^ Array with: cp with: ct
+	^ 'something'
 ]
 
 { #category : #'file service' }
