@@ -80,6 +80,14 @@ GMGitHubGraphQLQuery class >> hardCodedProjectList [
 ]
 
 { #category : #queries }
+GMGitHubGraphQLQuery class >> hardCodedRejectedASEProjectList [
+	"These are projects that were rejected from the study"
+
+	^ #('ftctechnh/ftc_app' 'kdn251/interviews' 'careercup/CtCI-6th-Edition' 'lipangit/JiaoZiVideoPlayer' 'sphynx02/AppStarter' 'DuGuQiuBai/Java' 'aporter/coursera-android-labs' 'motianhuo/wechat' 'survivingwithandroid/Surviving-with-android' 'chentao0707/SimplifyReader' 'guolindev/booksource' 'psaravan/JamsMusicPlayer' 'xcltapestry/XCL-Charts' 'janishar/mit-deep-learning-book-pdf')
+		asSet
+]
+
+{ #category : #queries }
 GMGitHubGraphQLQuery class >> hardCodedVerveineJCrashingProjectList [
 	"These are projects that crash when you try to parse them with JDT2Famix"
 	^ #('apache/beam' 'aws/aws-sdk-java' 'apache/hive' 'apache/groovy') asSet
