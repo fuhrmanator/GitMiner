@@ -138,10 +138,11 @@ GMInterfaceMine >> load [
 
 { #category : #'as yet unclassified' }
 GMInterfaceMine >> loadClientsAndImplementations [
-	"Find the clients and implementations for each interface"	
+	"Find the clients and implementations for each interface"
+
 	interfaces
 		do: [ :interface | 
-			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations allPairs unprotectedPairs protectedPairs |
+			| localClients localImplementations classesReferencingLocalImplementations allPairs unprotectedPairs protectedPairs |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
 			"AnonymouseClasses are rejected because they're inside a file (and won't ever be committed as a separate file)"
@@ -150,78 +151,36 @@ GMInterfaceMine >> loadClientsAndImplementations [
 			implementations addAll: localImplementations.
 			localClients := (self localClientsFrom: interface)
 				reject: [ :client | client sourceAnchor isNil ].
-				
-				
 			classesReferencingLocalImplementations := (localImplementations
 				flatCollect: [ :imp | imp clientTypes ]) asSet.
-			
-			
-			allPairs := localClients flatCollect: [ :localClient | localImplementations collect: [  :implementation | localClient -> implementation  ] ].
-			unprotectedPairs  := localImplementations flatCollect: [ :localImplementation | localImplementation clientTypes collect: [ :clientType | clientType  -> localImplementation  ] ].
-			protectedPairs := allPairs difference: unprotectedPairs. 
-			
-			unprotectedPairs do: [ :pair | 
-				listOfResults
+			allPairs := localClients
+				flatCollect: [ :localClient | 
+					localImplementations
+						collect: [ :implementation | localClient -> implementation ] ].
+			unprotectedPairs := localImplementations
+				flatCollect: [ :localImplementation | 
+					"don't get clients that are not local" 
+					(localImplementation clientTypes intersection: localClients) 
+						collect: [ :clientType | clientType -> localImplementation ]	].
+			protectedPairs := allPairs difference: unprotectedPairs.
+			unprotectedPairs
+				do: [ :pair | 
+					listOfResults
 						add:
 							(self
 								makeEntryForProtectedGroup: false
-								client: pair key 
+								client: pair key
 								interface: interface
 								implementation: pair value) ].
-			protectedPairs  do: [ :pair | 
-				listOfResults
+			protectedPairs
+				do: [ :pair | 
+					listOfResults
 						add:
 							(self
 								makeEntryForProtectedGroup: true
-								client: pair key 
+								client: pair key
 								interface: interface
-								implementation: pair value) ].
-		
-			
-		
-
-
-			"localImplementations do: [:implementation | (implementation clientTypes intersection: localClients) do: [ :correctLinkedClient | listOfResults
-								add:
-									(self
-										makeEntryForProtectedGroup: (classesReferencingLocalImplementations includes: correctLinkedClient)
-										client: correctLinkedClient 
-										interface: interface
-										implementation: implementation) ] ]."
-
-			"Classify protected and unprotected clients"
-"			
-			""Remove the clients of the interface that reference its implementations""
-			localProtectedClients := localClients
-				difference: classesReferencingLocalImplementations.
-			""Only take clients of the interface""
-			localUnprotectedClients := localClients
-				intersection: classesReferencingLocalImplementations.
-
-			""Generate the protected client-implementation pairs""
-			localProtectedClients
-				do: [ :client | 
-					localImplementations
-						do: [ :imp | 
-							listOfResults
-								add:
-									(self
-										makeEntryForProtectedGroup: true
-										client: client
-										interface: interface
-										implementation: imp) ] ].
-			""Generate the unprotected client-implementation pairs""
-			localUnprotectedClients
-				do: [ :client | 
-					localImplementations
-						do: [ :imp | 
-							listOfResults
-								add:
-									(self
-										makeEntryForProtectedGroup: false
-										client: client
-										interface: interface
-										implementation: imp) ] ]" ]
+								implementation: pair value) ] ]
 ]
 
 { #category : #'client implementation analysis' }
