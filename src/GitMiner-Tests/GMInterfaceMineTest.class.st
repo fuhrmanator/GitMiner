@@ -6908,5 +6908,6 @@ GMInterfaceMineTest >> testLoadClientsAndImplementations [
 	| iMine |
 	iMine := GMInterfaceMine fromMSE: mseFile.
 	iMine load.
-	self assert: (iMine listOfResults select: [:aResult | aResult first endsWith: 'ClientWithUnprotected']) size equals: 1.
+	self assert: (iMine listOfResults select: [:aResult | (aResult first endsWith: 'ClientWithUnprotected') and: [aResult last ] ] ) size equals: 5.
+	self assert: (iMine listOfResults select: [:aResult | (aResult first endsWith: 'ClientWithUnprotected') and: [ aResult last not ] ] ) size equals: 1.
 ]

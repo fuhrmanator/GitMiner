@@ -141,7 +141,7 @@ GMInterfaceMine >> loadClientsAndImplementations [
 	"Find the clients and implementations for each interface"	
 	interfaces
 		do: [ :interface | 
-			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations |
+			| localClients localProtectedClients localUnprotectedClients localImplementations classesReferencingLocalImplementations allPairs unprotectedPairs protectedPairs |
 			"Sub-interfaces are rejected because they are not implementations"
 			"Stubs are rejected because they're not under control of the project"
 			"AnonymouseClasses are rejected because they're inside a file (and won't ever be committed as a separate file)"
@@ -150,19 +150,55 @@ GMInterfaceMine >> loadClientsAndImplementations [
 			implementations addAll: localImplementations.
 			localClients := (self localClientsFrom: interface)
 				reject: [ :client | client sourceAnchor isNil ].
-
-			"Classify protected and unprotected clients"
+				
+				
 			classesReferencingLocalImplementations := (localImplementations
 				flatCollect: [ :imp | imp clientTypes ]) asSet.
+			
+			
+			allPairs := localClients flatCollect: [ :localClient | localImplementations collect: [  :implementation | localClient -> implementation  ] ].
+			unprotectedPairs  := localImplementations flatCollect: [ :localImplementation | localImplementation clientTypes collect: [ :clientType | clientType  -> localImplementation  ] ].
+			protectedPairs := allPairs difference: unprotectedPairs. 
+			
+			unprotectedPairs do: [ :pair | 
+				listOfResults
+						add:
+							(self
+								makeEntryForProtectedGroup: false
+								client: pair key 
+								interface: interface
+								implementation: pair value) ].
+			protectedPairs  do: [ :pair | 
+				listOfResults
+						add:
+							(self
+								makeEntryForProtectedGroup: true
+								client: pair key 
+								interface: interface
+								implementation: pair value) ].
+		
+			
+		
 
-			"Remove the clients of the interface that reference its implementations"
+
+			"localImplementations do: [:implementation | (implementation clientTypes intersection: localClients) do: [ :correctLinkedClient | listOfResults
+								add:
+									(self
+										makeEntryForProtectedGroup: (classesReferencingLocalImplementations includes: correctLinkedClient)
+										client: correctLinkedClient 
+										interface: interface
+										implementation: implementation) ] ]."
+
+			"Classify protected and unprotected clients"
+"			
+			""Remove the clients of the interface that reference its implementations""
 			localProtectedClients := localClients
 				difference: classesReferencingLocalImplementations.
-			"Only take clients of the interface"
+			""Only take clients of the interface""
 			localUnprotectedClients := localClients
 				intersection: classesReferencingLocalImplementations.
 
-			"Generate the protected client-implementation pairs"
+			""Generate the protected client-implementation pairs""
 			localProtectedClients
 				do: [ :client | 
 					localImplementations
@@ -174,7 +210,7 @@ GMInterfaceMine >> loadClientsAndImplementations [
 										client: client
 										interface: interface
 										implementation: imp) ] ].
-			"Generate the unprotected client-implementation pairs"
+			""Generate the unprotected client-implementation pairs""
 			localUnprotectedClients
 				do: [ :client | 
 					localImplementations
@@ -185,8 +221,7 @@ GMInterfaceMine >> loadClientsAndImplementations [
 										makeEntryForProtectedGroup: false
 										client: client
 										interface: interface
-										implementation: imp) ] ] ]
-		displayingProgress: 'Mining: Classifying interface clients'.
+										implementation: imp) ] ]" ]
 ]
 
 { #category : #'client implementation analysis' }
