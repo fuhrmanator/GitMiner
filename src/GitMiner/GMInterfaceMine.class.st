@@ -77,12 +77,19 @@ GMInterfaceMine >> implementationsFromCommittedClasses: aCollection [
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
-	isLoaded := false.
+	implementations := Set new.
+	isLoaded := false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 GMInterfaceMine >> interfaces [
 	^ interfaces
+]
+
+{ #category : #'private - testing' }
+GMInterfaceMine >> interfaces: theListOfTheInterface [
+	"For tests"
+	interfaces := theListOfTheInterface
 ]
 
 { #category : #'As yet unclassified' }
@@ -90,15 +97,19 @@ GMInterfaceMine >> interfacesForImplementation: aFAMIXClass [
 	^(((aFAMIXClass directSuperclasses) select: #isInterface) reject: #isStub) asSet
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 GMInterfaceMine >> isLoaded [
 	^isLoaded
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'private - testing' }
+GMInterfaceMine >> listOfResults [
+	^ listOfResults
+]
+
+{ #category : #loading }
 GMInterfaceMine >> load [
 	| mseStream |
-	implementations := Set new..
 	listOfResults := LinkedList new..
 	mseStream := mseFile readStream.
 	[ :job | 
@@ -178,7 +189,7 @@ GMInterfaceMine >> loadClientsAndImplementations [
 		displayingProgress: 'Mining: Classifying interface clients'.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'client implementation analysis' }
 GMInterfaceMine >> localClientsFrom: interface [
 	| localClients |
 	localClients := (interface structuresWithDeclaredType
@@ -191,7 +202,7 @@ GMInterfaceMine >> localClientsFrom: interface [
 	^ localClients
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'client implementation analysis' }
 GMInterfaceMine >> makeEntryForProtectedGroup: isProtected client: client interface: interface implementation: imp [
 	"makes an array element with the info"
 
@@ -209,12 +220,12 @@ GMInterfaceMine >> mooseClassesForDependencyMining: aMooseModel [
 	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 GMInterfaceMine >> mseFile [
 	^mseFile
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 GMInterfaceMine >> mseFile: aFileReference [ 
 	mseFile := aFileReference.
 ]
