@@ -1087,7 +1087,7 @@ GMUtility class >> cloneRepo: url [
 			cloneDir := working / 'tmp' / 'tempClonesPharo'.
 			gitErrors := working / 'tmp' / 'errors_gitClone'.
 			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-			cloneCommand := 'cd ' , cloneDir fullName , ' && git clone ' , url , ' 2>"'
+			cloneCommand := 'cd "' , cloneDir fullName , '" && git clone ' , url , ' 2>"'
 				, gitErrors fullName , '"'.
 			result := LibC uniqueInstance system: cloneCommand.
 			result = 0
