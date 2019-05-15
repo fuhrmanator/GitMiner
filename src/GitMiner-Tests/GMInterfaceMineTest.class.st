@@ -13,18 +13,8 @@ Class {
 	#category : #'GitMiner-Tests'
 }
 
-{ #category : #'helper methods' }
-GMInterfaceMineTest >> classFromMooseName: aString [ 
-	"get the FAMIXclass that corresponds to the Moose Name"
-	| matches |
-	matches := classes
-		select: [ :c | c mooseName = aString ].
-	self assert: matches size equals: 1.
-	^matches first
-]
-
 { #category : #'as yet unclassified' }
-GMInterfaceMineTest >> mseFileFactoryVariantsHardCodedString [
+GMInterfaceMineTest class >> mseFileFactoryVariantsHardCodedString [
 	"returns the contents of an MSE file. This allows putting it under source code control"
 	^ '(
 	(FAMIX.Method (id: 1)
@@ -6708,6 +6698,16 @@ GMInterfaceMineTest >> mseFileFactoryVariantsHardCodedString [
 		(endPos 107)
 		(fileName ''src/headfirst\designpatterns\factory\pizzaaf\Veggies.java'')
 		(startPos 83)))'
+]
+
+{ #category : #'helper methods' }
+GMInterfaceMineTest >> classFromMooseName: aString [ 
+	"get the FAMIXclass that corresponds to the Moose Name"
+	| matches |
+	matches := classes
+		select: [ :c | c mooseName = aString ].
+	self assert: matches size equals: 1.
+	^matches first
 ]
 
 { #category : #running }

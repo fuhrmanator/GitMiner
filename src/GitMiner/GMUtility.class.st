@@ -2323,9 +2323,9 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	job title: 'Generating pairs and transactions...'.
 	pairsAndTransactions := GMUtility
 		generatePairsAndTransactions: commitsWithoutInterfaces.
-	job progress: 5.5/6.
+"	job progress: 5.5/6.
 	job title: 'Calculating alternate stats...'.
-	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces.
+	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
 
 	job progress: 6/6.
 	job title: 'Calculating final stats...'.
@@ -2425,7 +2425,7 @@ GMUtility class >> mineProjectsWithLog: projects [
 		value: '/mnt/c/verveineJ5/verveinej.sh'.
 
 	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
-
+	
 	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
 	'Mining.log' asFileReference
 		ensureDelete;
