@@ -65,6 +65,10 @@ GMAbstractMine >> load [
 			job progress: count / classes size.
 			each isInterface and: [ each numberOfMethods > 0 ] ]) asSet ] asJob
 		run.
+	"Set the rootFolder for Moose so it can find the sources"
+	"Should be in directory below MSE file with the same name (minus .MSE)"
+	mooseModel
+		rootFolder: mseFile parent / mseFile basenameWithoutExtension
 ]
 
 { #category : #'as yet unclassified' }
@@ -81,4 +85,9 @@ GMAbstractMine >> mseFile [
 { #category : #accessing }
 GMAbstractMine >> mseFile: aFileReference [ 
 	mseFile := aFileReference.
+]
+
+{ #category : #'as yet unclassified' }
+GMAbstractMine >> sourceFolder: aFileReference [ 
+	mooseModel rootFolder: aFileReference 
 ]

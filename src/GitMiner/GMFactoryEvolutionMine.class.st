@@ -14,7 +14,19 @@ Class {
 
 { #category : #'as yet unclassified' }
 GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
-	^ Set new.
+	| constructorsOfImplementations invokersOfConstructors |
+	"e.g., new ArrayList();"
+	constructorsOfImplementations := mooseModel allMethods
+		select: [ :m | 
+			| isNonMarkerInterface |
+			isNonMarkerInterface := m parentType withSuperclassHierarchy
+				anySatisfy: [ :sc | sc isInterface and: [ sc methods isNotEmpty ] ].
+			m isConstructor & isNonMarkerInterface ].
+	invokersOfConstructors := constructorsOfImplementations flatCollect: [ :c | c incomingInvocations collect: #sender ].
+	"self from sourceAnchor ifNotNil: [ (self from generateFastIfNotDoneAndBind). 
+(self fast atAnyScope: {FASTJavaAssignementExpression . FASTJavaVariableDeclarator}) ifNotEmpty: [:aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable. ] ]."
+	invokersOfConstructors do: [ :invoker | invoker sourceAnchor ifNotNil: [ 0halt. ] ].
+	0halt.
 ]
 
 { #category : #initialization }
