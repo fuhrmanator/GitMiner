@@ -17,8 +17,9 @@ BaselineOfGitMiner >> baseline: spec [
 			spec
 				baseline: 'NeoJSON'
 					with: [ spec repository: 'github://svenvc/NeoJSON/repository' ];
-				baseline: 'NeoCSV'
-					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];
+				"Moose already has NeoCSV"
+				"baseline: 'NeoCSV'
+					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];"
 				baseline: 'PolyMath'
 					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ].
 			spec preLoadDoIt: #verifyMooseInstalled.
@@ -26,7 +27,8 @@ BaselineOfGitMiner >> baseline: spec [
 			"Packages"
 			spec
 				package: 'GitMiner' with: [ spec requires: #('NeoJSON') ];
-				package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];
+				"Moose already has NeoCSV"
+				"package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];"
 				package: 'GitMiner' with: [ spec requires: #('PolyMath') ];
 				package: 'GitMiner-Tests' with: [ spec requires: #('GitMiner') ] ]
 ]
