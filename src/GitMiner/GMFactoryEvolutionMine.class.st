@@ -11,3 +11,16 @@ Class {
 	],
 	#category : #GitMiner
 }
+
+{ #category : #'as yet unclassified' }
+GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
+	^ Set new.
+]
+
+{ #category : #initialization }
+GMFactoryEvolutionMine >> initialize [
+	super initialize.
+	implementationInstantiationsNoInterface := Set new.
+	implementationInstantiationsWithInterface := Set new.
+	factoryMethodCalls := Set new
+]
