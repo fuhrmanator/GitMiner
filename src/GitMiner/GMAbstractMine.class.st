@@ -3,7 +3,82 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'mseFile',
-		'mooseModel'
+		'mooseModel',
+		'interfaces',
+		'isLoaded'
 	],
 	#category : #GitMiner
 }
+
+{ #category : #'as yet unclassified' }
+GMAbstractMine class >> fromMSE: aFileReference [ 
+	| mine |
+	mine := self new.
+	mine mseFile: aFileReference.
+	^mine
+]
+
+{ #category : #initialization }
+GMAbstractMine >> initialize [
+	super initialize.
+	implementations := Set new.
+	interfaces := Set new.
+	isLoaded := false.
+
+]
+
+{ #category : #accessing }
+GMAbstractMine >> interfaces [
+	^ interfaces
+]
+
+{ #category : #'private - testing' }
+GMAbstractMine >> interfaces: theListOfTheInterface [
+	"For tests"
+	interfaces := theListOfTheInterface
+]
+
+{ #category : #accessing }
+GMAbstractMine >> isLoaded [
+	^isLoaded
+]
+
+{ #category : #loading }
+GMAbstractMine >> load [
+	| mseStream |
+	mseStream := mseFile readStream.
+	[ :job | 
+	| count classes |
+	job title: 'Loading MSE file: ' , mseFile fullPath fullName.
+	mseStream
+		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
+			mseStream close ]
+		ifNil: [ self error: 'The MSE file ' , mseFile , ' is not valid.' ].
+
+	"Find implementations and clients for each interface"
+	job title: 'Collecting interfaces'.
+	classes := self mooseClassesForDependencyMining: mooseModel.
+	count := 0.
+	interfaces := (classes
+		select: [ :each | 
+			count := count + 1.
+			job progress: count / classes size.
+			each isInterface and: [ each numberOfMethods > 0 ] ]) asSet ] asJob
+		run.
+]
+
+{ #category : #'as yet unclassified' }
+GMAbstractMine >> mooseClassesForDependencyMining: aMooseModel [ 
+	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
+	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass
+]
+
+{ #category : #accessing }
+GMAbstractMine >> mseFile [
+	^mseFile
+]
+
+{ #category : #accessing }
+GMAbstractMine >> mseFile: aFileReference [ 
+	mseFile := aFileReference.
+]

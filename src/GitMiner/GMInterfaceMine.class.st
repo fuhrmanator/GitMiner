@@ -5,21 +5,11 @@ Class {
 	#name : #GMInterfaceMine,
 	#superclass : #GMAbstractMine,
 	#instVars : [
-		'listOfResults',
 		'implementations',
-		'interfaces',
-		'isLoaded'
+		'listOfResults'
 	],
 	#category : #GitMiner
 }
-
-{ #category : #'as yet unclassified' }
-GMInterfaceMine class >> fromMSE: aFileReference [ 
-	| mine |
-	mine := self new.
-	mine mseFile: aFileReference.
-	^mine
-]
 
 { #category : #'as yet unclassified' }
 GMInterfaceMine >> clientsForImplementation: anImplementation [
@@ -78,29 +68,13 @@ GMInterfaceMine >> implementationsFromCommittedClasses: aCollection [
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
+	listOfResults := LinkedList new.
 	implementations := Set new.
-	isLoaded := false
-]
-
-{ #category : #accessing }
-GMInterfaceMine >> interfaces [
-	^ interfaces
-]
-
-{ #category : #'private - testing' }
-GMInterfaceMine >> interfaces: theListOfTheInterface [
-	"For tests"
-	interfaces := theListOfTheInterface
 ]
 
 { #category : #'As yet unclassified' }
 GMInterfaceMine >> interfacesForImplementation: aFAMIXClass [ 
 	^(((aFAMIXClass directSuperclasses) select: #isInterface) reject: #isStub) asSet
-]
-
-{ #category : #accessing }
-GMInterfaceMine >> isLoaded [
-	^isLoaded
 ]
 
 { #category : #'private - testing' }
@@ -109,29 +83,8 @@ GMInterfaceMine >> listOfResults [
 ]
 
 { #category : #loading }
-GMInterfaceMine >> load [
-	| mseStream |
-	listOfResults := LinkedList new..
-	mseStream := mseFile readStream.
-	[ :job | 
-	| count classes |
-	job title: 'Loading MSE file: ' , mseFile fullPath fullName.
-	mseStream
-		ifNotNil: [ mooseModel := MooseModel importFromMSEStream: mseStream.
-			mseStream close ]
-		ifNil: [ self error: 'The MSE file ' , mseFile , ' is not valid.' ].
-
-	"Find implementations and clients for each interface"
-	job title: 'Collecting interfaces'.
-	classes := self mooseClassesForDependencyMining: mooseModel.
-	count := 0.
-	interfaces := (classes
-		select: [ :each | 
-			count := count + 1.
-			job progress: count / classes size.
-			each isInterface and: [ each numberOfMethods > 0 ] ]) asSet ] asJob
-		run.
-
+GMInterfaceMine >> load [ 
+	super load.
 	self loadClientsAndImplementations.
 
 	isLoaded := true
@@ -207,20 +160,4 @@ GMInterfaceMine >> makeEntryForProtectedGroup: isProtected client: client interf
 	imp mooseName.
 	GMUtility normalizedFileName: imp sourceAnchor fileName.
 	isProtected	"protected"}
-]
-
-{ #category : #'as yet unclassified' }
-GMInterfaceMine >> mooseClassesForDependencyMining: aMooseModel [ 
-	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
-	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass
-]
-
-{ #category : #accessing }
-GMInterfaceMine >> mseFile [
-	^mseFile
-]
-
-{ #category : #accessing }
-GMInterfaceMine >> mseFile: aFileReference [ 
-	mseFile := aFileReference.
 ]
