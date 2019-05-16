@@ -6854,7 +6854,7 @@ GMInterfaceMineTest >> testInterfacesForImplementation [
 	"Need to test an implementation that implements multiple interfaces (not yet in MSE?)"
 ]
 
-{ #category : #test }
+{ #category : #tests }
 GMInterfaceMineTest >> testLoadClientsAndImplementations [
 	"| mooseModel2 clientClass interface concreteClass1 concreteClass2 miner |
 	
