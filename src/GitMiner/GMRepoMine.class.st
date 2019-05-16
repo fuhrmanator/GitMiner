@@ -41,6 +41,20 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+GMRepoMine class >> fromURL: url [ 
+	^self fromURL: url rootForClone: (FileSystem disk workingDirectory / 'tmp' / 'tempClonesPharo')
+]
+
+{ #category : #'as yet unclassified' }
+GMRepoMine class >> fromURL: url rootForClone: aPath [
+	| mine |
+	mine := self new.
+	mine url: url.
+	mine rootForClone: aPath.
+	^mine
+]
+
+{ #category : #'as yet unclassified' }
 GMRepoMine >> cloneRepo [
 	"clone a repo of a project (if it doesn't already exist) and return its handle "
 
