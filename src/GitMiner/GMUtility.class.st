@@ -1087,7 +1087,7 @@ GMUtility class >> cloneRepo: url [
 			cloneDir := working / 'tmp' / 'tempClonesPharo'.
 			gitErrors := working / 'tmp' / 'errors_gitClone'.
 			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-			cloneCommand := 'cd ' , cloneDir fullName , ' && git clone ' , url , ' 2>"'
+			cloneCommand := 'cd "' , cloneDir fullName , '" && git clone ' , url , ' 2>"'
 				, gitErrors fullName , '"'.
 			result := LibC uniqueInstance system: cloneCommand.
 			result = 0
@@ -2323,9 +2323,9 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	job title: 'Generating pairs and transactions...'.
 	pairsAndTransactions := GMUtility
 		generatePairsAndTransactions: commitsWithoutInterfaces.
-	job progress: 5.5/6.
+"	job progress: 5.5/6.
 	job title: 'Calculating alternate stats...'.
-	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces.
+	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
 
 	job progress: 6/6.
 	job title: 'Calculating final stats...'.
@@ -2425,7 +2425,7 @@ GMUtility class >> mineProjectsWithLog: projects [
 		value: '/mnt/c/verveineJ5/verveinej.sh'.
 
 	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
-
+	
 	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
 	'Mining.log' asFileReference
 		ensureDelete;

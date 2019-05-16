@@ -1,3 +1,6 @@
+"
+I represent a mining activity regarding Interfaces (their clients and their implementations).
+"
 Class {
 	#name : #GMInterfaceMine,
 	#superclass : #Object,
