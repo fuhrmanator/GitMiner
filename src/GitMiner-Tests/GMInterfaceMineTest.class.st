@@ -6723,7 +6723,7 @@ GMInterfaceMineTest >> setUp [
 	mseFile
 		ensureDelete;
 		writeStreamDo:
-				[ :stream | stream nextPutAll: self mseFileFactoryVariantsHardCodedString ].
+				[ :stream | stream nextPutAll: GMInterfaceMineTest mseFileFactoryVariantsHardCodedString ].
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
 	classes := ((mooseModel allWithSubTypesOf: FamixTClass)
