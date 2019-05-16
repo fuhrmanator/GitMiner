@@ -38,10 +38,13 @@ GMFactoryEvolutionMineTest >> setUp [
 ]
 
 { #category : #'as yet unclassified' }
-GMFactoryEvolutionMineTest >> testimplementationInstantiationsNoInterface [
-	"comment stating purpose of message"
-
-	| a |
-	mooseModel . 0halt
-	
+GMFactoryEvolutionMineTest >> testAssignmentsOfImplementationsWithNoInterface [
+	| iMine |
+	iMine := GMFactoryEvolutionMine fromMSE: mseFile.
+	iMine load.
+	self
+		assert:
+			(iMine
+				assignmentsOfImplementationsWithNoInterface)
+		notEmpty.
 ]
