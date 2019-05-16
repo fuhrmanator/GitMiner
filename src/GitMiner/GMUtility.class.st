@@ -1240,6 +1240,17 @@ GMUtility class >> ensureTmpDirectoryCreation [
 		ensureCreateDirectory
 ]
 
+{ #category : #'as yet unclassified' }
+GMUtility class >> exampleMineInterfacesAndMakeUML [
+	| scRecords |
+	GMUtility mineProjectsWithLog: #('fuhrmanator/FactoryVariants').
+	scRecords := GMUtility
+		loadClientImplementationPairs: 'FactoryVariants_HEAD_ClientImpPairs.csv' asFileReference.
+	GMUtility
+		writePlantUMLOutputFor: scRecords
+		toFile: 'FactoryVariants_HEAD.puml'
+]
+
 { #category : #'file service' }
 GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
 	"take a big CSV file and break it into smaller ones, project by project"
