@@ -3,10 +3,8 @@ I represent a mining activity regarding Interfaces (their clients and their impl
 "
 Class {
 	#name : #GMInterfaceMine,
-	#superclass : #Object,
+	#superclass : #GMAbstractMine,
 	#instVars : [
-		'mseFile',
-		'mooseModel',
 		'listOfResults',
 		'implementations',
 		'interfaces',

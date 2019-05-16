@@ -3,13 +3,7 @@ A GMFactoryEvolutionMineTest is a test class for testing the behavior of GMFacto
 "
 Class {
 	#name : #GMFactoryEvolutionMineTest,
-	#superclass : #TestCase,
-	#instVars : [
-		'mseFile',
-		'mseStream',
-		'mooseModel',
-		'classes'
-	],
+	#superclass : #GMAbstractMineTest,
 	#category : #'GitMiner-Tests'
 }
 

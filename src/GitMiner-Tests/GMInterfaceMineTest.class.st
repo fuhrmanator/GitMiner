@@ -1,14 +1,10 @@
 Class {
 	#name : #GMInterfaceMineTest,
-	#superclass : #TestCase,
+	#superclass : #GMAbstractMineTest,
 	#instVars : [
-		'mseFile',
-		'mooseModel',
-		'classes',
 		'aClient',
 		'anImplementation',
-		'anImplementationsClients',
-		'mseStream'
+		'anImplementationsClients'
 	],
 	#category : #'GitMiner-Tests'
 }

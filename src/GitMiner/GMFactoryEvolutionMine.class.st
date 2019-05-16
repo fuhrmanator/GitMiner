@@ -3,10 +3,8 @@ I represent an activity of mining for steps along the refactorings (evolution) t
 "
 Class {
 	#name : #GMFactoryEvolutionMine,
-	#superclass : #Object,
+	#superclass : #GMAbstractMine,
 	#instVars : [
-		'mseFile',
-		'mooseModel',
 		'implementationInstantiationsNoInterface',
 		'implementationInstantiationsWithInterface',
 		'factoryMethodCalls'
