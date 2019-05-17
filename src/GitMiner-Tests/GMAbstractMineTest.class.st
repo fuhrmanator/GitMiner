@@ -51,7 +51,7 @@ GMAbstractMineTest >> setUp [
 			self flag: 'automatically regenerate the MSE'.
 			self
 				error:
-					'No MSE file found for ' , tmpRoot asString
+					'No MSE file found for ' , tmpRoot fullName
 						,
 							'. Please generate it again in a shell, e.g.: "cd /tmp/GMTests/FactoryVariants & /mnt/c/verveineJ/verveinej.sh -- -o ../FactoryVariants.mse -anchor assoc ."' ].
 	"mseFile
