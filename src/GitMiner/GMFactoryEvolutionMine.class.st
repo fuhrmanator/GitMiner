@@ -14,7 +14,7 @@ Class {
 
 { #category : #'as yet unclassified' }
 GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
-	| constructorsOfImplementations invokersOfConstructors |
+	| constructorsOfImplementations invokersOfConstructors assignmentsOfImplementations |
 	"e.g., new ArrayList();"
 	constructorsOfImplementations := mooseModel allMethods
 		select: [ :m | 
@@ -24,21 +24,19 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
 			m isConstructor & isNonMarkerInterface ].
 	invokersOfConstructors := constructorsOfImplementations
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
-	"self from sourceAnchor ifNotNil: [ (self from generateFastIfNotDoneAndBind). 
-(self fast atAnyScope: {FASTJavaAssignementExpression . FASTJavaVariableDeclarator}) ifNotEmpty: [:aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable. ] ]."
-	invokersOfConstructors
-		do: [ :invoker | 
+	assignmentsOfImplementations := invokersOfConstructors
+		flatCollect: [ :invoker | 
 			| results |
 			invoker sourceAnchor
 				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
 					results := invoker fast
 						toAnyScope:
-							{FASTJavaAssignementExpression.
-							FASTJavaVariableDeclarator}.
-					0halt.
-					results
+							{FASTJavaAssignementExpression
+							". FASTJavaVariableDeclarator"}
+					"results
 						ifNotEmpty:
-							[ :aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable ] ] ]
+							[ :aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable ]" ] ].
+	0 halt
 ]
 
 { #category : #initialization }
