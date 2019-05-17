@@ -68,6 +68,7 @@ GMInterfaceMine >> implementationsFromCommittedClasses: aCollection [
 { #category : #initialization }
 GMInterfaceMine >> initialize [
 	super initialize.
+	implementations := Set new.
 	listOfResults := LinkedList new.
 	implementations := Set new.
 ]

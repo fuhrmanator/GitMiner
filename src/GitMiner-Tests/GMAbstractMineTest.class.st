@@ -32,7 +32,7 @@ GMAbstractMineTest >> setUp [
 		/ 'FactoryVariants.mse'."
 	"Clone the test repo, pull changes if it already exists"
 	tmpRoot := FileLocator temp / 'GMTests'.
-	mseFile := tmpRoot / 'FactoryVariants_HEAD.mse'.
+	mseFile := tmpRoot / 'FactoryVariants.mse'.
 	testRepoURL := 'https://github.com/fuhrmanator/FactoryVariants'.
 	testRepoLocation := tmpRoot / 'FactoryVariants'.
 	"testRepoLocation deleteAll."
@@ -53,7 +53,7 @@ GMAbstractMineTest >> setUp [
 				error:
 					'No MSE file found for ' , tmpRoot asString
 						,
-							'. Please generate it again in a shell, e.g.: "cd /tmp/GMTests/FactoryVariants & /mnt/c/verveineJ/verveinej.sh -- -o ../FactoryVariants_HEAD.mse -anchor assoc ."' ].
+							'. Please generate it again in a shell, e.g.: "cd /tmp/GMTests/FactoryVariants & /mnt/c/verveineJ/verveinej.sh -- -o ../FactoryVariants.mse -anchor assoc ."' ].
 	"mseFile
 		ensureDelete;
 		writeStreamDo: [ :stream | 
@@ -61,6 +61,8 @@ GMAbstractMineTest >> setUp [
 				nextPutAll: GMInterfaceMineTest mseFileFactoryVariantsHardCodedString ]."
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
+	"Hook the sources to the mooseModel"
+	mooseModel rootFolder: testRepoLocation fullName.
 	classes := ((mooseModel allWithSubTypesOf: FamixTClass)
 		reject: #isStub) reject: #isAnonymousClass
 ]
@@ -125,4 +127,27 @@ GMAbstractMineTest >> testLoad [
 	self assert: iMine isLoaded.
 	self assert: iMine interfaces size equals: 8.
 
+]
+
+{ #category : #tests }
+GMAbstractMineTest >> testSourceFolder [
+	"create a mine from an mseFile"
+	| iMine  |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
+	self assert: iMine sourceFolder equals: '/tmp/GMTests/FactoryVariants_HEAD'.
+
+]
+
+{ #category : #tests }
+GMAbstractMineTest >> testSourceFolderIsUseful [
+	"create a mine from an mseFile"
+	| iMine  |
+	iMine := GMInterfaceMine fromMSE: mseFile.
+	iMine load.
+	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
+	self assert: iMine sourceFolder equals: '/tmp/GMTests/FactoryVariants'.
+	"see if source text is OK for the first implementation "
+	self deny: iMine interfaces anyOne sourceText equals: ''.
 ]

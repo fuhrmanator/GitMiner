@@ -20,7 +20,9 @@ GMFactoryEvolutionMineTest >> testAssignmentsOfImplementationsWithNoInterface [
 	| iMine |
 	iMine := GMFactoryEvolutionMine fromMSE: mseFile.
 	iMine load.
-	iMine sourceFolder: (FileSystem disk workingDirectory) / 'tmp' / 'data_mining' / 'FactoryVariants_master' / 'HEAD'.
+	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
+
+	"iMine sourceFolder: (FileSystem disk workingDirectory) / 'tmp' / 'data_mining' / 'FactoryVariants_master' / 'HEAD'."
 	self
 		assert: iMine assignmentsOfImplementationsWithNoInterface notEmpty
 ]
