@@ -24,17 +24,41 @@ GMAbstractMineTest >> classFromMooseName: aString [
 GMAbstractMineTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
 
+	| testRepoURL testRepoLocation tmpRoot |
 	super setUp.
 	"The MSE string could be put into a test method and loaded that way so the tests can run in CI."
 	"mseFile := FileSystem disk workingDirectory / 'pharo-local'
 		/ 'iceberg' / 'fuhrmanator' / 'GitMiner' / 'tests'
 		/ 'FactoryVariants.mse'."
-	mseFile := '___FactoryVariants_HEAD.mse' asFileReference.
-	mseFile
+	"Clone the test repo, pull changes if it already exists"
+	tmpRoot := FileLocator temp / 'GMTests'.
+	mseFile := tmpRoot / 'FactoryVariants_HEAD.mse'.
+	testRepoURL := 'https://github.com/fuhrmanator/FactoryVariants'.
+	testRepoLocation := tmpRoot / 'FactoryVariants'.
+	"testRepoLocation deleteAll."
+	testRepoLocation exists
+		ifFalse: [ IceGitClone new
+				location: testRepoLocation;
+				url: testRepoURL;
+				execute.
+			"remove any MSE file as it's out of date"
+			mseFile ensureDelete ]
+		ifTrue:
+			[ "pull changes" self flag: 'do a fetch/pull to get latest updates from remote' ].
+	"regenerate the MSE if it doesn't exist"
+	mseFile exists
+		ifFalse: [ "regenerate the MSE, see GMUtility"
+			self flag: 'automatically regenerate the MSE'.
+			self
+				error:
+					'No MSE file found for ' , tmpRoot asString
+						,
+							'. Please generate it again in a shell, e.g.: "cd /tmp/GMTests/FactoryVariants & /mnt/c/verveineJ/verveinej.sh -- -o ../FactoryVariants_HEAD.mse -anchor assoc ."' ].
+	"mseFile
 		ensureDelete;
 		writeStreamDo: [ :stream | 
 			stream
-				nextPutAll: GMInterfaceMineTest mseFileFactoryVariantsHardCodedString ].
+				nextPutAll: GMInterfaceMineTest mseFileFactoryVariantsHardCodedString ]."
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
 	classes := ((mooseModel allWithSubTypesOf: FamixTClass)
