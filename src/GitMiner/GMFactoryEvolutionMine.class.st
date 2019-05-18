@@ -24,7 +24,7 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
 			m isConstructor & isNonMarkerInterface ].
 	invokersOfConstructors := constructorsOfImplementations
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
-	assignmentsOfImplementations := invokersOfConstructors
+	assignmentsOfImplementations := (invokersOfConstructors
 		flatCollect: [ :invoker | 
 			| results |
 			invoker sourceAnchor
@@ -35,7 +35,9 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
 							". FASTJavaVariableDeclarator"}
 					"results
 						ifNotEmpty:
-							[ :aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable ]" ] ].
+							[ :aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable ]" ] ])
+		asSet
+		groupedBy: [ :a | a variable famixVariable declaredType isInterface ].
 	0 halt
 ]
 
