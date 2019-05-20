@@ -15,6 +15,21 @@ GMFactoryEvolutionMineTest >> setUp [
 
 ]
 
+{ #category : #test }
+GMFactoryEvolutionMineTest >> testAssignmentsOfImplementations [
+
+	| iMine assignmentsOfImplementations |
+	iMine := GMFactoryEvolutionMine fromMSE: mseFile.
+	iMine load.
+	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
+
+	assignmentsOfImplementations := iMine assignmentsOfImplementations.
+	0halt.
+
+	self
+		assert: assignmentsOfImplementations notEmpty.
+]
+
 { #category : #tests }
 GMFactoryEvolutionMineTest >> testAssignmentsOfImplementationsWithNoInterface [
 	| iMine |
@@ -25,4 +40,16 @@ GMFactoryEvolutionMineTest >> testAssignmentsOfImplementationsWithNoInterface [
 	"iMine sourceFolder: (FileSystem disk workingDirectory) / 'tmp' / 'data_mining' / 'FactoryVariants_master' / 'HEAD'."
 	self
 		assert: iMine assignmentsOfImplementationsWithNoInterface notEmpty
+]
+
+{ #category : #test }
+GMFactoryEvolutionMineTest >> testConstructors [
+	| iMine constructors |
+	iMine := GMFactoryEvolutionMine fromMSE: mseFile.
+	iMine load.
+	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.	
+	constructors := iMine constructors.
+	
+	self assert: constructors anyOne isConstructor.
+	self assert: constructors anyOne isMethod.
 ]

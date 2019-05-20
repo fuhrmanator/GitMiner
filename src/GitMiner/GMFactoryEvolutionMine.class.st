@@ -13,6 +13,32 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+GMFactoryEvolutionMine >> assignmentsOfImplementations [
+	| constructorsOfImplementations invokersOfConstructors |
+	"e.g., new ArrayList();"
+	constructorsOfImplementations := self constructors
+		select: [ :m | 
+			| constructeeImplementsNonMarkerInterface |
+			"0 halt."
+			constructeeImplementsNonMarkerInterface := m parentType
+				withSuperclassHierarchy "withAllSuperclasses?"
+				anySatisfy: [ :sc | 
+					"Halt if: [ sc name = 'IProduct' ]."
+					self
+						crLog: 'method ' , m mooseName , ' (', m kind , ') superclass ' , sc name , ' isInterface = ' , sc isInterface asString.
+					sc isInterface and: [ sc methods isNotEmpty ] ].
+			constructeeImplementsNonMarkerInterface ].
+	invokersOfConstructors := constructorsOfImplementations
+		flatCollect: [ :c | c incomingInvocations collect: #sender ].
+	^ (invokersOfConstructors
+		flatCollect: [ :invoker | 
+			invoker sourceAnchor
+				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
+					invoker fast toAnyScope: {FASTJavaAssignementExpression . FASTJavaVarDeclStatement} ] ])
+		asSet
+]
+
+{ #category : #'as yet unclassified' }
 GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
 	| constructorsOfImplementations invokersOfConstructors assignmentsOfImplementations |
 	"e.g., new ArrayList();"
@@ -39,6 +65,11 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
 		asSet
 		groupedBy: [ :a | a variable famixVariable declaredType isInterface ].
 	0 halt
+]
+
+{ #category : #'as yet unclassified' }
+GMFactoryEvolutionMine >> constructors [
+	^ mooseModel allMethods select: #isConstructor
 ]
 
 { #category : #initialization }
