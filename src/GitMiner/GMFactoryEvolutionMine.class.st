@@ -14,28 +14,40 @@ Class {
 
 { #category : #'as yet unclassified' }
 GMFactoryEvolutionMine >> assignmentsOfImplementations [
-	| constructorsOfImplementations invokersOfConstructors |
+	| constructorsOfImplementations invokersOfConstructors assignmentsInInvokersOfConstructors |
 	"e.g., new ArrayList();"
 	constructorsOfImplementations := self constructors
 		select: [ :m | 
-			| constructeeImplementsNonMarkerInterface |
+			| constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract |
 			"0 halt."
-			constructeeImplementsNonMarkerInterface := m parentType
-				withSuperclassHierarchy "withAllSuperclasses?"
-				anySatisfy: [ :sc | 
-					"Halt if: [ sc name = 'IProduct' ]."
-					self
-						crLog: 'method ' , m mooseName , ' (', m kind , ') superclass ' , sc name , ' isInterface = ' , sc isInterface asString.
-					sc isInterface and: [ sc methods isNotEmpty ] ].
-			constructeeImplementsNonMarkerInterface ].
+			constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract := m parentType
+				withSuperclassHierarchy 	"withAllSuperclasses?"
+				anySatisfy: [ :sc | "Halt if: [ sc name = 'IProduct' ]." "self
+						crLog: 'method ' , m mooseName , ' (', m kind , ') superclass ' , sc name , ' isInterface = ' , sc isInterface asString
+						, ' isAbstract = ' , sc isAbstract asString." sc isAbstract or: [sc isInterface and: [ sc methods isNotEmpty ]] ].
+			constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract ].
+	"constructorsOfImplementations 
+		do: [ :i | 
+			self
+				crLog:
+					'method ' , i mooseName , ' (' , i kind , ') parentType: '
+						, i parentType mooseName]."
 	invokersOfConstructors := constructorsOfImplementations
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
-	^ (invokersOfConstructors
+	assignmentsInInvokersOfConstructors := (invokersOfConstructors
 		flatCollect: [ :invoker | 
 			invoker sourceAnchor
 				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
-					invoker fast toAnyScope: {FASTJavaAssignementExpression . FASTJavaVarDeclStatement} ] ])
-		asSet
+					invoker fast
+						toAnyScope:
+							{FASTJavaAssignementExpression.
+							FASTJavaVarDeclStatement} ] ]) asSet.
+	"Not all assignments are calls to constructors!"
+	0halt.
+	"Return all assignments who have a '= new' in them "
+	^ assignmentsInInvokersOfConstructors select: [ :a | 
+		(a toScope: FASTJavaNewExpression ) isNotEmpty
+		]
 ]
 
 { #category : #'as yet unclassified' }
