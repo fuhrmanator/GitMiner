@@ -2348,6 +2348,120 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 		selectedCommitsFile: commitsWithoutInterfaces ] asJob run
 ]
 
+{ #category : #pipeline }
+GMUtility class >> mineFactoryEvolution: gitName url: urlString [
+	"Mine the whole repo, using HEAD and nil as limits"
+	^ self mineFactoryEvolution: gitName url: urlString from: 'HEAD' to: ''
+]
+
+{ #category : #pipeline }
+GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDString to: endOIDString [
+	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
+
+	| loc feMine mseFileRef |
+	[ :job | 
+	job title: 'Cloning repo for ', gitName.
+	self crLog: '----> NEW PROJECT: ', gitName.
+	loc := GMUtility cloneRepo: urlString.
+	job progress: 1/6.
+"	job title: 'Gathering commit data...'.
+	commitMetadata := GMUtility
+		annotateCommitsOnRepoLeftBranchOnly: loc
+		from: startOIDString
+		to: endOIDString.
+	job progress: 2/6.
+	job title: 'Selecting commits...'.
+	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
+	job progress: 3/6."
+	job title: 'Generating MSE file...'.
+	mseFileRef := GMUtility
+		generateMSEFileFor: startOIDString
+		reponame: loc basename.
+	job progress: 3/6.
+	job title: 'Mining factory evolution patterns...'.
+	feMine := GMFactoryEvolutionMine fromMSE: mseFileRef.
+	"Show the classes where there are instances of upcasting or no"
+	self crLog: '----> Classes with instantiations that are not upcasted:'.
+	feMine assignmentsOfImplementationsWithoutUpCasting do: [ :a | self crLog: '''', a sourceCode , ''' in method ' , a variable famixVariable parentBehaviouralEntity  ].
+"	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+	job title: 'Removing commits with interfaces'.
+	commitsWithoutInterfaces := GMUtility
+		commitswithoutInterfaces: selectedCommits
+		project: gitName
+		start: startOIDString.
+	job progress: 5/6.
+	job title: 'Generating pairs and transactions...'.
+	pairsAndTransactions := GMUtility
+		generatePairsAndTransactions: commitsWithoutInterfaces.
+	job progress: 5.5/6.
+	job title: 'Calculating alternate stats...'.
+	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
+
+	job progress: 6/6.
+"	job title: 'Calculating final stats...'.
+	GMUtility
+		calculateCouplingIntersectionsFor: gitName
+		withPairsFile: pairsAndTransactions first
+		from: startOIDString
+		to: endOIDString
+		selectedCommitsFile: commitsWithoutInterfaces" 
+		] asJob run
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
+	| working |
+	working := FileSystem disk workingDirectory.
+	OSEnvironment current
+		setEnv: 'JDT2FAMIXCOMMAND'
+		value: '/mnt/c/verveineJ5/verveinej.sh'.
+
+	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
+	
+	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
+	'Mining.log' asFileReference
+		ensureDelete;
+		writeStreamDo: [ :stream | 
+			projects
+				do: [ :ownerAndName | 
+					| pName |
+					pName := (ownerAndName splitOn: '/') last.
+					stream
+						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
+						crlf.
+					"Check if files exist for project - if so, don't do mining"
+					(working / (pName , '_HEAD_Interfaces.csv')) exists
+						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
+							GMUtility
+								mineFactoryEvolution: pName
+								url: 'https://github.com/' , ownerAndName ]
+								on: AssertionFailure
+								do: [ :exception | 
+									exception tag = #GitMinerException
+										ifTrue: [ stream
+												nextPutAll:
+													DateAndTime now asString , ': Mining exception processing project '
+														, ownerAndName;
+												crlf.
+											stream
+												nextPutAll: exception messageText;
+												crlf.
+											stream flush ]
+										ifFalse: [ stream
+												nextPutAll:
+													DateAndTime now asString
+														, ': Caught unknown AssertionFailure exception.';
+												crlf.
+											0 halt ] ] ]
+						ifTrue: [ "Skip the mining"
+							stream
+								nextPutAll:
+									DateAndTime now asString
+										, ': skipping since found .csv files for project';
+								crlf ] ]
+				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
+]
+
 { #category : #'as yet unclassified' }
 GMUtility class >> mineFixedProjectListWithLog [
 	| working projectList |

@@ -59,6 +59,7 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithUpCasting [
 	assignmentsOfImplementationsWithUpCasting := assignmentsOfImplementations select: [ :a | 
 		| variableType |
 		"Left-hand side of assignment"
+		0halt.
 		variableType := a famixVariable declaredType.
 		"Right hand side could have many expressions (or just one)"
 		(a toScope: FASTJavaNewExpression ) allSatisfy: [ :newEx | 
