@@ -38,6 +38,7 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
 	assignmentsInInvokersOfConstructors := (invokersOfConstructors
 		flatCollect: [ :invoker | 
+			0halt.
 			invoker sourceAnchor
 				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
 					invoker fast
@@ -74,8 +75,10 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithUpCasting [
 { #category : #'as yet unclassified' }
 GMFactoryEvolutionMine >> assignmentsOfImplementationsWithoutUpCasting [
 	| assignmentsOfImplementations assignmentsOfImplementationsWithoutUpCasting |
-	assignmentsOfImplementations := self assignmentsOfImplementations.
-	^ assignmentsOfImplementations difference: self assignmentsOfImplementationsWithUpCasting 
+	(assignmentsOfImplementations := self assignmentsOfImplementations)
+		ifNotNil: [ ^ assignmentsOfImplementations
+				difference: self assignmentsOfImplementationsWithUpCasting ]
+		ifNil: [ ^ nil ]
 ]
 
 { #category : #queries }

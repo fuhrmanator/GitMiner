@@ -2380,9 +2380,12 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	job progress: 3/6.
 	job title: 'Mining factory evolution patterns...'.
 	feMine := GMFactoryEvolutionMine fromMSE: mseFileRef.
+	feMine load.
+	feMine sourceFolder: (mseFileRef parent / mseFileRef basenameWithoutExtension) fullName.
+
 	"Show the classes where there are instances of upcasting or no"
 	self crLog: '----> Classes with instantiations that are not upcasted:'.
-	feMine assignmentsOfImplementationsWithoutUpCasting do: [ :a | self crLog: '''', a sourceCode , ''' in method ' , a variable famixVariable parentBehaviouralEntity  ].
+	feMine assignmentsOfImplementationsWithoutUpCasting ifNotNil: [ :a | self crLog: '''', a sourceCode , ''' in method ' , a variable famixVariable parentBehaviouralEntity  ] ifNil: [ self crLog: 'None.' ].
 "	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 	job title: 'Removing commits with interfaces'.
 	commitsWithoutInterfaces := GMUtility
