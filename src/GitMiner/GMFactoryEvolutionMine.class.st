@@ -12,20 +12,22 @@ Class {
 	#category : #GitMiner
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #queries }
 GMFactoryEvolutionMine >> assignmentsOfImplementations [
 	| constructorsOfImplementations invokersOfConstructors assignmentsInInvokersOfConstructors |
 	"e.g., new ArrayList();"
 	constructorsOfImplementations := self constructors
 		select: [ :m | 
-			| constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract |
+			| constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract |
 			"0 halt."
-			constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract := m parentType
+			constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract := m parentType
 				withSuperclassHierarchy 	"withAllSuperclasses?"
-				anySatisfy: [ :sc | "Halt if: [ sc name = 'IProduct' ]." "self
+				anySatisfy: [ :sc | 
+					"self
 						crLog: 'method ' , m mooseName , ' (', m kind , ') superclass ' , sc name , ' isInterface = ' , sc isInterface asString
-						, ' isAbstract = ' , sc isAbstract asString." sc isAbstract or: [sc isInterface and: [ sc methods isNotEmpty ]] ].
-			constructeeImplementsNonMarkerInterfaceOrIsSubclassOfAbstract ].
+						, ' isAbstract = ' , sc isAbstract asString." 
+					sc isAbstract or: [sc isInterface and: [ sc methods isNotEmpty ]] ].
+			constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract ].
 	"constructorsOfImplementations 
 		do: [ :i | 
 			self
@@ -40,46 +42,42 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
 					invoker fast
 						toAnyScope:
-							{FASTJavaAssignementExpression.
-							FASTJavaVarDeclStatement} ] ]) asSet.
+							{FASTJavaAssignementExpression. FASTJavaVariableDeclarator
+							"FASTJavaVarDeclStatement"} ] ]) asSet.
 	"Not all assignments are calls to constructors!"
-	0halt.
 	"Return all assignments who have a '= new' in them "
 	^ assignmentsInInvokersOfConstructors select: [ :a | 
 		(a toScope: FASTJavaNewExpression ) isNotEmpty
 		]
 ]
 
-{ #category : #'as yet unclassified' }
-GMFactoryEvolutionMine >> assignmentsOfImplementationsWithNoInterface [
-	| constructorsOfImplementations invokersOfConstructors assignmentsOfImplementations |
-	"e.g., new ArrayList();"
-	constructorsOfImplementations := mooseModel allMethods
-		select: [ :m | 
-			| isNonMarkerInterface |
-			isNonMarkerInterface := m parentType withSuperclassHierarchy
-				anySatisfy: [ :sc | sc isInterface and: [ sc methods isNotEmpty ] ].
-			m isConstructor & isNonMarkerInterface ].
-	invokersOfConstructors := constructorsOfImplementations
-		flatCollect: [ :c | c incomingInvocations collect: #sender ].
-	assignmentsOfImplementations := (invokersOfConstructors
-		flatCollect: [ :invoker | 
-			| results |
-			invoker sourceAnchor
-				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
-					results := invoker fast
-						toAnyScope:
-							{FASTJavaAssignementExpression
-							". FASTJavaVariableDeclarator"}
-					"results
-						ifNotEmpty:
-							[ :aScopeWithOneElement | ^ aScopeWithOneElement anyOne variable famixVariable ]" ] ])
-		asSet
-		groupedBy: [ :a | a variable famixVariable declaredType isInterface ].
-	0 halt
+{ #category : #queries }
+GMFactoryEvolutionMine >> assignmentsOfImplementationsWithUpCasting [
+	| assignmentsOfImplementations assignmentsOfImplementationsWithUpCasting |
+	assignmentsOfImplementations := self assignmentsOfImplementations.
+	"For each assignment, return those whose type on the left is more abstract than the type on the right (upcasting)"
+	assignmentsOfImplementationsWithUpCasting := assignmentsOfImplementations select: [ :a | 
+		| variableType |
+		"Left-hand side of assignment"
+		variableType := a famixVariable declaredType.
+		"Right hand side could have many expressions (or just one)"
+		(a toScope: FASTJavaNewExpression ) allSatisfy: [ :newEx | 
+			| newExpressionType isUpcasting |
+			newExpressionType := newEx famix to first parentType.
+			isUpcasting := newExpressionType superclassHierarchy includes: variableType.
+			isUpcasting]
+		].
+	^ assignmentsOfImplementationsWithUpCasting
 ]
 
 { #category : #'as yet unclassified' }
+GMFactoryEvolutionMine >> assignmentsOfImplementationsWithoutUpCasting [
+	| assignmentsOfImplementations assignmentsOfImplementationsWithoutUpCasting |
+	assignmentsOfImplementations := self assignmentsOfImplementations.
+	^ assignmentsOfImplementations difference: self assignmentsOfImplementationsWithUpCasting 
+]
+
+{ #category : #queries }
 GMFactoryEvolutionMine >> constructors [
 	^ mooseModel allMethods select: #isConstructor
 ]
