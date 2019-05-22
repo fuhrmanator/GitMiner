@@ -20,13 +20,11 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 		select: [ :m | 
 			| constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract |
 			"0 halt."
-			constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract := m parentType
-				withSuperclassHierarchy 	"withAllSuperclasses?"
-				anySatisfy: [ :sc | 
-					"self
+			constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract := m
+				parentType withSuperclassHierarchy
+				anySatisfy: [ :sc | "self
 						crLog: 'method ' , m mooseName , ' (', m kind , ') superclass ' , sc name , ' isInterface = ' , sc isInterface asString
-						, ' isAbstract = ' , sc isAbstract asString." 
-					sc isAbstract or: [sc isInterface and: [ sc methods isNotEmpty ]] ].
+						, ' isAbstract = ' , sc isAbstract asString." sc isAbstract or: [ sc isInterface and: [ sc methods isNotEmpty ] ] ].	"withAllSuperclasses?"
 			constructeeImplementsNonMarkerInterfaceOrIsDirectSubclassOfAbstract ].
 	"constructorsOfImplementations 
 		do: [ :i | 
@@ -37,19 +35,42 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 	invokersOfConstructors := constructorsOfImplementations
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
 	assignmentsInInvokersOfConstructors := (invokersOfConstructors
-		flatCollect: [ :invoker | 
-			0halt.
+		collect: [ :invoker | 
 			invoker sourceAnchor
 				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
-					invoker fast
-						toAnyScope:
-							{FASTJavaAssignementExpression. FASTJavaVariableDeclarator
-							"FASTJavaVarDeclStatement"} ] ]) asSet.
+					"self crLog: 'Processing invoker ' , invoker asString."
+					invoker fast sourceText
+						ifNotNil: [ "self crLog: invoker fast sourceCode."
+							((invoker fast
+								toAnyScope:
+									{FASTJavaAssignementExpression.
+									FASTJavaVariableDeclarator
+									"FASTJavaVarDeclStatement"})
+								ifNil: [ self
+										crLog:
+											'---> Warning: fast query returned no results for invoker '
+												, invoker asString , ':'.
+									self crLog: invoker sourceText.
+									self crLog: '<---'.
+									OrderedCollection new ]) asSet ]
+						ifNil: [ self
+								crLog:
+									'---> Warning: fast sourceText was nil for invoker '
+										, invoker asString , ':'.
+							self crLog: invoker sourceText.
+							self crLog: '<---'.
+							OrderedCollection new ] ]
+				ifNil: [ self
+						crLog:
+							'---> Warning: sourceAnchor was nil for invoker ' , invoker asString
+								, ':'.
+					self crLog: '<---'.
+					OrderedCollection new ] ]) flattened asSet.
+
 	"Not all assignments are calls to constructors!"
 	"Return all assignments who have a '= new' in them "
-	^ assignmentsInInvokersOfConstructors select: [ :a | 
-		(a toScope: FASTJavaNewExpression ) isNotEmpty
-		]
+	^ assignmentsInInvokersOfConstructors
+		select: [ :a | (a toScope: FASTJavaNewExpression) isNotEmpty ]
 ]
 
 { #category : #queries }
@@ -60,7 +81,6 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithUpCasting [
 	assignmentsOfImplementationsWithUpCasting := assignmentsOfImplementations select: [ :a | 
 		| variableType |
 		"Left-hand side of assignment"
-		0halt.
 		variableType := a famixVariable declaredType.
 		"Right hand side could have many expressions (or just one)"
 		(a toScope: FASTJavaNewExpression ) allSatisfy: [ :newEx | 

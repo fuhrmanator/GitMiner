@@ -2358,13 +2358,13 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString [
 GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDString to: endOIDString [
 	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
 
-	| loc feMine mseFileRef |
+	| loc feMine mseFileRef aNoUpcasting aUpcasting |
 	[ :job | 
-	job title: 'Cloning repo for ', gitName.
-	self crLog: '----> NEW PROJECT: ', gitName.
+	job title: 'Cloning repo for ' , gitName.
+	self crLog: '----> NEW PROJECT: ' , gitName.
 	loc := GMUtility cloneRepo: urlString.
-	job progress: 1/6.
-"	job title: 'Gathering commit data...'.
+	job progress: 1 / 6.
+	"	job title: 'Gathering commit data...'.
 	commitMetadata := GMUtility
 		annotateCommitsOnRepoLeftBranchOnly: loc
 		from: startOIDString
@@ -2377,16 +2377,37 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	mseFileRef := GMUtility
 		generateMSEFileFor: startOIDString
 		reponame: loc basename.
-	job progress: 3/6.
+	job progress: 3 / 6.
 	job title: 'Mining factory evolution patterns...'.
 	feMine := GMFactoryEvolutionMine fromMSE: mseFileRef.
 	feMine load.
-	feMine sourceFolder: (mseFileRef parent / mseFileRef basenameWithoutExtension) fullName.
+	feMine
+		sourceFolder: (mseFileRef parent / mseFileRef basenameWithoutExtension) fullName.
 
 	"Show the classes where there are instances of upcasting or no"
-	self crLog: '----> Classes with instantiations that are not upcasted:'.
-	feMine assignmentsOfImplementationsWithoutUpCasting ifNotNil: [ :a | self crLog: '''', a sourceCode , ''' in method ' , a variable famixVariable parentBehaviouralEntity  ] ifNil: [ self crLog: 'None.' ].
-"	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
+	aNoUpcasting := feMine assignmentsOfImplementationsWithoutUpCasting.
+	aUpcasting := feMine assignmentsOfImplementationsWithUpCasting.
+	self
+		crLog: '----> Classes with instantiations that are NOT upcast:'.
+	aNoUpcasting
+		ifNotNil: [ aNoUpcasting
+				do: [ :a | 
+					self
+						crLog:
+							'''' , a sourceCode , ''' in class '
+								, a variable famixVariable parentType mooseName ] ]
+		ifNil: [ self crLog: 'None.' ].
+	self
+		crLog: '----> Classes with instantiations that ARE upcast:'.
+	aUpcasting
+		ifNotNil: [ aUpcasting
+				do: [ :a | 
+					self
+						crLog:
+							'''' , a sourceCode , ''' in class '
+								, a variable famixVariable parentType mooseName ] ]
+		ifNil: [ self crLog: 'None.' ].
+	"	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
 	job title: 'Removing commits with interfaces'.
 	commitsWithoutInterfaces := GMUtility
 		commitswithoutInterfaces: selectedCommits
@@ -2399,16 +2420,14 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	job progress: 5.5/6.
 	job title: 'Calculating alternate stats...'.
 	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
-
-	job progress: 6/6.
-"	job title: 'Calculating final stats...'.
+	job progress: 6 / 6
+	"	job title: 'Calculating final stats...'.
 	GMUtility
 		calculateCouplingIntersectionsFor: gitName
 		withPairsFile: pairsAndTransactions first
 		from: startOIDString
 		to: endOIDString
-		selectedCommitsFile: commitsWithoutInterfaces" 
-		] asJob run
+		selectedCommitsFile: commitsWithoutInterfaces" ] asJob run
 ]
 
 { #category : #'as yet unclassified' }
