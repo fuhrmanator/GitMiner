@@ -38,6 +38,9 @@ BaselineOfGitMiner >> baseline: spec [
 
 { #category : #baselines }
 BaselineOfGitMiner >> launchVerifications [
+	"Reset the metamodel in after Carrefour is loaded (else parsing doesn't work well)"
+	FASTJavaMetamodelGenerator resetMetamodel.
+	
 	"Make sure RScript is in the path?"
 
 	self class environment
