@@ -2433,13 +2433,17 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 { #category : #'as yet unclassified' }
 GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 	| working |
+	TinyLogger default
+		addFileLogger;
+		addFileLoggerNamed: 'tmp/FactoryEvolution.log'.
+		
 	working := FileSystem disk workingDirectory.
 	OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
 		value: '/mnt/c/verveineJ5/verveinej.sh'.
 
 	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
-	
+
 	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
 	'Mining.log' asFileReference
 		ensureDelete;

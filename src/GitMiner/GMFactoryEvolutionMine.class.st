@@ -50,9 +50,9 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 						on: SmaCCParserError
 						do: [ :exception | 
 							didParseFail := true.
-							'--> SmaCCParserError:' crLog.
-							exception crLog.
-							'<--' crLog
+							'--> SmaCCParserError:' record.
+							exception record.
+							'<--' record
 							 ].
 					didParseFail
 						ifFalse: [ "self crLog: 'Processing invoker ' , invoker asString."
@@ -63,26 +63,21 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 											{FASTJavaAssignementExpression.
 											FASTJavaVariableDeclarator
 											"FASTJavaVarDeclStatement"})
-										ifNil: [ self
-												crLog:
-													'---> Warning: fast query returned no results for invoker '
-														, invoker asString , ':'.
-											self crLog: invoker sourceText.
-											self crLog: '<---'.
+										ifNil: [ 
+													('---> Warning: fast query returned no results for invoker '
+														, invoker asString , ':') record.
+											(invoker sourceText) record.
+											'<---' record.
 											OrderedCollection new ]) asSet.
 										invoker fast: nil. "Garbage collect?" ]
-								ifNil: [ self
-										crLog:
-											'---> Warning: fast sourceText was nil for invoker '
-												, invoker asString , ':'.
-									self crLog: invoker sourceText.
-									self crLog: '<---'.
+								ifNil: [ ('---> Warning: fast sourceText was nil for invoker '
+												, invoker asString , ':') record.
+									(invoker sourceText) record.
+									'<---' record.
 									OrderedCollection new ] ] ]
-				ifNil: [ self
-						crLog:
-							'---> Warning: sourceAnchor was nil for invoker ' , invoker asString
-								, ':'.
-					self crLog: '<---'.
+				ifNil: [ ('---> Warning: sourceAnchor was nil for invoker ' , invoker asString
+								, ':') record.
+					'<---' record.
 					OrderedCollection new ] ]) flattened asSet ] asJob run.
 
 	"Not all assignments are calls to constructors!"
