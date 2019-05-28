@@ -69,7 +69,7 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 											(invoker sourceText) record.
 											'<---' record.
 											OrderedCollection new ]) asSet.
-										invoker fast: nil. "Garbage collect?" ]
+										"invoker fast: nil." "Garbage collect?" ]
 								ifNil: [ ('---> Warning: fast sourceText was nil for invoker '
 												, invoker asString , ':') record.
 									(invoker sourceText) record.
