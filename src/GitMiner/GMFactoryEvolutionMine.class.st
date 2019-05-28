@@ -34,38 +34,53 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 						, i parentType mooseName]."
 	invokersOfConstructors := constructorsOfImplementations
 		flatCollect: [ :c | c incomingInvocations collect: #sender ].
+	"Code that takes time - show a progress bar"
+	[ :job | 
+	| count s didParseFail |
+	job title: 'Finding assignments in invokers of constructors'.
+	count := 0.
+	s := invokersOfConstructors size.
 	assignmentsInInvokersOfConstructors := (invokersOfConstructors
 		collect: [ :invoker | 
+			count := count + 1.
+			job progress: count / s.
+			didParseFail := false.
 			invoker sourceAnchor
-				ifNotNil: [ invoker generateFastIfNotDoneAndBind.
-					"self crLog: 'Processing invoker ' , invoker asString."
-					invoker fast sourceText
-						ifNotNil: [ "self crLog: invoker fast sourceCode."
-							((invoker fast
-								toAnyScope:
-									{FASTJavaAssignementExpression.
-									FASTJavaVariableDeclarator
-									"FASTJavaVarDeclStatement"})
+				ifNotNil: [ [ invoker generateFastIfNotDoneAndBind ]
+						on: SmaCCParserError
+						do: [ :exception | 
+							didParseFail := true.
+							exception crLog ].
+					didParseFail
+						ifFalse: [ "self crLog: 'Processing invoker ' , invoker asString."
+							invoker fast sourceText
+								ifNotNil: [ "self crLog: invoker fast sourceCode."
+									((invoker fast
+										toAnyScope:
+											{FASTJavaAssignementExpression.
+											FASTJavaVariableDeclarator
+											"FASTJavaVarDeclStatement"})
+										ifNil: [ self
+												crLog:
+													'---> Warning: fast query returned no results for invoker '
+														, invoker asString , ':'.
+											self crLog: invoker sourceText.
+											self crLog: '<---'.
+											OrderedCollection new ]) asSet.
+										invoker fast: nil. "Garbage collect?" ]
 								ifNil: [ self
 										crLog:
-											'---> Warning: fast query returned no results for invoker '
+											'---> Warning: fast sourceText was nil for invoker '
 												, invoker asString , ':'.
 									self crLog: invoker sourceText.
 									self crLog: '<---'.
-									OrderedCollection new ]) asSet ]
-						ifNil: [ self
-								crLog:
-									'---> Warning: fast sourceText was nil for invoker '
-										, invoker asString , ':'.
-							self crLog: invoker sourceText.
-							self crLog: '<---'.
-							OrderedCollection new ] ]
+									OrderedCollection new ] ] ]
 				ifNil: [ self
 						crLog:
 							'---> Warning: sourceAnchor was nil for invoker ' , invoker asString
 								, ':'.
 					self crLog: '<---'.
-					OrderedCollection new ] ]) flattened asSet.
+					OrderedCollection new ] ]) flattened asSet ] asJob run.
 
 	"Not all assignments are calls to constructors!"
 	"Return all assignments who have a '= new' in them "
