@@ -50,7 +50,10 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 						on: SmaCCParserError
 						do: [ :exception | 
 							didParseFail := true.
-							exception crLog ].
+							'--> SmaCCParserError:' crLog.
+							exception crLog.
+							'<--' crLog
+							 ].
 					didParseFail
 						ifFalse: [ "self crLog: 'Processing invoker ' , invoker asString."
 							invoker fast sourceText

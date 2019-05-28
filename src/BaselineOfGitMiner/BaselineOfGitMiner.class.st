@@ -30,9 +30,11 @@ BaselineOfGitMiner >> baseline: spec [
 			spec
 				package: 'GitMiner' with: [ spec requires: #('NeoJSON') ];
 				package: 'GitMiner' with: [ spec requires: #('Carrefour') ];
+				package: 'TinyLogger'
+					with: [ spec repository: 'github://jecisc/TinyLogger:v1.x.x/src' ];
 				"Moose already has NeoCSV"
-				"package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];"
-				package: 'GitMiner' with: [ spec requires: #('PolyMath') ];
+					"package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];"
+					package: 'GitMiner' with: [ spec requires: #('PolyMath') ];
 				package: 'GitMiner-Tests' with: [ spec requires: #('GitMiner') ] ]
 ]
 
