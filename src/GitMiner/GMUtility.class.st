@@ -1747,8 +1747,8 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , command ]
 				ifTrue: [ "Make an MSE file"
-					command := 'cd ' , revPath fullName , ' && "' , pathToJDT2FamixCommand
-						, '" > "' , jdt2FamixOutput fullName , '"' , verveineJ5Options
+					command := 'cd "' , revPath fullName , '" && "' , pathToJDT2FamixCommand
+						, '" > "' , jdt2FamixOutput fullName , '" ' , verveineJ5Options
 						, ' 2> "' , jdt2FamixErrors fullName , '"'.
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
@@ -1758,7 +1758,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 					result = 0
 						ifFalse: [ self
 								abortWithErrorMessageFromFileReference: jdt2FamixErrors
-								title: 'jdt2Famix terminated with errors' ]
+								title: 'The command ''' , command , ''' terminated with errors' ]
 						ifTrue: [ "Move the file out of the directory"
 							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
 							"Clean up the directories and files"
