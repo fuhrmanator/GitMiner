@@ -1720,7 +1720,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 			pathToJDT2FamixCommand
 				ifNil: [ self
 						error:
-							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download.' ].
+							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download, or try VerveineJ.' ].
 			[ :job | 
 			job
 				title: 'To create MSE file, checking out copy of repo at ' , oid;
@@ -1740,7 +1740,7 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						, ' -- . 2>"' , gitErrors fullName , '"'.
 					"Work_tree must exist"
 					checkoutDest ensureCreateDirectory.
-					result := LibC uniqueInstance system: command ]
+					result := LibC runCommand: command ]
 				ifTrue: [ result := 0 ].
 			result = 0
 				ifFalse: [ self
@@ -1753,7 +1753,9 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
-					result := LibC uniqueInstance system: command.
+					'LibC: about to run command: ' record.
+					(' > ', command) record.
+					result := LibC runCommand: command.
 					"self logCr: 'About to execute command: ', command. result := 0."
 					result = 0
 						ifFalse: [ self
@@ -2434,27 +2436,25 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 	| working |
 	TinyLogger default
-		addFileLogger;
 		addFileLoggerNamed: 'tmp/FactoryEvolution.log'.
 		
 	working := FileSystem disk workingDirectory.
 	OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
-		value: '/mnt/c/verveineJ5/verveinej.sh'.
+		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'.
+		"value: '/mnt/c/verveineJ5/verveinej.sh'."
 
-	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
-
-	"(GMGitHubGraphQLQuery hardCodedProjectList difference: GMGitHubGraphQLQuery hardCodedCrashingProjectList)"
-	'Mining.log' asFileReference
+"	'Mining.log' asFileReference
 		ensureDelete;
 		writeStreamDo: [ :stream | 
-			projects
+"			projects
 				do: [ :ownerAndName | 
 					| pName |
 					pName := (ownerAndName splitOn: '/') last.
-					stream
+					('Mining project ' , ownerAndName) record.
+					"stream
 						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
-						crlf.
+						crlf."
 					"Check if files exist for project - if so, don't do mining"
 					(working / (pName , '_HEAD_Interfaces.csv')) exists
 						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
@@ -2464,28 +2464,32 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 								on: AssertionFailure
 								do: [ :exception | 
 									exception tag = #GitMinerException
-										ifTrue: [ stream
+										ifTrue: [ "stream
 												nextPutAll:
 													DateAndTime now asString , ': Mining exception processing project '
 														, ownerAndName;
-												crlf.
-											stream
+												crlf."
+												(' Mining exception processing project ', ownerAndName) record.
+												exception messageText record.
+											"stream
 												nextPutAll: exception messageText;
-												crlf.
-											stream flush ]
-										ifFalse: [ stream
+												crlf."
+											"stream flush" ]
+										ifFalse: [ "stream
 												nextPutAll:
 													DateAndTime now asString
 														, ': Caught unknown AssertionFailure exception.';
-												crlf.
+												crlf."
+												'Caught unknown AssertionFailure exception.' record.
 											0 halt ] ] ]
 						ifTrue: [ "Skip the mining"
-							stream
+							"stream
 								nextPutAll:
 									DateAndTime now asString
 										, ': skipping since found .csv files for project';
-								crlf ] ]
-				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
+								crlf"
+								 ' --> skipping since found .csv files for project' record] ]
+				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ]
 ]
 
 { #category : #'as yet unclassified' }
@@ -2573,7 +2577,8 @@ GMUtility class >> mineProjectsWithLog: projects [
 	working := FileSystem disk workingDirectory.
 	OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
-		value: '/mnt/c/verveineJ5/verveinej.sh'.
+		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'.
+		"value: '/mnt/c/verveineJ5/verveinej.sh'."
 
 	"OSEnvironment current at: 'JDT2FAMIXCOMMAND'."
 	
