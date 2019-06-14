@@ -1062,6 +1062,37 @@ GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: cl
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest [
+	"Check out the code from a repo into a working directory (outside the repo directory)"
+
+	| command working gitErrors result gitWorkTreeEnvVar |
+	working := FileSystem disk workingDirectory.
+	gitErrors := working / 'tmp' / 'errors_git'.
+	gitWorkTreeEnvVar := 'GIT_WORK_TREE'.
+
+	"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
+	OSEnvironment current
+		setEnv: gitWorkTreeEnvVar
+		value: checkoutDest fullName.
+	('OSEnvironment: ' , gitWorkTreeEnvVar , ' set to '''
+		, checkoutDest fullName , '''') record.
+	"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
+	command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
+		, ' -- . 2>"' , gitErrors fullName , '"'.
+	"Work_tree must exist"
+	checkoutDest ensureCreateDirectory.
+	'LibC: about to run command: ' record.
+	(' > ' , command) record.
+	result := LibC runCommand: command.
+	OSEnvironment current removeKey: gitWorkTreeEnvVar.
+	result = 0
+		ifFalse: [ self
+				abortWithErrorMessageFromFileReference: gitErrors asFileReference
+				title: 'Failed to execute: ' , command ].
+	^ result
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> classIndexFromFileName: classFileName InMooseClasses: classes [
 	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
 	classes doWithIndex: [ :class :index | classFileName = (GMUtility normalizedFileName: class sourceAnchor fileName) ifTrue: [^index] ].
@@ -1144,6 +1175,30 @@ GMUtility class >> commitswithoutInterfaces: commitsFile project: project start:
 	^ self
 		rewriteSelectedCommits: commitsWithoutInterfaces
 		file: commitsFile
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand named: mseFileName [
+	"create an MSE file from the source code in revPath using the Java parser"
+
+	| command result working javaToFamixOutput javaToFamixErrors verveineJ5Options |
+	working := FileSystem disk workingDirectory.
+	javaToFamixOutput := working / 'tmp' / 'output_java_to_famix'.
+	javaToFamixErrors := working / 'tmp' / 'errors_java_to_famix'.
+	verveineJ5Options := '-Xms1g -Xmx15g -- -o ' , mseFileName
+		, ' -anchor assoc -alllocals .'.	"-localaccesses -autocp "
+	command := 'cd "' , revPath fullName , '" && "'
+		, pathToJavaToFamixCommand , '" > "' , javaToFamixOutput fullName
+		, '" ' , verveineJ5Options , ' 2> "' , javaToFamixErrors fullName
+		, '"'.
+	'LibC: about to run command: ' record.
+	(' > ' , command) record.
+	result := LibC runCommand: command.
+	result = 0
+		ifFalse: [ self
+				abortWithErrorMessageFromFileReference: javaToFamixErrors
+				title: 'The command ''' , command , ''' terminated with errors' ].
+	^ result
 ]
 
 { #category : #pipeline }
@@ -1259,92 +1314,50 @@ GMUtility class >> generateLogicalCouplingPairsWithRSingleFile: filePath [
 GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
 
-	| working destPath repoPath gitErrors verveineJ5Options jdt2FamixOutput jdt2FamixErrors revPath command result mseFromJDT2Famix mseDestination pathToJDT2FamixCommand checkoutDest |
-	working := FileSystem disk workingDirectory.
+	| working destPath repoPath revPath result mseFromJavaToFamix mseDestination pathToJavaToFamixCommand checkoutDest |
 	destPath := Path * 'tmp' / 'data_mining'.
-	gitErrors := working / 'tmp' / 'errors_git'.
-	verveineJ5Options := '-Xms1g -Xmx15g -- -o ' , oid
-		, '.mse -anchor assoc -alllocals .'. "-localaccesses -autocp "
-	jdt2FamixOutput := working / 'tmp' / 'output_jdt2famix'.
-	jdt2FamixErrors := working / 'tmp' / 'errors_jdt2famix'.
+	working := FileSystem disk workingDirectory.
 	checkoutDest := working
 		resolve: destPath / (repoName , '_master') / oid.
 	repoPath := Path * 'tmp' / 'tempClonesPharo' / repoName.
 	revPath := destPath / (repoName , '_master') / oid.
-	mseFromJDT2Famix := working resolve: revPath / oid , 'mse'.
+	mseFromJavaToFamix := working resolve: revPath / oid , 'mse'.
 	mseDestination := working
 		resolve: destPath / (repoName , '_master') / oid , 'mse'.
 
-	"Don't do anything if the MSE already exists"
+	"Only if the MSE does not already exist"
 	mseDestination exists
-		ifFalse: [ pathToJDT2FamixCommand := OSEnvironment current
-				at: 'JDT2FAMIXCOMMAND'
-				ifAbsent: [ | cmdFileRef |
-					cmdFileRef := self
-						navigateToFile:
-							'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.'
-						extensions: #('cmd' 'sh').
-					cmdFileRef
-						ifNotNil: [ "set the environment variable"
-							OSEnvironment current
-								setEnv: 'JDT2FAMIXCOMMAND'
-								value: cmdFileRef fullName.
-							"we want the string containing the entire path, not a file ref"
-							cmdFileRef fullName ] ].
-			pathToJDT2FamixCommand
+		ifFalse: [ pathToJavaToFamixCommand := self queryJavaToFamixCommand.
+			pathToJavaToFamixCommand
 				ifNil: [ self
 						error:
-							'This tool can not run without a JDT2Famix implementation. See https://github.com/feenkcom/jdt2famix/releases to download, or try VerveineJ.' ].
+							'This tool can not run without a Java-to-MSE parser (JDT2Famix, VerveineJ).' ].
 			[ :job | 
 			job
 				title: 'To create MSE file, checking out copy of repo at ' , oid;
 				progress: 1 / 3.
 
 
-			"Don't do checkout if the checkout already exists"
+			"Only checkout if the checkout doesn't exist"
 			checkoutDest exists
-				ifFalse: [ "Create a new sub dir for the repos MSE dirs"
-					"(working / 'MSE') ensureCreateDirectory."
-					"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
-					OSEnvironment current
-						setEnv: 'GIT_WORK_TREE'
-						value: checkoutDest fullName.
-					"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-					command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
-						, ' -- . 2>"' , gitErrors fullName , '"'.
-					"Work_tree must exist"
-					checkoutDest ensureCreateDirectory.
-					result := LibC runCommand: command ]
-				ifTrue: [ result := 0 ].
+				ifFalse: [ result := self checkoutRepo: repoPath at: oid to: checkoutDest ]
+				ifTrue: [ result := 0.
+					('Skipping git checkout of ' , oid
+						, ' because it''s already there.') record ].
 			result = 0
-				ifFalse: [ self
-						abortWithErrorMessageFromFileReference: gitErrors asFileReference
-						title: 'Failed to execute: ' , command ]
-				ifTrue: [ "Make an MSE file"
-					command := 'cd "' , revPath fullName , '" && "' , pathToJDT2FamixCommand
-						, '" > "' , jdt2FamixOutput fullName , '" ' , verveineJ5Options
-						, ' 2> "' , jdt2FamixErrors fullName , '"'.
+				ifTrue: [ 
 					job
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
-					'LibC: about to run command: ' record.
-					(' > ', command) record.
-					result := LibC runCommand: command.
-					"self logCr: 'About to execute command: ', command. result := 0."
+					result := self createJavaMSEOn: revPath using: pathToJavaToFamixCommand named: (oid , '.mse').
 					result = 0
-						ifFalse: [ self
-								abortWithErrorMessageFromFileReference: jdt2FamixErrors
-								title: 'The command ''' , command , ''' terminated with errors' ]
 						ifTrue: [ "Move the file out of the directory"
-							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
-							"Clean up the directories and files"
-							"revPath asFileReference deleteAll"
-							"Dangerous if buggy..."
-							mseFromJDT2Famix exists
+							('Moving ' , mseFromJavaToFamix asString , ' to '
+								, mseDestination asString) record.
+							mseFromJavaToFamix exists
 								ifTrue: [ mseDestination exists
 										ifTrue: [ mseDestination delete ].
-									mseFromJDT2Famix moveTo: mseDestination ] ] ] ] asJob run.
-			OSEnvironment current removeKey: 'GIT_WORK_TREE' ].
+									mseFromJavaToFamix moveTo: mseDestination ] ] ] ] asJob run ].
 	^ mseDestination
 ]
 
@@ -1700,7 +1713,6 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	loc := GMUtility cloneRepo: urlString.
 	job progress: 1 / 6.
 	job title: 'Generating MSE file...'.
-	'Generating MSE file...' record.
 	mseFileRef := GMUtility
 		generateMSEFileFor: startOIDString
 		reponame: loc basename.
@@ -1749,9 +1761,9 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 		removeFileLoggers;
 		addFileLoggerNamed: logName.
 	working := FileSystem disk workingDirectory.
-	OSEnvironment current
+	"OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
-		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'.
+		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'."
 	"value: '/mnt/c/verveineJ5/verveinej.sh'."
 	projects
 		do: [ :ownerAndName | 
@@ -1767,7 +1779,7 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 						on: AssertionFailure
 						do: [ :exception | 
 							exception tag = #GitMinerException
-								ifTrue: [ (' Mining exception processing project ' , ownerAndName) record.
+								ifTrue: [ ('>>>> Mining exception while processing project ' , ownerAndName) record.
 									exception messageText record ]
 								ifFalse: [ 'Caught unknown AssertionFailure exception.' record.
 									0 halt ] ] ]
@@ -1960,6 +1972,27 @@ GMUtility class >> normalizedFileName: fileName [
 	(fixedName beginsWith: './')
 		ifTrue: [ fixedName := fixedName allButFirst: 2 ].
 	^ fixedName
+]
+
+{ #category : #'file service' }
+GMUtility class >> queryJavaToFamixCommand [
+	"Read the command from the environment variable, or if it's not set, get the user to find the command"
+	| pathToJDT2FamixCommand |
+	pathToJDT2FamixCommand := OSEnvironment current
+		at: 'JDT2FAMIXCOMMAND'
+		ifAbsent: [ | cmdFileRef |
+			cmdFileRef := self
+				navigateToFile:
+					'JDT2FAMIXCOMMAND environment variable not defined. Please select the JDT2Famix script.'
+				extensions: #('cmd' 'sh').
+			cmdFileRef
+				ifNotNil: [ "set the environment variable"
+					OSEnvironment current
+						setEnv: 'JDT2FAMIXCOMMAND'
+						value: cmdFileRef fullName.
+					"we want the string containing the entire path, not a file ref"
+					cmdFileRef fullName ] ].
+	^ pathToJDT2FamixCommand
 ]
 
 { #category : #'file service' }
