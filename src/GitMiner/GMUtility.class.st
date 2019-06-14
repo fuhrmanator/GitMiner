@@ -2358,29 +2358,22 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString [
 
 { #category : #pipeline }
 GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDString to: endOIDString [
-	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
+	"Pipeline to mine changes instances of Factory-related evolutions"
 
 	| loc feMine mseFileRef aNoUpcasting aUpcasting |
 	[ :job | 
 	job title: 'Cloning repo for ' , gitName.
-	self crLog: '----> NEW PROJECT: ' , gitName.
+	('----> NEW PROJECT: ' , gitName) record.
 	loc := GMUtility cloneRepo: urlString.
 	job progress: 1 / 6.
-	"	job title: 'Gathering commit data...'.
-	commitMetadata := GMUtility
-		annotateCommitsOnRepoLeftBranchOnly: loc
-		from: startOIDString
-		to: endOIDString.
-	job progress: 2/6.
-	job title: 'Selecting commits...'.
-	selectedCommits := GMUtility generateSelectedCommits: commitMetadata.
-	job progress: 3/6."
 	job title: 'Generating MSE file...'.
+	'Generating MSE file...' record.
 	mseFileRef := GMUtility
 		generateMSEFileFor: startOIDString
 		reponame: loc basename.
 	job progress: 3 / 6.
 	job title: 'Mining factory evolution patterns...'.
+	'Mining factory evolution patterns...' record.
 	feMine := GMFactoryEvolutionMine fromMSE: mseFileRef.
 	feMine load.
 	feMine
@@ -2389,39 +2382,20 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	"Show the classes where there are instances of upcasting or no"
 	aNoUpcasting := feMine assignmentsOfImplementationsWithoutUpCasting.
 	aUpcasting := feMine assignmentsOfImplementationsWithUpCasting.
-	self
-		crLog: '----> Classes with instantiations that are NOT upcast:'.
+	'----> Classes with instantiations that are NOT upcast:' record.
 	aNoUpcasting
 		ifNotNil: [ aNoUpcasting
 				do: [ :a | 
-					self
-						crLog:
-							'''' , a sourceCode , ''' in class '
-								, a variable famixVariable parentType mooseName ] ]
-		ifNil: [ self crLog: 'None.' ].
-	self
-		crLog: '----> Classes with instantiations that ARE upcast:'.
+					('''' , a sourceCode , ''' in class '
+						, a variable famixVariable parentType mooseName) record ] ]
+		ifNil: [ 'None.' record ].
+	'----> Classes with instantiations that ARE upcast:' record.
 	aUpcasting
 		ifNotNil: [ aUpcasting
 				do: [ :a | 
-					self
-						crLog:
-							'''' , a sourceCode , ''' in class '
-								, a variable famixVariable parentType mooseName ] ]
-		ifNil: [ self crLog: 'None.' ].
-	"	cimpFile := GMUtility generateClientImplementationPairs: mseFileRef.
-	job title: 'Removing commits with interfaces'.
-	commitsWithoutInterfaces := GMUtility
-		commitswithoutInterfaces: selectedCommits
-		project: gitName
-		start: startOIDString.
-	job progress: 5/6.
-	job title: 'Generating pairs and transactions...'.
-	pairsAndTransactions := GMUtility
-		generatePairsAndTransactions: commitsWithoutInterfaces.
-	job progress: 5.5/6.
-	job title: 'Calculating alternate stats...'.
-	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
+					('''' , a sourceCode , ''' in class '
+						, a variable famixVariable parentType mooseName) record ] ]
+		ifNil: [ 'None.' record ].
 	job progress: 6 / 6
 	"	job title: 'Calculating final stats...'.
 	GMUtility
@@ -2434,62 +2408,38 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 
 { #category : #'as yet unclassified' }
 GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
-	| working |
+	| working logName |
+	logName := 'tmp/FactoryEvolution.log'.
+	"Remove old log"
+	logName asFileReference ensureDelete.
 	TinyLogger default
-		addFileLoggerNamed: 'tmp/FactoryEvolution.log'.
-		
+		removeFileLoggers;
+		addFileLoggerNamed: logName.
 	working := FileSystem disk workingDirectory.
 	OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
 		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'.
-		"value: '/mnt/c/verveineJ5/verveinej.sh'."
-
-"	'Mining.log' asFileReference
-		ensureDelete;
-		writeStreamDo: [ :stream | 
-"			projects
-				do: [ :ownerAndName | 
-					| pName |
-					pName := (ownerAndName splitOn: '/') last.
-					('Mining project ' , ownerAndName) record.
-					"stream
-						nextPutAll: DateAndTime now asString , ': Mining project ' , ownerAndName;
-						crlf."
-					"Check if files exist for project - if so, don't do mining"
-					(working / (pName , '_HEAD_Interfaces.csv')) exists
-						ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
-							GMUtility
-								mineFactoryEvolution: pName
-								url: 'https://github.com/' , ownerAndName ]
-								on: AssertionFailure
-								do: [ :exception | 
-									exception tag = #GitMinerException
-										ifTrue: [ "stream
-												nextPutAll:
-													DateAndTime now asString , ': Mining exception processing project '
-														, ownerAndName;
-												crlf."
-												(' Mining exception processing project ', ownerAndName) record.
-												exception messageText record.
-											"stream
-												nextPutAll: exception messageText;
-												crlf."
-											"stream flush" ]
-										ifFalse: [ "stream
-												nextPutAll:
-													DateAndTime now asString
-														, ': Caught unknown AssertionFailure exception.';
-												crlf."
-												'Caught unknown AssertionFailure exception.' record.
-											0 halt ] ] ]
-						ifTrue: [ "Skip the mining"
-							"stream
-								nextPutAll:
-									DateAndTime now asString
-										, ': skipping since found .csv files for project';
-								crlf"
-								 ' --> skipping since found .csv files for project' record] ]
-				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ]
+	"value: '/mnt/c/verveineJ5/verveinej.sh'."
+	projects
+		do: [ :ownerAndName | 
+			| pName |
+			pName := (ownerAndName splitOn: '/') last.
+			('Mining project ' , ownerAndName) record.
+			"Check if files exist for project - if so, don't do mining"
+			(working / (pName , '_HEAD_Interfaces.csv')) exists
+				ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
+					GMUtility
+						mineFactoryEvolution: pName
+						url: 'https://github.com/' , ownerAndName ]
+						on: AssertionFailure
+						do: [ :exception | 
+							exception tag = #GitMinerException
+								ifTrue: [ (' Mining exception processing project ' , ownerAndName) record.
+									exception messageText record ]
+								ifFalse: [ 'Caught unknown AssertionFailure exception.' record.
+									0 halt ] ] ]
+				ifTrue: [ ' --> skipping since found .csv files for project' record ] ]
+		displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ]
 ]
 
 { #category : #'as yet unclassified' }
