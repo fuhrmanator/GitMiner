@@ -1089,36 +1089,15 @@ GMUtility class >> cloneRepo: url [
 			"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
 			cloneCommand := 'cd "' , cloneDir fullName , '" && git clone ' , url , ' 2>"'
 				, gitErrors fullName , '"'.
-			result := LibC uniqueInstance system: cloneCommand.
+			'LibC: About to run command: ' record.
+			(' > ', cloneCommand) record.
+			result := LibC runCommand: cloneCommand.
 			result = 0
 				ifFalse: [ self
 						abortWithErrorMessageFromFileReference: gitErrors asFileReference
 						title: 'Failed to execute: ' , cloneCommand ] ].
 	self assert: location exists.
 	^ location
-]
-
-{ #category : #'file service' }
-GMUtility class >> cloneReposAndGenerateCommitMetadata: projectsFile [
-	"For all repos in the 'projects.csv' file, make a *_commits.csv file with data regarding the repo"
-
-	| working csvInputStream csvRecords i |
-	working := FileSystem disk workingDirectory.
-	csvInputStream := (working / projectsFile) readStream.
-	csvRecords := self loadProjectsList: csvInputStream.	"ID	Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%)	CLD(%)	GC_url	GitHub_url"	"GitHub url"
-	i := 0.
-	[ :job | 
-	csvRecords
-		do: [ :each | 
-			| githubUrl |
-			i := i + 1.
-			job
-				progress: i / csvRecords size;
-				title: 'Generating CSV files for commits: ' , each second.
-			githubUrl := each last.
-			githubUrl = 'NA'
-				ifFalse: [ GMCommitFilter filterCommitsOnRepository: githubUrl withRange: '' ] ] ]
-		asJob run
 ]
 
 { #category : #accessing }
@@ -1134,41 +1113,6 @@ GMUtility class >> cloneRoot: anObject [
 { #category : #'as yet unclassified' }
 GMUtility class >> cochangeMatrixFromChangeHistory: aChangeHistoryMatrix forClasses: classes [
 	^ GMCochangeMatrix with: aChangeHistoryMatrix classes: classes
-]
-
-{ #category : #'as yet unclassified' }
-GMUtility class >> commits: commitsFile withoutInterfaces: cimpPairsFile [
-	| commits interfaces interfacesMoose commitsWithoutInterfaces interfacesFile interfacesExtension startOIDString project commitMetadataFile |
-
-	interfacesExtension := '_' , startOIDString , '_Interfaces.csv'.
-
-	"Load commits"
-	commits := GMUtility loadCommitMetadataFile: commitsFile.
-		
-	"Load interfaces"
-	interfacesFile := FileLocator workingDirectory
-		/ (project , interfacesExtension).
-	interfacesMoose := interfacesFile contents lines.
-	"Get interface set with just interface name, which looks like: 
-	 'com::baeldung::dao::repositories::ItemTypeRepository' 
-	 as 'ItemTypeRepository'"
-	interfaces := (interfacesMoose collect: [ :interface | (interface splitOn: '::') last ]) asSet.
-	"Make sure we didn't lose anything"
-	self assert: interfaces size equals: interfacesMoose size.
-
-	"Remove commits that contain interfaces"
-	commitsWithoutInterfaces := commits reject: [ :commit | 
-		| committedFiles rejectCommit |
-		rejectCommit := true.
-		committedFiles := commit third.
-		committedFiles detect: [ :file | 
-			| sFile | 
-			sFile := (file splitOn: '/') last allButLast: '.java' size.
-			interfaces includes: sFile] ifNone: [ rejectCommit := false "don't reject" ].
-		rejectCommit.
-		].
-
-  ^ self writeSelectedCommits: commitsWithoutInterfaces file: commitMetadataFile
 ]
 
 { #category : #'as yet unclassified' }
@@ -1251,50 +1195,6 @@ GMUtility class >> exampleMineInterfacesAndMakeUML [
 		toFile: 'FactoryVariants_HEAD.puml'
 ]
 
-{ #category : #'file service' }
-GMUtility class >> extractIndividualProjectLogicalCouplingData: csvFile [
-	"take a big CSV file and break it into smaller ones, project by project"
-
-	| project csvWriter csvOutStream count |
-	project := ''.
-	csvWriter := nil.
-	csvOutStream := nil.
-	count := 0.
-	[ :job | 
-	csvFile asFileReference
-		readStreamDo: [ :input | 
-			(NeoCSVReader on: (ZnBufferedReadStream on: input))
-				skipHeader;
-				"Project	  From Class	  To Class	  Revision ID"
-					addField;
-				"Project"
-					"NeoCSV grabs spaces between the ',' separators"
-					addFieldConverter: [ :string | string trimBoth ];
-				"From Class"
-					addFieldConverter: [ :string | string trimBoth ];
-				"To Class"
-					addFieldConverter: [ :string | string trimBoth asInteger ];
-				"Revision ID"
-					do: [ :each | 
-					each first = project
-						ifFalse: [ project := each first.
-							count := count + 1.
-							"self logCr: 'Found new project: ', project."
-							job
-								progress: count / 80;
-								"80 projects"
-									title: 'Extracting data for ' , project asString.
-							"init new csv file"
-							csvOutStream := FileStream
-								forceNewFileNamed: project , '_logicalcoupling_AS2017.csv'.
-							csvWriter := NeoCSVWriter on: csvOutStream.
-							csvWriter
-								nextPut: #('Project' 'From class' 'To class' 'Revision ID');
-								addFields: #(first second third fourth) ].
-					csvWriter nextPut: each ]
-			"			separator: $,;" ] ] asJob run
-]
-
 { #category : #'as yet unclassified' }
 GMUtility class >> extractProjectNameFromURL: url [
 	| projectName |
@@ -1302,146 +1202,6 @@ GMUtility class >> extractProjectNameFromURL: url [
 	(projectName endsWith: '.git')
 		ifTrue: [ projectName := projectName allButLast: '.git' size ].
 	^ projectName
-]
-
-{ #category : #'as yet unclassified' }
-GMUtility class >> filterCommitsOnRepo: location fromTag: fromTag toTag: toTag [
-	"selects commits from a range specified by Git tags"
-
-	| repoHandle revwalk newerCommit commitDataList nCommits relativeRevNumber projectName startTag endTag outFile |
-	projectName := location path basename.
-	repoHandle := LGitRepository on: location.
-	repoHandle open.
-	"Revwalk goes backwards, so we start at 'to' (latest) and end at 'from' (earliest)"
-	startTag := 'tags/' , toTag , '*'.
-	endTag := 'tags/' , fromTag , '*'.
-	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
-	newerCommit := nil.
-	commitDataList := LinkedList new.
-
-	"Walk through just to count commits for progress bar"
-	nCommits := 0.
-	revwalk do: [ :commit | nCommits := nCommits + 1 ].
-	nCommits > 2000
-		ifTrue: [ (UIManager
-				confirm:
-					'This range has ' , nCommits asString
-						, ' commits. Are you sure you want to mine it?')
-				ifFalse: [self error: 'Process aborted by user.' ] ].
-
-	"Revwalk reset didn't work, so we start over"
-	revwalk := self historyRevwalk: repoHandle from: startTag to: endTag.
-
-	"Get commit ids that have:
-  - no added files (only changed files)
-  - 10 or fewer files
-  - at least one .java file."
-	relativeRevNumber := 0.
-	[ :job | 
-	revwalk
-		do: [ :commit | 
-			| addedFiles difference atLeastOneJavaFile diffFiles |
-			relativeRevNumber := relativeRevNumber + 1.
-			newerCommit
-				ifNotNil: [ difference := commit tree diffTo: newerCommit tree.
-					diffFiles := difference files.
-"					0halt."
-					job
-						progress: relativeRevNumber / nCommits;
-						title:
-							'Analyzing revision ' , (commit name truncateTo: 8) , ': '''
-								, (commit message truncateTo: 25) , ''' ('
-								, difference numberOfDeltas asString , ' files, isMerge=='
-								, commit isMerge asString , ') ' , relativeRevNumber asString
-								, '/' , nCommits asString.
-					addedFiles := Set new.
-					diffFiles
-						do:
-							[ :file | newerCommit tree entryByPath: file ifAbsent: [ addedFiles add: file ] ].
-					atLeastOneJavaFile := difference files
-						anySatisfy: [ :file | file endsWith: '.java' ].
-					commitDataList
-						add:
-							{newerCommit name.
-							(nCommits - relativeRevNumber + 1).	"Revwalk goes from latest to earliest"
-							(Character space join: addedFiles).
-							difference numberOfDeltas.
-							atLeastOneJavaFile.
-							(Character space join: diffFiles)} ].
-			newerCommit := commit ] ] asJob run.
-	outFile := projectName , '_' , fromTag , '-' , toTag
-		, '_commits_tags.csv'.
-	self writeCommitResults: commitDataList to: outFile.
-	^ outFile
-]
-
-{ #category : #'as yet unclassified' }
-GMUtility class >> filterCommitsOnRepo: location withRange: range [
-	"generates a list of info about commits according to the queries within this method."
-
-	| handle revwalk newerCommit commitDataList nCommits revisionNumber projectName outFile |
-	projectName := location path basename.
-	handle := LGitRepository on: location.
-	handle open.
-	revwalk := LGitRevwalk of: handle.
-	range = ''
-		ifFalse: [ revwalk pushRange: range ]
-		ifTrue: [ revwalk pushHead ].
-
-	"Get commit ids that have:
-  - no added files (only changed files)
-  - 10 or fewer files
-  - at least one .java file."
-	newerCommit := nil.
-	commitDataList := LinkedList new.
-
-	"Walk through just to count commits"
-	nCommits := 0.
-	revwalk do: [ :commit | nCommits := nCommits + 1 ].
-
-	"Revwalk reset didn't work, so we start over"
-	revwalk := LGitRevwalk of: handle.
-	range = ''
-		ifFalse: [ revwalk pushRange: range ]
-		ifTrue: [ revwalk pushHead ].
-	revisionNumber := 0.
-	[ :job | 
-	revwalk
-		do: [ :commit | 
-			| addedFiles difference atLeastOneJavaFile |
-			revisionNumber := revisionNumber + 1.
-			job
-				progress: revisionNumber / nCommits;
-				title: 'Analyzing revision ' , commit name.
-			newerCommit = nil
-				ifFalse: [ difference := newerCommit tree diffTo: commit tree.
-					addedFiles := Set new.
-					difference files
-						do: [ :file | 
-							newerCommit tree
-								entryByPath: file
-								ifAbsent:
-									[ "Transcript show: 'File not found in newer commit: ', file ; cr." addedFiles add: file ] ].
-					atLeastOneJavaFile := difference files
-						anySatisfy: [ :file | file endsWith: '.java' ].
-					commitDataList
-						add:
-							{newerCommit name.
-							(nCommits - revisionNumber + 1).	"Revwalk goes from latest to earliest"
-							(Character space join: addedFiles).
-							difference numberOfDeltas.
-							atLeastOneJavaFile.
-							(Character space join: difference files)} ].
-			newerCommit := commit ] ] asJob run.
-	outFile := projectName , '_commits.csv'.
-	self writeCommitResults: commitDataList to: outFile.
-	^outFile
-]
-
-{ #category : #pipeline }
-GMUtility class >> filterCommitsOnRepoLeftBranchOnly: location url: url [
-	"Mine whole left branch, from HEAD to (no stopping commit)"
-	^ self annotateCommitsOnRepoLeftBranchOnly: location from: 'HEAD' to: ''
 ]
 
 { #category : #'file service' }
@@ -1474,192 +1234,6 @@ GMUtility class >> generateClientImplementationPairs: mseFileRef [
 		writeClientImplementationPairs: results first
 		file: mseFileRef ] asJob run.
 	^ clientImplementationsFile
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile [
-	"For each commit
-		For each class that's an implementation in the commit
-			potP := generate pairs for P
-			potU := generate pairs for U
-			actP := actual pairs for P (already calculated 'ClientImpPairs.csv' )
-			actU := actual pairs for U (already calculated 'ClientImpPairs.csv')
-			
-	"
-	| selectedCommitsFileRef commitRecords logicalCouplingRecords project commitTransactions cp ct |
-	selectedCommitsFileRef := selectedCommitsFile asFileReference.
-	project := selectedCommitsFileRef basenameWithoutExtension.
-	commitRecords := self readSelectedCommitsFile: selectedCommitsFile.
-
-
-	commitRecords
-		do: [ :rec | 
-			| committedFiles committedClasses classPairs uid revNum |
-			uid := rec first.
-			revNum := rec second.
-			committedFiles := rec third splitOn: Character space.
-			committedClasses := committedFiles
-				select: [ :each | each endsWith: '.java' ].
-			classPairs := committedClasses combinations
-				select: [ :each | each size = 2 ].
-			"Note: this won't create pair-entries for commits with only one java file."
-			
-			classPairs
-				do: [ :pair | 
-					"Add the pair twice - logical coupling could be either direction"
-					logicalCouplingRecords
-						addFirst:
-							{project.
-							pair first.
-							pair second.
-							uid.
-							revNum}.
-					logicalCouplingRecords
-						addFirst:
-							{project.
-							pair second.
-							pair first.
-							uid.
-							revNum} ] ]
-		displayingProgress: 'Generating implementation-oriented changes...'.
-		
-	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-	[ :job | 
-	job title: 'Writing class pairs.'.
-	cp := self
-		writeClassPairs: logicalCouplingRecords
-		file: selectedCommitsFile.
-	job
-		progress: 0.5;
-		title: 'Writing transactions.'.
-	"Generates a 'transactions' (basket) style file for arules in R"
-	ct := self
-		writeCommitTransactions: commitTransactions
-		to: selectedCommitsFile ] asJob run.
-	^ Array with: cp with: ct
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateImplementationOrientedChanges: selectedCommitsFile mse: mseFile [
-	"For each commit
-		For each class that's an implementation in the commit
-			potP := generate pairs for P
-			potU := generate pairs for U
-			actP := actual pairs for P (already calculated 'ClientImpPairs.csv' )
-			actU := actual pairs for U (already calculated 'ClientImpPairs.csv')
-			
-	"
-
-	| selectedCommitsFileRef commitRecords project implementations |
-	selectedCommitsFileRef := selectedCommitsFile asFileReference.
-	project := selectedCommitsFileRef basenameWithoutExtension.
-	commitRecords := self readSelectedCommitsFile: selectedCommitsFile.
-	commitRecords
-		do: [ :rec | 
-			| committedFiles committedClasses iMine oid revNum |
-			oid := rec first.
-			revNum := rec second.
-			committedFiles := rec third splitOn: Character space.
-			committedClasses := committedFiles
-				select: [ :each | each endsWith: '.java' ].
-			iMine := GMInterfaceMine fromMSE: mseFile.
-			implementations := iMine implementationsFromCommittedClasses: committedClasses.
-
-			"classPairs := committedClasses combinations
-				select: [ :each | each size = 2 ]."
-			"Note: this won't create pair-entries for commits with only one java file." ]
-		displayingProgress: 'Generating implementation-oriented changes...'.
-
-	^ 'something'
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateLogicalCouplingCandidatePairsAndTransactions: fileEnding [
-	"take files ending with '_commits_UIDs.csv' and create the logical coupling candidate pairs and transaction files"
-
-	| working selectedCommitFiles |
-	working := FileSystem disk workingDirectory.
-	selectedCommitFiles := working allChildrenMatching: '*' , fileEnding.
-	selectedCommitFiles
-		do: [ :file | 
-			| csvInputStream csvRecords logicalCouplingRecords project commitTransactions outFileName |
-			"Parse the CSV and gather the UIDs for commits that match criteria"
-			project := file basename allButLast: fileEnding size.
-			csvInputStream := file readStream.
-			csvRecords := (NeoCSVReader on: csvInputStream)
-				separator: $,;
-				skipHeader;
-				addField;
-				"Commit_id"
-					addField;
-				"Revision_number"
-					addField;
-				"committed_files"
-					upToEnd.
-			logicalCouplingRecords := OrderedCollection new.
-			commitTransactions := OrderedCollection new.	"Transaction data: UID, item, item, ..."
-			"Write out the logical coupling of java classes for the selected commits"
-			"It's pairs of classes in the committed_files set"
-			csvRecords
-				do: [ :rec | 
-					| committedFiles committedClasses classPairs uid revNum |
-					uid := rec first.
-					revNum := rec second.
-					committedFiles := rec third splitOn: Character space.
-					committedClasses := committedFiles
-						select: [ :each | each endsWith: '.java' ].
-					commitTransactions 
-						addFirst: (GMCommitTransaction new uid:uid; committedFileNames: committedClasses). "ID, item, item, ...".
-					"Note: this won't create pair-entries for commits with only one java file."
-					classPairs := committedClasses combinations
-						select: [ :each | each size = 2 ].
-					classPairs
-						do: [ :pair | 
-							| sortedPair |
-							sortedPair := pair asSortedCollection.
-							"Add the pair twice - logical coupling could be either direction"
-							logicalCouplingRecords
-								addFirst:
-									{project.
-									pair first.
-									pair second.
-									uid.
-									revNum}.
-							logicalCouplingRecords
-								addFirst:
-									{project.
-									pair second.
-									pair first.
-									uid.
-									revNum} ] ].
-			"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_logicalcoupling.csv'."
-			FileStream
-				forceNewFileNamed: file basenameWithoutExtension , '_logicalcoupling.csv'
-				do: [ :csvStream | 
-					(NeoCSVWriter on: csvStream)
-						nextPut: #('Project' 'Class_1' 'Class_2' 'Commit_ID' 'Revision_number');
-						addFields: #(first second third fourth fifth);
-						nextPutAll: logicalCouplingRecords ].
-			"Generates a 'transactions' (basket) style file for arules in R"
-			outFileName := file basenameWithoutExtension , '_transactions.csv'.
-			self writeCommitTransactions: commitTransactions to: outFileName]
-		displayingProgress: [ :file | 
-			'Generating data to calculate logical coupling for ' , file basename
-				allButLast: fileEnding size ]
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateLogicalCouplingPairsWithR: inputPath [
-	| command |
-	"TODO: Error check to remind user to add Rscript.exe to path"
-	self ensureTmpDirectoryCreation.
-	command := 'Rscript R/GenerateLogicalPairsFromTransactions.R ' , inputPath
-		, ' 2> /tmp/R.errors.txt'.
-	Transcript
-		show: 'About to execute: ';
-		cr;
-		show: command.
-	^ LibC uniqueInstance system: command
 ]
 
 { #category : #'file service' }
@@ -1775,139 +1349,6 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 ]
 
 { #category : #'file service' }
-GMUtility class >> generateMSEFilesForEachHEAD: uidFileSuffix [
-	"For each *_UIDs.csv file, generate a Moose MSE for the HEAD of repo"
-
-	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath pathToJDT2FamixCommand |
-	destPath := 'tmp/data_mining'.
-	gitErrors := 'tmp/errors_git'.
-	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
-	working := FileSystem disk workingDirectory.
-	uidFiles := working allChildrenMatching: '*' , uidFileSuffix.
-	pathToJDT2FamixCommand := OSEnvironment current
-		at: 'JDT2FAMIXCOMMAND'
-		ifAbsent: [ nil ].
-	self ensureTmpDirectoryCreation.
-	"Create a new sub dir for the repos MSE dirs"
-	(working / 'MSE') ensureCreateDirectory.
-	uidFiles
-		do: [ :file | 
-			| repoName uidFileName uid command result |
-			"Create a new sub dir for the repos MSE files"
-			uidFileName := file basename.
-			repoName := uidFileName allButLast: uidFileSuffix size.
-			repoPath := 'tmp/tempClonesPharo/' , repoName.
-			uid := 'HEAD'.
-			revPath := destPath , '/' , repoName , '_master/' , uid.
-			command := 'cd ' , repoPath , ' && git --work-tree=' , revPath , ' checkout ' , uid
-				, ' -- . 2>' , gitErrors.
-			revPath asFileReference ensureCreateDirectory.
-			"self logCr: 'About to create directory: ', revPath ."
-			OSEnvironment current setEnv: 'GIT_INDEX_FILE' value: revPath , '/.git'.
-			result := LibC uniqueInstance system: command.
-			"self logCr: 'About to execute command: ', command. result := 0."
-			result = 0
-				ifFalse: [ gitErrors asFileReference ]
-				ifTrue: [ | mseFile mseDestination |
-					"Make an MSE file"
-					command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand , '  2>'
-						, jdt2FamixErrors.
-					result := LibC uniqueInstance system: command.
-					"self logCr: 'About to execute command: ', command. result := 0."
-					result = 0
-						ifFalse: [ jdt2FamixErrors asFileReference ]
-						ifTrue: [ "Move the file out of the directory"
-							mseFile := (revPath , '/' , uid , '.mse') asFileReference.
-							mseDestination := (destPath , '/' , repoName , '_master/' , uid , '.mse')
-								asFileReference.
-							"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
-							mseFile exists
-								ifTrue: [ mseDestination exists
-										ifTrue: [ mseDestination delete ].
-									mseFile moveTo: mseDestination ] ].
-					"Clean up the directories and files"
-					revPath asFileReference deleteAll ] ]
-		displayingProgress: [ :file | 'Generating MSE file for HEAD of: ' , file basename ]
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateMSEFilesForEachUID: uidFileSuffix [
-	"For each *_UIDs.csv file, generate a Moose MSE "
-
-	| working uidFiles destPath repoPath gitErrors jdt2FamixErrors revPath pathToJDT2FamixCommand |
-	destPath := 'tmp/data_mining'.
-	gitErrors := 'tmp/errors_git'.
-	jdt2FamixErrors := 'tmp/errors_jdt2famix'.
-	working := FileSystem disk workingDirectory.
-	"uidFileSuffix := '_commits_UIDs.csv'."
-	uidFiles := working allChildrenMatching: '*' , uidFileSuffix.
-	pathToJDT2FamixCommand := OSEnvironment current
-		at: 'JDT2FAMIXCOMMAND'
-		ifAbsent: [ nil ].
-	self ensureTmpDirectoryCreation.
-
-	"Create a new sub dir for the repos MSE dirs"
-	(working / 'MSE') ensureCreateDirectory.
-	uidFiles
-		do: [ :file | 
-			| csvInputStream csvRecords selectedCommits repoName uidFileName |
-			"Parse the CSV and gather the UIDs for commits that match criteria"
-			csvInputStream := file readStream.
-			csvRecords := (NeoCSVReader on: csvInputStream)
-				separator: $,;
-				skipHeader;
-				addField;
-				"Commit_id"
-					addField;
-				"Revision_number"
-					addField;
-				"Committed_files"
-					upToEnd.
-
-			"Create a new sub dir for the repos MSE files"
-			uidFileName := file basename.
-			repoName := uidFileName allButLast: uidFileSuffix size.
-			repoPath := '/tmp/tempClonesPharo/' , repoName.
-			csvRecords
-				do: [ :csvRecord | 
-					| uid command result |
-					uid := csvRecord first.
-					revPath := destPath , '/' , repoName , '_master/' , uid.
-					command := 'cd ' , repoPath , ' && git --work-tree=' , revPath
-						, ' checkout ' , uid , ' -- . 2>' , gitErrors.
-					revPath asFileReference ensureCreateDirectory.
-					"self logCr: 'About to create directory: ', revPath ."
-					OSEnvironment current
-						setEnv: 'GIT_INDEX_FILE'
-						value: revPath , '/.git'.
-					result := LibC uniqueInstance system: command.
-					"self logCr: 'About to execute command: ', command. result := 0."
-					result = 0
-						ifFalse: [ gitErrors asFileReference ]
-						ifTrue: [ | mseFile mseDestination |
-							"Make an MSE file"
-							command := 'cd ' , revPath , ' && ' , pathToJDT2FamixCommand
-								, '  2>' , jdt2FamixErrors.
-							result := LibC uniqueInstance system: command.
-							"self logCr: 'About to execute command: ', command. result := 0."
-							result = 0
-								ifFalse: [ jdt2FamixErrors asFileReference ]
-								ifTrue: [ "Move the file out of the directory"
-									mseFile := (revPath , '/' , uid , '.mse') asFileReference.
-									mseDestination := (destPath , '/' , repoName , '_master/'
-										, uid , '.mse') asFileReference.
-									"self logCr: 'About to move ', mseFile asString, ' to ', mseDestination asString."
-									mseFile exists
-										ifTrue: [ mseDestination exists
-												ifTrue: [ mseDestination delete ].
-											mseFile moveTo: mseDestination ] ].
-							"Clean up the directories and files"
-							revPath asFileReference deleteAll ] ]
-				displayingProgress: [ :r | 'Processing UID: ' , r first ] ]
-		displayingProgress: [ :file | 'Processing: ' , file basename ]
-]
-
-{ #category : #'file service' }
 GMUtility class >> generatePairsAndTransactions: selectedCommitsFile [
 	"Create the logical coupling candidate pairs and transaction file from the set of selected commits"
 
@@ -1968,56 +1409,6 @@ GMUtility class >> generatePairsAndTransactions: selectedCommitsFile [
 		writeCommitTransactions: commitTransactions
 		to: selectedCommitsFile ] asJob run.
 	^ Array with: cp with: ct
-]
-
-{ #category : #'file service' }
-GMUtility class >> generateSelectedCommitFiles: commitFileExtension [
-"Selects commits from *_commits.csv files and writes out a list of UIDs that match (in a *_UIDs.csv file)"
-
-| working commitFiles |
-working := FileSystem disk workingDirectory.
-
-"working := 'G:\My Drive\Congé sabbatique 2018-2019\Activités INRIA\Change Evolution Interface Clients\Pharo image' asFileReference."
-
-commitFiles := working allChildrenMatching: commitFileExtension.
-
-commitFiles do: [ :file | 
-	| csvInputStream csvRecords selectedCommits commitID revisionNumber addedFiles countCommittedFiles hasJava committedFiles |
- 
-	"Parse the CSV and gather the UIDs for commits that match criteria"
-	csvInputStream := file readStream.
-	csvRecords := (NeoCSVReader on:  csvInputStream) 
-		separator: $,;
-		skipHeader;
-		addField; "Commit_id"
-		addField; "Revision_number"
-		addField; "set of Added_files"
-		addIntegerField; "n_committed_files"
-		addField; "has_java"
-		addField; "committed_files"
-		upToEnd.
-
-	"Transcript show: csvRecords; cr."
-
-	selectedCommits := csvRecords select: [ :each | 
-"		commitID := each first. 
-		revisionNumber := each second. "
-		addedFiles := each third. 
-		countCommittedFiles := each fourth. 
-		hasJava := each fifth. 
-"		committedFiles := each sixth." 
-		(addedFiles = nil "no added files") and: (countCommittedFiles <= 10 and: hasJava = 'true')].
-
-	"Write out the list of UIDs for the selected commits"
-	"self crLog: 'Creating file ', (file basenameWithoutExtension) , '_UIDs.csv'."
-	FileStream
-		forceNewFileNamed: (file basenameWithoutExtension) , '_selected.csv'
-		do: [ :csvStream | 
-			(NeoCSVWriter on: csvStream)
-				nextPut: #('Commit_id' 'Revision_number' 'committed_files');
-				addFields: #(first second sixth);
-				nextPutAll: selectedCommits ].
-] displayingProgress: [ :file | 'Selecting UIDs in: ', file basename ]
 ]
 
 { #category : #accessing }
@@ -2134,7 +1525,7 @@ GMUtility class >> loadCommitMetadataFile: fileName [
 GMUtility class >> loadCommitTransactions: transactionsFileReference [
 	"Load commit transactions. Note NeoCSVReader doesn't support variable records, so we declare spots for many entries, and remove them after."
 
-	| transactionRecords transactions csvInputStream |
+	| transactionRecords csvInputStream |
 	csvInputStream := transactionsFileReference  readStream.
 	transactionRecords := (NeoCSVReader on: csvInputStream)
 		separator: $,;
@@ -2242,61 +1633,6 @@ GMUtility class >> locationOfProjectRepo [
 ]
 
 { #category : #pipeline }
-GMUtility class >> mineClientChanges: gitName url: urlString [
-	"Mine the whole repo, using HEAD and nil as limits"
-	^ self mineClientChanges: gitName url: urlString from: 'HEAD' to: ''
-]
-
-{ #category : #pipeline }
-GMUtility class >> mineClientChanges: gitName url: urlString from: startOIDString to: endOIDString [
-	"Pipeline to mine changes of clients of interfaces"
-
-	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile renamedTransactionsFile removedTr rResult mseStream mooseModel classes commitTransactions changeHistoryMatrix cochangeMatrix |
-	loc := self cloneRepo: urlString.
-	commitMetadata := self
-		annotateCommitsOnRepoLeftBranchOnly: loc
-		from: startOIDString
-		to: endOIDString.
-	selectedCommits := self generateSelectedCommits: commitMetadata.
-	pairsAndTransactions := self generatePairsAndTransactions: selectedCommits.
-	self ensureTmpDirectoryCreation.	
-	"oid := GMUtility getOIDFromTag: newerTag on: loc."
-	mseFileRef := self generateMSEFileFor: startOIDString reponame: loc basename.
-	"mseFileRef := GMUtility generateMSEFileFor: 'HEAD' reponame: loc basename."
-	cimpFile := self generateClientImplementationPairs: mseFileRef.
-
-	"Renamings should do a check-out of the Revision to use renamings from that point? Otherwise, integrate the revision info into the git-log command."
-	"renamedTransactionsFile := GMUtility
-		applyRenamingsToTransactions: pairsAndTransactions second 
-		usingRevision: startOIDString
-		project: gitName."
-		
-	"skip renamings"
-	renamedTransactionsFile := pairsAndTransactions second.
-
-	mooseModel := self loadMooseModelFromMSE: mseFileRef.
-	commitTransactions := self loadCommitTransactions: renamedTransactionsFile asFileReference.
- 
-	classes := self mooseClassesForDependencyMining: mooseModel.
-	changeHistoryMatrix := self changeHistoryMatrixFromTransactions: commitTransactions classes: classes.
-	cochangeMatrix := self cochangeMatrixFromChangeHistory: changeHistoryMatrix forClasses: classes.
-	
-	removedTr := self
-		removeUnrelatedClassesFromTransactions: gitName
-		withTransactionsFile: renamedTransactionsFile 
-		fromRevision: startOIDString.
-		
-	rResult := self generateLogicalCouplingPairsWithRSingleFile: removedTr.
-	rResult = 0 ifFalse: [ self abortWithErrorMessageFromFileReference: 'tmp/R.errors.txt' asFileReference title: 'R terminated with errors'. ].	
-	
-	"TODO: pass the filename"
-	"rhino_HEAD_ClientImpPairs_only_clients_and_imps_TR_apriori_rules"
-
-	"GMUtility generateLogicalCouplingPairsWithRSingleFile: pairsAndTransactions second."
-	self calculateCouplingIntersectionsFor: gitName withARulesFile: removedTr from: startOIDString to: endOIDString 
-]
-
-{ #category : #pipeline }
 GMUtility class >> mineClientChangesNoARules: gitName url: urlString [
 	"Mine the whole repo, using HEAD and nil as limits"
 	^ self mineClientChangesNoARules: gitName url: urlString from: 'HEAD' to: ''
@@ -2306,7 +1642,7 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString [
 GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: startOIDString to: endOIDString [
 	"Pipeline to mine changes of clients of interfaces - don't use ARules to calculate Logical Coupling"
 
-	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces implementationOrientedChanges |
+	| loc commitMetadata selectedCommits pairsAndTransactions mseFileRef cimpFile commitsWithoutInterfaces |
 	[ :job | 
 	job title: 'Cloning repo...'.
 	loc := GMUtility cloneRepo: urlString.
@@ -2336,9 +1672,6 @@ GMUtility class >> mineClientChangesNoARules: gitName url: urlString from: start
 	job title: 'Generating pairs and transactions...'.
 	pairsAndTransactions := GMUtility
 		generatePairsAndTransactions: commitsWithoutInterfaces.
-"	job progress: 5.5/6.
-	job title: 'Calculating alternate stats...'.
-	implementationOrientedChanges := GMUtility generateImplementationOrientedChanges: commitsWithoutInterfaces."
 
 	job progress: 6/6.
 	job title: 'Calculating final stats...'.
@@ -2494,31 +1827,6 @@ GMUtility class >> mineFixedProjectListWithLog [
 										, ': skipping since found .csv files for project';
 								crlf ] ]
 				displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ] ]
-]
-
-{ #category : #'file service' }
-GMUtility class >> mineProjectsIn: projectsFile [
-	"For all repos in the 'projects.csv' file do a mining operation"
-
-	| working csvInputStream csvRecords i |
-	working := FileSystem disk workingDirectory.
-	csvInputStream := (working / projectsFile) readStream.
-	csvRecords := self loadProjectsList: csvInputStream.	"ID Project	Str.Dep.	Log.Dep.	Int.Set	CSD(%) CLD(%) GC_url GitHub_url"
-	i := 0.
-	[ :job | 
-	csvRecords
-		do: [ :each | 
-			| projectName githubUrl |
-			i := i + 1.
-			job
-				progress: i / csvRecords size;
-				title: 'Generating CSV files for commits: ' , each second.
-			projectName := each second.
-			githubUrl := each last.
-			githubUrl = 'NA'
-				ifFalse: [ self "mineClientChanges:" mineClientChangesNoARules: projectName url: githubUrl  ] ] ]
-		asJob run
-	
 ]
 
 { #category : #'as yet unclassified' }
