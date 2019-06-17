@@ -20,6 +20,13 @@ GMAbstractMineTest >> classFromMooseName: aString [
 	^matches first
 ]
 
+{ #category : #private }
+GMAbstractMineTest >> performTest [
+	"Use an empty logger during tests to not add any noise in logs."
+
+	TinyCurrentLogger value: TinyLogger new during: [ super performTest ]
+]
+
 { #category : #running }
 GMAbstractMineTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
