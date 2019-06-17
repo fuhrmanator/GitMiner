@@ -47,17 +47,18 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 			didParseFail := false.
 			invoker sourceAnchor
 				ifNotNil: [ [ invoker generateFastIfNotDoneAndBind ]
-						on: SmaCCParserError
+						on: SmaCCParserError, MessageNotUnderstood, SubscriptOutOfBounds 
 						do: [ :exception | 
 							didParseFail := true.
-							'--> SmaCCParserError:' record.
+							'--> Exception while parsing Invoker''s source:' record.
 							exception record.
+							(invoker sourceText) record.
 							'<--' record
 							 ].
 					didParseFail
-						ifFalse: [ "self crLog: 'Processing invoker ' , invoker asString."
+						ifFalse: [ "('Processing invoker ' , invoker asString) record."
 							invoker fast sourceText
-								ifNotNil: [ "self crLog: invoker fast sourceCode."
+								ifNotNil: [ "invoker fast sourceText record."
 									((invoker fast
 										toAnyScope:
 											{FASTJavaAssignementExpression.
@@ -74,16 +75,18 @@ GMFactoryEvolutionMine >> assignmentsOfImplementations [
 												, invoker asString , ':') record.
 									(invoker sourceText) record.
 									'<---' record.
+									"0halt."
 									OrderedCollection new ] ] ]
 				ifNil: [ ('---> Warning: sourceAnchor was nil for invoker ' , invoker asString
 								, ':') record.
 					'<---' record.
+								"0halt."
 					OrderedCollection new ] ]) flattened asSet ] asJob run.
 
 	"Not all assignments are calls to constructors!"
 	"Return all assignments who have a '= new' in them "
 	^ assignmentsInInvokersOfConstructors
-		select: [ :a | (a toScope: FASTJavaNewExpression) isNotEmpty ]
+		select: [ :a | a isNotNil and: [(a toScope: FASTJavaNewExpression) isNotEmpty] ]
 ]
 
 { #category : #queries }
@@ -91,17 +94,34 @@ GMFactoryEvolutionMine >> assignmentsOfImplementationsWithUpCasting [
 	| assignmentsOfImplementations assignmentsOfImplementationsWithUpCasting |
 	assignmentsOfImplementations := self assignmentsOfImplementations.
 	"For each assignment, return those whose type on the left is more abstract than the type on the right (upcasting)"
-	assignmentsOfImplementationsWithUpCasting := assignmentsOfImplementations select: [ :a | 
-		| variableType |
-		"Left-hand side of assignment"
-		variableType := a famixVariable declaredType.
-		"Right hand side could have many expressions (or just one)"
-		(a toScope: FASTJavaNewExpression ) allSatisfy: [ :newEx | 
-			| newExpressionType isUpcasting |
-			newExpressionType := newEx famix to first parentType.
-			isUpcasting := newExpressionType superclassHierarchy includes: variableType.
-			isUpcasting]
-		].
+	assignmentsOfImplementationsWithUpCasting := assignmentsOfImplementations
+		select: [ :a | 
+			| variableType |
+			"Left-hand side of assignment"
+			a famixVariable
+				ifNil:
+					[ 'assignmentsOfImplementationsWithUpCasting: Warning: Left-hand side has nil famixVariable: '
+						record.
+					a sourceCode record ]
+				ifNotNil: [ variableType := a famixVariable declaredType ].
+			"Right hand side could have many expressions (or just one)"
+			"Exclude NewClass expressions"
+			(((a toScope: FASTJavaNewExpression) reject: #isNewAnonymousClass)
+				"reject and log invalid expressions"
+				reject: [ :newEx | 
+					newEx famix isNil
+						ifTrue:
+							[ 'assignmentsOfImplementationsWithUpCasting: Warning: Right-hand side has nil famix: '
+								record.
+							newEx sourceCode record.
+							true ]
+						ifFalse: [ false ] ])
+				allSatisfy: [ :newEx | 
+					| newExpressionType isUpcasting |
+					newExpressionType := newEx famix to first parentType.
+					isUpcasting := newExpressionType superclassHierarchy
+						includes: variableType.
+					isUpcasting ] ].
 	^ assignmentsOfImplementationsWithUpCasting
 ]
 

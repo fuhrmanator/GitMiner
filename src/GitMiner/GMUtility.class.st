@@ -1732,7 +1732,7 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 		ifNotNil: [ aNoUpcasting
 				do: [ :a | 
 					('''' , a sourceCode , ''' in class '
-						, a variable famixVariable parentType mooseName) record ] ]
+						, a variable famixVariable declaredType mooseName) record ] ]
 		ifNil: [ 'None.' record ].
 	'----> Classes with instantiations that ARE upcast:' record.
 	aUpcasting
@@ -1755,11 +1755,8 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 	| working logName |
 	logName := 'tmp/FactoryEvolution.log'.
-	"Remove old log"
-	logName asFileReference ensureDelete.
 	TinyLogger default
-		removeFileLoggers;
-		addFileLoggerNamed: logName.
+		ensureFileLoggerNamed: logName; clearLog.
 	working := FileSystem disk workingDirectory.
 	"OSEnvironment current
 		setEnv: 'JDT2FAMIXCOMMAND'
