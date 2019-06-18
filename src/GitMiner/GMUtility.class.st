@@ -1831,8 +1831,11 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	aNoUpcasting
 		ifNotNil: [ aNoUpcasting
 				do: [ :a | 
-					('''' , a sourceCode , ''' in class '
-						, a variable famixVariable declaredType mooseName) record ] ]
+					a variable famixVariable isNil
+						ifTrue: [ ('''' , a sourceCode
+								, ''' in class UNKNOWN -- famixVariable is nil.') record ]
+						ifFalse: [ ('''' , a sourceCode , ''' in class '
+								, a variable famixVariable declaredType mooseName) record ] ] ]
 		ifNil: [ 'None.' record ].
 	'----> Classes with instantiations that ARE upcast:' record.
 	aUpcasting
