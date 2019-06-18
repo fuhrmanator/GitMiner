@@ -1109,7 +1109,7 @@ GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest withPostCheck
 	('OSEnvironment: ' , gitWorkTreeEnvVar , ' set to '''
 		, checkoutDest fullName , '''') record.
 	"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
-	command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
+	command := 'cd "' , repoPath fullName , '" && git checkout ' , oid
 		, ' -- . 2>"' , checkoutErrors fullName , '"'.
 	"Work_tree must exist"
 	checkoutDest ensureCreateDirectory.
@@ -1123,7 +1123,7 @@ GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest withPostCheck
 				title: 'Failed to execute: ' , command ].
 	"Customized post-checkout command if applicable"
 	postCheckoutCommand isNotEmpty
-		ifTrue: [ command := 'cd ' , checkoutDest fullName , ' && '
+		ifTrue: [ command := 'cd "' , checkoutDest fullName , '" && '
 				, postCheckoutCommand , ' 2>"' , postCheckoutErrors fullName , '"'.
 			'LibC: about to run CUSTOM command: ' record.
 			(' > ' , command) record.
@@ -1950,7 +1950,7 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 								ifFalse: [ 'Caught unknown AssertionFailure exception.' record.
 									0 halt ] ] ]
 				ifTrue: [ ' --> skipping since found .csv files for project' record ] ]
-		displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ]
+		displayingProgress: [ :projectEntry | 'Mining project: ' , projectEntry first ]
 ]
 
 { #category : #'as yet unclassified' }
