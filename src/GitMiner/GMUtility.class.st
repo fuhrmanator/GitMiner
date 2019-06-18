@@ -1841,8 +1841,15 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	aUpcasting
 		ifNotNil: [ aUpcasting
 				do: [ :a | 
-					('''' , a sourceCode , ''' in class '
-						, a variable famixVariable parentType mooseName) record ] ]
+					('''' , a sourceCode , ''' in '
+						,
+							((a variable famixVariable typeOf: FAMIXLocalVariable)
+								ifTrue: [ 'method '
+										, a variable famixVariable parentBehaviouralEntity mooseName
+										, ' in class '
+										, a variable famixVariable parentBehaviouralEntity parentType mooseName ]
+								ifFalse: [ 'class ' , a variable famixVariable declaredType mooseName ]))
+						record	 ] ]
 		ifNil: [ 'None.' record ].
 	job progress: 6 / 6
 	"	job title: 'Calculating final stats...'.
