@@ -1093,6 +1093,49 @@ GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest [
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest withPostCheckoutCommand: postCheckoutCommand [
+	"Check out the code from a repo into a working directory (outside the repo directory)"
+
+	| command working result gitWorkTreeEnvVar checkoutErrors postCheckoutErrors |
+	working := FileSystem disk workingDirectory.
+	checkoutErrors := working / 'tmp' / 'errors_checkout'.
+	postCheckoutErrors := working / 'tmp' / 'errors_post_checkout'.
+	gitWorkTreeEnvVar := 'GIT_WORK_TREE'.
+
+	"setenv for GIT_WORK_TREE -- it's cleaner than an argument to a LibC command with spaces, etc. in path"
+	OSEnvironment current
+		setEnv: gitWorkTreeEnvVar
+		value: checkoutDest fullName.
+	('OSEnvironment: ' , gitWorkTreeEnvVar , ' set to '''
+		, checkoutDest fullName , '''') record.
+	"Command to extract the revision from git into a temp dir so we can generate an MSE file for it"
+	command := 'cd ' , repoPath fullName , ' && git checkout ' , oid
+		, ' -- . 2>"' , checkoutErrors fullName , '"'.
+	"Work_tree must exist"
+	checkoutDest ensureCreateDirectory.
+	'LibC: about to run command: ' record.
+	(' > ' , command) record.
+	result := LibC runCommand: command.
+	OSEnvironment current removeKey: gitWorkTreeEnvVar.
+	result = 0
+		ifFalse: [ self
+				abortWithErrorMessageFromFileReference: checkoutErrors asFileReference
+				title: 'Failed to execute: ' , command ].
+	"Customized post-checkout command if applicable"
+	postCheckoutCommand isNotEmpty
+		ifTrue: [ command := 'cd ' , checkoutDest fullName , ' && '
+				, postCheckoutCommand , ' 2>"' , postCheckoutErrors fullName , '"'.
+			'LibC: about to run CUSTOM command: ' record.
+			(' > ' , command) record.
+			result := LibC runCommand: command ].
+	result = 0
+		ifFalse: [ self
+				abortWithErrorMessageFromFileReference: postCheckoutErrors asFileReference
+				title: 'Failed to execute: ' , command ].
+	^ result
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> classIndexFromFileName: classFileName InMooseClasses: classes [
 	"Moose class names aren't by file names - return the index of the class by looking for its Moose File name"
 	classes doWithIndex: [ :class :index | classFileName = (GMUtility normalizedFileName: class sourceAnchor fileName) ifTrue: [^index] ].
@@ -1350,6 +1393,63 @@ GMUtility class >> generateMSEFileFor: oid reponame: repoName [
 						title: 'Generating MSE file in ' , revPath fullName;
 						progress: 2 / 3.
 					result := self createJavaMSEOn: revPath using: pathToJavaToFamixCommand named: (oid , '.mse').
+					result = 0
+						ifTrue: [ "Move the file out of the directory"
+							('Moving ' , mseFromJavaToFamix asString , ' to '
+								, mseDestination asString) record.
+							mseFromJavaToFamix exists
+								ifTrue: [ mseDestination exists
+										ifTrue: [ mseDestination delete ].
+									mseFromJavaToFamix moveTo: mseDestination ] ] ] ] asJob run ].
+	^ mseDestination
+]
+
+{ #category : #'file service' }
+GMUtility class >> generateMSEFileFor: oid reponame: repoName withPostCheckoutCommand: postCheckoutCommand [
+	"Generate a Moose MSE for the OID -- OID can be hexString or 'HEAD' "
+
+	| working destPath repoPath revPath result mseFromJavaToFamix mseDestination pathToJavaToFamixCommand checkoutDest |
+	destPath := Path * 'tmp' / 'data_mining'.
+	working := FileSystem disk workingDirectory.
+	checkoutDest := working
+		resolve: destPath / (repoName , '_master') / oid.
+	repoPath := Path * 'tmp' / 'tempClonesPharo' / repoName.
+	revPath := destPath / (repoName , '_master') / oid.
+	mseFromJavaToFamix := working resolve: revPath / oid , 'mse'.
+	mseDestination := working
+		resolve: destPath / (repoName , '_master') / oid , 'mse'.
+
+	"Only if the MSE does not already exist"
+	mseDestination exists
+		ifFalse: [ pathToJavaToFamixCommand := self queryJavaToFamixCommand.
+			pathToJavaToFamixCommand
+				ifNil: [ self
+						error:
+							'This tool can not run without a Java-to-MSE parser (JDT2Famix, VerveineJ).' ].
+			[ :job | 
+			job
+				title: 'To create MSE file, checking out copy of repo at ' , oid;
+				progress: 1 / 3.
+
+
+			"Only checkout if the checkout doesn't exist"
+			checkoutDest exists
+				ifFalse: [ result := self
+						checkoutRepo: repoPath
+						at: oid
+						to: checkoutDest
+						withPostCheckoutCommand: postCheckoutCommand ]
+				ifTrue: [ result := 0.
+					('Skipping git checkout of ' , oid
+						, ' because it''s already there.') record ].
+			result = 0
+				ifTrue: [ job
+						title: 'Generating MSE file in ' , revPath fullName;
+						progress: 2 / 3.
+					result := self
+						createJavaMSEOn: revPath
+						using: pathToJavaToFamixCommand
+						named: oid , '.mse'.
 					result = 0
 						ifTrue: [ "Move the file out of the directory"
 							('Moving ' , mseFromJavaToFamix asString , ' to '
@@ -1751,8 +1851,64 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 		selectedCommitsFile: commitsWithoutInterfaces" ] asJob run
 ]
 
+{ #category : #pipeline }
+GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDString to: endOIDString withPostCheckoutCommand: postCheckoutCommand [
+	"Pipeline to mine changes instances of Factory-related evolutions"
+
+	| loc feMine mseFileRef aNoUpcasting aUpcasting |
+	[ :job | 
+	job title: 'Cloning repo for ' , gitName.
+	('----> NEW PROJECT: ' , gitName) record.
+	loc := GMUtility cloneRepo: urlString.
+	job progress: 1 / 6.
+	job title: 'Generating MSE file...'.
+	mseFileRef := GMUtility
+		generateMSEFileFor: startOIDString
+		reponame: loc basename withPostCheckoutCommand: postCheckoutCommand.
+	job progress: 3 / 6.
+	job title: 'Mining factory evolution patterns...'.
+	'Mining factory evolution patterns...' record.
+	feMine := GMFactoryEvolutionMine fromMSE: mseFileRef.
+	feMine load.
+	feMine
+		sourceFolder: (mseFileRef parent / mseFileRef basenameWithoutExtension) fullName.
+
+	"Show the classes where there are instances of upcasting or no"
+	aNoUpcasting := feMine assignmentsOfImplementationsWithoutUpCasting.
+	aUpcasting := feMine assignmentsOfImplementationsWithUpCasting.
+	'----> Classes with instantiations that are NOT upcast:' record.
+	aNoUpcasting
+		ifNotNil: [ aNoUpcasting
+				do: [ :a | 
+					('''' , a sourceCode , ''' in class '
+						, a variable famixVariable declaredType mooseName) record ] ]
+		ifNil: [ 'None.' record ].
+	'----> Classes with instantiations that ARE upcast:' record.
+	aUpcasting
+		ifNotNil: [ aUpcasting
+				do: [ :a | 
+					('''' , a sourceCode , ''' in class '
+						, a variable famixVariable parentType mooseName) record ] ]
+		ifNil: [ 'None.' record ].
+	job progress: 6 / 6
+	"	job title: 'Calculating final stats...'.
+	GMUtility
+		calculateCouplingIntersectionsFor: gitName
+		withPairsFile: pairsAndTransactions first
+		from: startOIDString
+		to: endOIDString
+		selectedCommitsFile: commitsWithoutInterfaces" ] asJob run
+]
+
+{ #category : #pipeline }
+GMUtility class >> mineFactoryEvolution: gitName url: urlString withPostCheckoutCommand: postCheckoutCommand [
+	"Mine the whole repo, using HEAD and nil as limits"
+	^ self mineFactoryEvolution: gitName url: urlString from: 'HEAD' to: '' withPostCheckoutCommand: postCheckoutCommand
+]
+
 { #category : #'as yet unclassified' }
 GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
+	"The projects is a collection of two-item collections; the first item is a github project owner/name and the second item is a command to run after checking out the code."
 	| working logName |
 	logName := 'tmp/FactoryEvolution.log'.
 	TinyLogger default
@@ -1763,8 +1919,10 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 		value: '/mnt/c/Users/fuhrm/Documents/GitHub/VerveineJ/verveinej.sh'."
 	"value: '/mnt/c/verveineJ5/verveinej.sh'."
 	projects
-		do: [ :ownerAndName | 
-			| pName |
+		do: [ :projectEntry | 
+			| pName ownerAndName postCheckoutCommand |
+			ownerAndName := projectEntry first.
+			postCheckoutCommand := projectEntry second.
 			pName := (ownerAndName splitOn: '/') last.
 			('Mining project ' , ownerAndName) record.
 			"Check if files exist for project - if so, don't do mining"
@@ -1772,7 +1930,8 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 				ifFalse: [ [ "GMUtility generateMSEFileFor: 'HEAD' reponame: name."
 					GMUtility
 						mineFactoryEvolution: pName
-						url: 'https://github.com/' , ownerAndName ]
+						url: 'https://github.com/' , ownerAndName 
+						withPostCheckoutCommand: postCheckoutCommand ]
 						on: AssertionFailure
 						do: [ :exception | 
 							exception tag = #GitMinerException
