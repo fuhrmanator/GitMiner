@@ -1940,7 +1940,7 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 								ifFalse: [ 'Caught unknown AssertionFailure exception.' record.
 									0 halt ] ] ]
 				ifTrue: [ ' --> skipping since found .csv files for project' record ] ]
-		displayingProgress: [ :ownerAndName | 'Mining project: ' , ownerAndName ]
+		displayingProgress: [ :projectEntry | 'Mining project: ' , projectEntry first ]
 ]
 
 { #category : #'as yet unclassified' }
