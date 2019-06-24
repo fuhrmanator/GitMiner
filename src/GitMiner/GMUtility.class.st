@@ -1966,6 +1966,14 @@ GMUtility class >> mineFactoryEvolutionProjectsWithLog: projects [
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> mineFactoryEvolutionsForProjectsWithPostCheckoutCommand [
+	<script>
+	GMUtility
+		mineFactoryEvolutionProjectsWithLog:
+			{{'apache/camel' . 'find . -name \*.java -exec grep -q ''\${'' {} \; -exec rm -f {} \;'}}
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> mineFixedProjectListWithLog [
 	| working projectList |
 	working := FileSystem disk workingDirectory.
