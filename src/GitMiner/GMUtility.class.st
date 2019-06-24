@@ -1904,7 +1904,7 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 				do: [ :a | 
 					('''' , a sourceCode , ''' in '
 						,
-							((a variable famixVariable typeOf: FAMIXLocalVariable)
+							((a variable famixVariable class = FAMIXLocalVariable)
 								ifTrue: [ 'method '
 										, a variable famixVariable parentBehaviouralEntity mooseName
 										, ' in class '
