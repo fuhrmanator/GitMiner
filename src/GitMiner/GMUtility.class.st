@@ -1874,7 +1874,8 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	job title: 'Generating MSE file...'.
 	mseFileRef := GMUtility
 		generateMSEFileFor: startOIDString
-		reponame: loc basename withPostCheckoutCommand: postCheckoutCommand.
+		reponame: loc basename
+		withPostCheckoutCommand: postCheckoutCommand.
 	job progress: 3 / 6.
 	job title: 'Mining factory evolution patterns...'.
 	'Mining factory evolution patterns...' record.
@@ -1890,15 +1891,26 @@ GMUtility class >> mineFactoryEvolution: gitName url: urlString from: startOIDSt
 	aNoUpcasting
 		ifNotNil: [ aNoUpcasting
 				do: [ :a | 
-					('''' , a sourceCode , ''' in class '
-						, a variable famixVariable declaredType mooseName) record ] ]
+					a variable famixVariable isNil
+						ifTrue: [ 0 halt.
+							('''' , a sourceCode
+								, ''' in class UNKNOWN -- famixVariable is nil.') record ]
+						ifFalse: [ ('''' , a sourceCode , ''' in class '
+								, a variable famixVariable declaredType mooseName) record ] ] ]
 		ifNil: [ 'None.' record ].
 	'----> Classes with instantiations that ARE upcast:' record.
 	aUpcasting
 		ifNotNil: [ aUpcasting
 				do: [ :a | 
-					('''' , a sourceCode , ''' in class '
-						, a variable famixVariable parentType mooseName) record ] ]
+					('''' , a sourceCode , ''' in '
+						,
+							((a variable famixVariable typeOf: FAMIXLocalVariable)
+								ifTrue: [ 'method '
+										, a variable famixVariable parentBehaviouralEntity mooseName
+										, ' in class '
+										, a variable famixVariable parentBehaviouralEntity parentType mooseName ]
+								ifFalse: [ 'class ' , a variable famixVariable declaredType mooseName ]))
+						record ] ]
 		ifNil: [ 'None.' record ].
 	job progress: 6 / 6
 	"	job title: 'Calculating final stats...'.
