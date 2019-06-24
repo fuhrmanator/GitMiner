@@ -1970,7 +1970,7 @@ GMUtility class >> mineFactoryEvolutionsForProjectsWithPostCheckoutCommand [
 	<script>
 	GMUtility
 		mineFactoryEvolutionProjectsWithLog:
-			{{'fuhrmanator/FactoryVariants' . ''} . {'apache/camel' . 'find . -name \*.java -exec grep -q ''\${'' {} \; -exec rm -f {} \;'}}
+			{{'fuhrmanator/FactoryVariants' . ''} ". {'apache/camel' . 'find . -name \*.java -exec grep -q ''\${'' {} \; -exec rm -f {} \;'}"}
 ]
 
 { #category : #'as yet unclassified' }
