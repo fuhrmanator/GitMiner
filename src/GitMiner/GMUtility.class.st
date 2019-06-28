@@ -1228,8 +1228,8 @@ GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand name
 	working := FileSystem disk workingDirectory.
 	javaToFamixOutput := working / 'tmp' / 'output_java_to_famix'.
 	javaToFamixErrors := working / 'tmp' / 'errors_java_to_famix'.
-	verveineJ5Options := '-Xms1g -Xmx15g -- -o ' , mseFileName
-		, ' -anchor assoc -alllocals .'.	"-localaccesses -autocp "
+	verveineJ5Options := '-Xms1g -Xmx15g -- -o "' , mseFileName
+		, '" -anchor assoc -alllocals .'.	"-localaccesses -autocp "
 	command := 'cd "' , revPath fullName , '" && "'
 		, pathToJavaToFamixCommand , '" > "' , javaToFamixOutput fullName
 		, '" ' , verveineJ5Options , ' 2> "' , javaToFamixErrors fullName

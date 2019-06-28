@@ -9,6 +9,12 @@ Class {
 	#category : #GitMiner
 }
 
+{ #category : #'as yet unclassified' }
+GMMSEGeneratorWizard >> generateMSE [
+	"Launch the parser"
+	GMUtility createJavaMSEOn: (javaSourcePath asPath) using: verveineJScriptPath named: mseDestinationPath. 
+]
+
 { #category : #accessing }
 GMMSEGeneratorWizard >> javaSourcePath [
 	^ javaSourcePath

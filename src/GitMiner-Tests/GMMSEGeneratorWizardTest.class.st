@@ -18,6 +18,17 @@ GMMSEGeneratorWizardTest >> setUp [
 ]
 
 { #category : #test }
+GMMSEGeneratorWizardTest >> testGenerateMSE [
+	wizard
+		verveineJScriptPath: '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh';
+		javaSourcePath: '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants';
+		mseDestinationPath:
+			'/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse'.
+	wizard generateMSE.
+	self assert: wizard mseDestinationPath asFileReference exists.
+]
+
+{ #category : #test }
 GMMSEGeneratorWizardTest >> testJavaSourcePath [
 	| path |
 	path := '/mnt/myproject/src'.
