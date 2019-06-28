@@ -22,5 +22,5 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 	"should return a file path that ends with verveinej.sh"
 	| path |
 	path := wizard verveineJScriptPath.
-	self assert: path asString endsWith: 'verveinej.sh'.
+	self assert: (path asString endsWith: 'verveinej.sh').
 ]
