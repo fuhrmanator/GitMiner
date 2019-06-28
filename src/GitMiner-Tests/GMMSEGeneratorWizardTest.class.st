@@ -17,6 +17,22 @@ GMMSEGeneratorWizardTest >> setUp [
 	wizard := GMMSEGeneratorWizard new.
 ]
 
+{ #category : #test }
+GMMSEGeneratorWizardTest >> testJavaSourcePath [
+	| path |
+	path := '/mnt/myproject/src'.
+	wizard javaSourcePath: path.
+	self assert: wizard javaSourcePath equals: path
+]
+
+{ #category : #test }
+GMMSEGeneratorWizardTest >> testMseDestinationPath [
+	| path |
+	path := '/mnt/myproject/src'.
+	wizard mseDestinationPath: path.
+	self assert: wizard mseDestinationPath equals: path
+]
+
 { #category : #tests }
 GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 	"should return a file path that ends with verveinej.sh"
