@@ -10,6 +10,28 @@ Class {
 	#category : #'GitMiner-Tests'
 }
 
+{ #category : #test }
+GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants'.
+	path asFileReference exists
+		ifFalse: [ self
+				error:
+					'The path to the Java sources needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
+]
+
+{ #category : #test }
+GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse'.
+	path asFileReference parent exists
+		ifFalse: [ self
+				error:
+					'The path to the MSE output directory needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
+]
+
 { #category : #running }
 GMMSEGeneratorWizardTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
@@ -20,12 +42,11 @@ GMMSEGeneratorWizardTest >> setUp [
 { #category : #test }
 GMMSEGeneratorWizardTest >> testGenerateMSE [
 	wizard
-		verveineJScriptPath: '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh';
-		javaSourcePath: '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants';
-		mseDestinationPath:
-			'/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse'.
+		verveineJScriptPath: self verveineJScriptPathForTesting;
+		javaSourcePath: self javaSourcePathForTesting;
+		mseDestinationPath: self mseDestinationPathForTesting.
 	wizard generateMSE.
-	self assert: wizard mseDestinationPath asFileReference exists.
+	self assert: wizard mseDestinationPath asFileReference exists
 ]
 
 { #category : #test }
@@ -50,4 +71,15 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 	| path |
 	path := wizard verveineJScriptPath.
 	self assert: (path asString endsWith: 'verveinej.sh').
+]
+
+{ #category : #test }
+GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh'.
+	path asFileReference exists
+		ifFalse: [ self
+				error:
+					'The path to the VerveineJ.sh script needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
 ]
