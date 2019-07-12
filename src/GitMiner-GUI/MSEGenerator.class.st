@@ -76,8 +76,10 @@ MSEGenerator >> generateMSE [
 	wizard
 		javaSourcePath: javaSourcePath input text;
 		verveineJScriptPath: verveineJScriptPath input text;
-		mseDestinationPath: mseDestinationPath input text , '\' , fileName input text , '.mse'.
-	wizard generateMSE
+		mseDestinationPath: mseDestinationPath input text, '/' , fileName input text , '.mse'.
+		self halt.
+	wizard generateMSE.
+	self assert: wizard mseDestinationPath asFileReference exists.
 ]
 
 { #category : #initialization }
