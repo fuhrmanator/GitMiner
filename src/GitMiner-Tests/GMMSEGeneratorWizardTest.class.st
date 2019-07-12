@@ -13,8 +13,8 @@ Class {
 { #category : #test }
 GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants'.
-	path asFileReference exists
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants' asFileReference.
+	path exists
 		ifFalse: [ self
 				error:
 					'The path to the Java sources needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
@@ -24,8 +24,8 @@ GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 { #category : #test }
 GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse'.
-	path asFileReference parent exists
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse' asFileReference .
+	path parent exists
 		ifFalse: [ self
 				error:
 					'The path to the MSE output directory needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
@@ -68,16 +68,18 @@ GMMSEGeneratorWizardTest >> testMseDestinationPath [
 { #category : #tests }
 GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 	"should return a file path that ends with verveinej.sh"
-	| path |
+	| expectedPath path |
+	expectedPath := self verveineJScriptPathForTesting.
+	wizard verveineJScriptPath: expectedPath.
 	path := wizard verveineJScriptPath.
-	self assert: (path pathString endsWith: 'verveinej.sh').
+	self assert: expectedPath equals: path.
 ]
 
 { #category : #test }
 GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh'.
-	path asFileReference exists
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference.
+	path exists
 		ifFalse: [ self
 				error:
 					'The path to the VerveineJ.sh script needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].

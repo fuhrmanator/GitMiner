@@ -12,7 +12,7 @@ Class {
 { #category : #'as yet unclassified' }
 GMMSEGeneratorWizard >> generateMSE [
 	"Launch the parser"
-	GMUtility createJavaMSEOn: (javaSourcePath asPath) using: verveineJScriptPath named: mseDestinationPath. 
+	GMUtility createJavaMSEOn: (javaSourcePath asPath) using: (verveineJScriptPath pathString) named: (mseDestinationPath pathString). 
 ]
 
 { #category : #accessing }
