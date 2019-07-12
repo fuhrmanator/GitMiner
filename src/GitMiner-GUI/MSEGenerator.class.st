@@ -75,7 +75,6 @@ MSEGenerator >> generateMSE [
 		mseDestinationPath:
 			destinationPresenter input text asFileReference / fileName input text
 				, 'mse'.
-	0 halt.
 	wizard generateMSE.
 	self assert: wizard mseDestinationPath asFileReference exists
 ]
