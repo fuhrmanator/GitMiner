@@ -10,6 +10,28 @@ Class {
 	#category : #'GitMiner-Tests'
 }
 
+{ #category : #test }
+GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants' asFileReference.
+	path exists
+		ifFalse: [ self
+				error:
+					'The path to the Java sources needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
+]
+
+{ #category : #test }
+GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse' asFileReference .
+	path parent exists
+		ifFalse: [ self
+				error:
+					'The path to the MSE output directory needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
+]
+
 { #category : #running }
 GMMSEGeneratorWizardTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
@@ -20,18 +42,17 @@ GMMSEGeneratorWizardTest >> setUp [
 { #category : #test }
 GMMSEGeneratorWizardTest >> testGenerateMSE [
 	wizard
-		verveineJScriptPath: '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh';
-		javaSourcePath: '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants';
-		mseDestinationPath:
-			'/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants/FactoryVariants.mse'.
+		verveineJScriptPath: self verveineJScriptPathForTesting;
+		javaSourcePath: self javaSourcePathForTesting;
+		mseDestinationPath: self mseDestinationPathForTesting.
 	wizard generateMSE.
-	self assert: wizard mseDestinationPath asFileReference exists.
+	self assert: wizard mseDestinationPath asFileReference exists
 ]
 
 { #category : #test }
 GMMSEGeneratorWizardTest >> testJavaSourcePath [
 	| path |
-	path := '/mnt/myproject/src'.
+	path := '/mnt/myproject/src' asFileReference .
 	wizard javaSourcePath: path.
 	self assert: wizard javaSourcePath equals: path
 ]
@@ -39,7 +60,7 @@ GMMSEGeneratorWizardTest >> testJavaSourcePath [
 { #category : #test }
 GMMSEGeneratorWizardTest >> testMseDestinationPath [
 	| path |
-	path := '/mnt/myproject/src'.
+	path := '/mnt/myproject/src' asFileReference .
 	wizard mseDestinationPath: path.
 	self assert: wizard mseDestinationPath equals: path
 ]
@@ -47,7 +68,20 @@ GMMSEGeneratorWizardTest >> testMseDestinationPath [
 { #category : #tests }
 GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 	"should return a file path that ends with verveinej.sh"
-	| path |
+	| expectedPath path |
+	expectedPath := self verveineJScriptPathForTesting.
+	wizard verveineJScriptPath: expectedPath.
 	path := wizard verveineJScriptPath.
-	self assert: (path asString endsWith: 'verveinej.sh').
+	self assert: expectedPath equals: path.
+]
+
+{ #category : #test }
+GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
+	| path |
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference.
+	path exists
+		ifFalse: [ self
+				error:
+					'The path to the VerveineJ.sh script needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
+	^ path
 ]
