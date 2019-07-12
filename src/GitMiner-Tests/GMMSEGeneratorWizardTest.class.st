@@ -13,7 +13,7 @@ Class {
 { #category : #test }
 GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 	| path |
-	path := 'C:/Users/user/workspace/HW5'
+	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants'
 		asFileReference.
 	path exists
 		ifFalse: [ self
@@ -25,7 +25,7 @@ GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 { #category : #test }
 GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
 	| path |
-	path := 'C:/Users/user/Downloads/FactoryVariants.mse'
+	path := '/home/cfuhrman/FactoryVariants.mse'
 		asFileReference.
 	path parent exists
 		ifFalse: [ self
@@ -47,9 +47,7 @@ GMMSEGeneratorWizardTest >> testGenerateMSE [
 		verveineJScriptPath: self verveineJScriptPathForTesting;
 		javaSourcePath: self javaSourcePathForTesting;
 		mseDestinationPath: self mseDestinationPathForTesting.
-	self halt.
 	wizard generateMSE.
-	
 	self assert: wizard mseDestinationPath asFileReference exists
 ]
 
@@ -82,7 +80,7 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 { #category : #test }
 GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
 	| path |
-	path := 'C:/Users/user/Downloads/VerveineJ-master/VerveineJ-master/verveinej.sh' asFileReference.
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference.
 	path exists
 		ifFalse: [ self
 				error:

@@ -1234,7 +1234,6 @@ GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand name
 		, pathToJavaToFamixCommand , '" > "' , javaToFamixOutput fullName
 		, '" ' , verveineJ5Options , ' 2> "' , javaToFamixErrors fullName
 		, '"'.
-	0 halt.
 	'LibC: about to run command: ' record.
 	(' > ' , command) record.
 	result := LibC runCommand: command.
