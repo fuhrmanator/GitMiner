@@ -1231,9 +1231,10 @@ GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand name
 	verveineJ5Options := '-Xms1g -Xmx15g -- -o "' , mseFileName
 		, '" -anchor assoc -alllocals .'.	"-localaccesses -autocp "
 	command := 'cd "' , revPath asFileReference pathString , '" && "'
-		, pathToJavaToFamixCommand , '" > "' , javaToFamixOutput fullName
-		, '" ' , verveineJ5Options , ' 2> "' , javaToFamixErrors fullName
-		, '"'.
+		, pathToJavaToFamixCommand
+		, '" > "' , javaToFamixOutput fullName , '" ' 
+		, ' 2> "' , javaToFamixErrors fullName, '" '
+		, verveineJ5Options .
 	'LibC: about to run command: ' record.
 	(' > ' , command) record.
 	result := LibC runCommand: command.
