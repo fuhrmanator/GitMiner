@@ -2,9 +2,9 @@ Class {
 	#name : #MSEGenerator,
 	#superclass : #SpPresenter,
 	#instVars : [
-		'javaSourcePath',
-		'verveineJScriptPath',
-		'mseDestinationPath',
+		'javaSourcePresenter',
+		'parserPresenter',
+		'destinationPresenter',
 		'generateMSEButton',
 		'selectSourceButton',
 		'selectParserButton',
@@ -21,7 +21,7 @@ MSEGenerator class >> defaultSpec [
 		add: '' withConstraints: [ :constraints | constraints height: 10 ];
 		add:
 			(SpBoxLayout newHorizontal
-				add: #javaSourcePath;
+				add: #javaSourcePresenter;
 				add:
 					(SpBoxLayout newVertical
 						add: #selectSourceButton
@@ -30,7 +30,7 @@ MSEGenerator class >> defaultSpec [
 			withConstraints: [ :constraints | constraints height: 40 ];
 		add:
 			(SpBoxLayout newHorizontal
-				add: #verveineJScriptPath;
+				add: #parserPresenter;
 				add:
 					(SpBoxLayout newVertical
 						add: #selectParserButton
@@ -39,7 +39,7 @@ MSEGenerator class >> defaultSpec [
 			withConstraints: [ :constraints | constraints height: 40 ];
 		add:
 			(SpBoxLayout newHorizontal
-				add: #mseDestinationPath;
+				add: #destinationPresenter;
 				add:
 					(SpBoxLayout newVertical
 						add: #selectDestinationButton
@@ -68,16 +68,15 @@ self new openWithSpec
 
 { #category : #action }
 MSEGenerator >> generateMSE [
-	javaSourcePath input accept.
-	verveineJScriptPath input accept.
-	mseDestinationPath input accept.
-	fileName input accept.
 	wizard := GMMSEGeneratorWizard new.
 	wizard
-		javaSourcePath: javaSourcePath input text;
-		verveineJScriptPath: verveineJScriptPath input text;
-		mseDestinationPath: mseDestinationPath input text , '\' , fileName input text , '.mse'.
-	wizard generateMSE
+		javaSourcePath: javaSourcePresenter input text asFileReference;
+		verveineJScriptPath: parserPresenter input text asFileReference;
+		mseDestinationPath:
+			destinationPresenter input text asFileReference / fileName input text
+				, 'mse'.
+	wizard generateMSE.
+	self assert: wizard mseDestinationPath asFileReference exists
 ]
 
 { #category : #initialization }
@@ -87,39 +86,52 @@ MSEGenerator >> initialExtent [
 
 { #category : #initialization }
 MSEGenerator >> initializePresenter [
+	javaSourcePresenter input
+		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+	parserPresenter input
+		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+	destinationPresenter input
+		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+	fileName input whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
 	selectSourceButton action: [ self selectSource ].
 	selectParserButton action: [ self selectParser ].
 	selectDestinationButton action: [ self selectDestination ].
-	generateMSEButton action: [ self  generateMSE]
+	generateMSEButton action: [ self generateMSE ]
 ]
 
 { #category : #initialization }
 MSEGenerator >> initializeWidgets [
-	javaSourcePath := self
+	javaSourcePresenter := self
 		instantiate:
-		(SpLabelledPresenter
-		label: 'Java source path: '
-		input: self newTextInput).
+			(SpLabelledPresenter
+				label: 'Java source path: '
+				input: (self newTextInput autoAccept: true)).
 	selectSourceButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
-	verveineJScriptPath := self
-		instantiate: (SpLabelledPresenter label: 'Parser path: ' input: self newTextInput).
+	parserPresenter := self
+		instantiate:
+			(SpLabelledPresenter
+				label: 'Parser path: '
+				input: (self newTextInput autoAccept: true)).
 	selectParserButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
-	mseDestinationPath := self
+	destinationPresenter := self
 		instantiate:
 			(SpLabelledPresenter
 				label: 'Destination path: '
-				input: self newTextInput).
+				input: (self newTextInput autoAccept: true)).
 	selectDestinationButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
 	fileName := self
-		instantiate: (SpLabelledPresenter label: 'File name: ' input: self newTextInput).
-	generateMSEButton := self newButton label: 'Generate MSE file'.
+		instantiate:
+			(SpLabelledPresenter
+				label: 'File name: '
+				input: (self newTextInput autoAccept: true)).
+	generateMSEButton := self newButton label: 'Generate MSE file' ;disable.
 	self focusOrder
-		add: javaSourcePath;
-		add: verveineJScriptPath;
-		add: mseDestinationPath
+		add: javaSourcePresenter;
+		add: parserPresenter;
+		add: destinationPresenter
 ]
 
 { #category : #initialization }
@@ -130,36 +142,56 @@ MSEGenerator >> initializeWindow: aWindowPresenter [
 ]
 
 { #category : #action }
+MSEGenerator >> manageButton [
+	javaSourcePresenter input text ifEmpty: [ ^ false ].
+	parserPresenter input text ifEmpty: [ ^ false ].
+	destinationPresenter input text ifEmpty: [ ^ false ].
+	fileName input text ifEmpty: [ ^ false ].
+	^ javaSourcePresenter input text asFileReference exists
+		& parserPresenter input text asFileReference exists
+		& destinationPresenter input text asFileReference exists
+]
+
+{ #category : #action }
 MSEGenerator >> selectDestination [
-	| reference |
+	| reference lastPath |
+	lastPath := destinationPresenter input text asFileReference.
+	lastPath exists
+		ifFalse: [ lastPath := FileLocator home ].
 	reference := UIManager default
-		chooseExistingFileReference: 'Select a Java source'
+		chooseExistingFileReference: 'Select a destination'
 		extensions: ''
-		path: FileLocator home.
+		path: lastPath.
 	reference
-		ifNotNil: [ mseDestinationPath input text: reference pathString ]
+		ifNotNil: [ destinationPresenter input text: reference pathString ]
 ]
 
 { #category : #action }
 MSEGenerator >> selectParser [
-	| reference |
+	| reference lastPath |
+	lastPath := parserPresenter input text asFileReference.
+	lastPath exists
+		ifFalse: [ lastPath := FileLocator home ].
 	reference := UIManager default
 		chooseExistingFileReference: 'Select a parser'
 		extensions: #('bat' 'sh')
-		path: FileLocator home.
-	reference
-		ifNotNil: [ verveineJScriptPath input text: reference pathString ]
+		path: lastPath.
+(	reference isNotNil and:[reference extension = 'bat' or:[reference extension = 'sh'] ])
+		ifTrue: [ parserPresenter input text: reference pathString ]
 ]
 
 { #category : #action }
 MSEGenerator >> selectSource [
-	| reference |
+	| reference lastPath |
+	lastPath := javaSourcePresenter input text asFileReference.
+	lastPath exists
+		ifFalse: [ lastPath := FileLocator home ].
 	reference := UIManager default
 		chooseExistingFileReference: 'Select a Java source'
 		extensions: ''
-		path: FileLocator home.
+		path: lastPath.
 	reference
-		ifNotNil: [ javaSourcePath input text: reference pathString ]
+		ifNotNil: [ javaSourcePresenter  input text: reference pathString ]
 ]
 
 { #category : #api }
