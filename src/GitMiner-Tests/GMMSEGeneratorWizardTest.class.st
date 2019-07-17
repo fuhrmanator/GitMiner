@@ -76,7 +76,7 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 { #category : #test }
 GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh'.
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej_bourne_shell.sh'.
 	path asFileReference exists
 		ifFalse: [ self
 				error:
