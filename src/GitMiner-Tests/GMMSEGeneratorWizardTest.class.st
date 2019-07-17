@@ -13,8 +13,8 @@ Class {
 { #category : #test }
 GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants'
-		asFileReference.
+	"path := '/mnt/c/Users/fuhrm/Documents/GitHub/FactoryVariants' asFileReference."
+	path := 'C:/Users/fuhrm/Documents/GitHub/FactoryVariants' asFileReference.
 	path exists
 		ifFalse: [ self
 				error:
@@ -25,8 +25,8 @@ GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 { #category : #test }
 GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
 	| path |
-	path := '/home/cfuhrman/FactoryVariants.mse'
-		asFileReference.
+	"path := '/home/cfuhrman/FactoryVariants.mse' asFileReference."
+	path := 'c:/users/fuhrm/Desktop/FactoryVariants.mse' asFileReference.
 	path parent exists
 		ifFalse: [ self
 				error:
@@ -80,7 +80,8 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 { #category : #test }
 GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference.
+"	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference."
+	path := 'c:/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej_bourne_shell.sh' asFileReference.
 	path exists
 		ifFalse: [ self
 				error:
