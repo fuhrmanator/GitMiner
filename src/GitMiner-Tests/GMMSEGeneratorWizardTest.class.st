@@ -24,11 +24,12 @@ GMMSEGeneratorWizardTest >> javaSourcePathForTesting [
 
 { #category : #test }
 GMMSEGeneratorWizardTest >> mseDestinationPathForTesting [
+	"Note: the file at this path will be deleted if it exists before the tests are run"
 	| path |
-	path := '/home/cfuhrman/FactoryVariants.mse'
-		asFileReference.
+	path := '/home/cfuhrman/FactoryVariants.mse' asFileReference.
 	path parent exists
-		ifFalse: [ self
+		ifFalse: [ 
+			self
 				error:
 					'The path to the MSE output directory needs defining. It must be valid in a Bourne Shell. See https://fuhrmanator.github.io/2019/03/16/LibC-Pharo-experiments.html' ].
 	^ path
@@ -47,6 +48,7 @@ GMMSEGeneratorWizardTest >> testGenerateMSE [
 		verveineJScriptPath: self verveineJScriptPathForTesting;
 		javaSourcePath: self javaSourcePathForTesting;
 		mseDestinationPath: self mseDestinationPathForTesting.
+	self mseDestinationPathForTesting ensureDelete.
 	wizard generateMSE.
 	self assert: wizard mseDestinationPath asFileReference exists
 ]
@@ -80,7 +82,7 @@ GMMSEGeneratorWizardTest >> testVerveineJScriptPath [
 { #category : #test }
 GMMSEGeneratorWizardTest >> verveineJScriptPathForTesting [
 	| path |
-	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej.sh' asFileReference.
+	path := '/mnt/c/Users/fuhrm/Documents/git_repos/VerveineJ/verveinej_bourne_shell.sh' asFileReference.
 	path exists
 		ifFalse: [ self
 				error:
