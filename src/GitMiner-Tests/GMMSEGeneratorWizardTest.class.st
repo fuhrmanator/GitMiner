@@ -47,6 +47,7 @@ GMMSEGeneratorWizardTest >> testGenerateMSE [
 		verveineJScriptPath: self verveineJScriptPathForTesting;
 		javaSourcePath: self javaSourcePathForTesting;
 		mseDestinationPath: self mseDestinationPathForTesting.
+	self mseDestinationPathForTesting ensureDelete.
 	wizard generateMSE.
 	self assert: wizard mseDestinationPath asFileReference exists
 ]
