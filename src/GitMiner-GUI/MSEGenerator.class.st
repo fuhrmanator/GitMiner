@@ -11,7 +11,8 @@ Class {
 		'selectDestinationButton',
 		'fileName',
 		'wizard',
-		'feedbackMessage'
+		'feedbackMessage',
+		'indeterminated'
 	],
 	#category : #'GitMiner-GUI'
 }
@@ -60,6 +61,7 @@ MSEGenerator class >> defaultSpec [
 				withConstraints: [ :constraints | 
 					constraints
 						height: 40; width: 150 ];
+		add: #indeterminated withConstraints: [ :constraints | constraints height: 10 ];
 		add: #feedbackMessage
 			withConstraints: [ :constraints | constraints height: 40 ];
 		yourself
@@ -67,25 +69,42 @@ MSEGenerator class >> defaultSpec [
 
 { #category : #examples }
 MSEGenerator class >> open [
-<example>
-self new openWithSpec
+	<example>
+	^ self new openWithSpec
 ]
 
 { #category : #action }
 MSEGenerator >> generateMSE [
-	feedbackMessage text: ''.
+	| destinationPath |
+	destinationPath := destinationPresenter input text asFileReference / fileName input text
+				, 'mse'.
+	indeterminated := self newProgressBar.
+	indeterminated indeterminate.
 	wizard := GMMSEGeneratorWizard new.
+	[ :job | 
+	feedbackMessage text: 'Generating MSE file: ', destinationPath pathString , ' -- Please wait...'.
+	job title: feedbackMessage text.
 	wizard
 		javaSourcePath: javaSourcePresenter input text asFileReference;
 		verveineJScriptPath: parserPresenter input text asFileReference;
 		mseDestinationPath:
-			destinationPresenter input text asFileReference / fileName input text
-				, 'mse'.
-	feedbackMessage text: 'Generating MSE file... Please wait...'.
+			destinationPath.
 	wizard generateMSE.
+	indeterminated := self newNullPresenter.
 	wizard mseDestinationPath asFileReference exists
 		ifTrue: [ feedbackMessage text: 'MSE file successfully generated!' ]
-		ifFalse: [ feedbackMessage text: 'MSE file NOT generated.' ]
+		ifFalse: [ feedbackMessage text: 'MSE file NOT generated.' ] ] asJob
+		run
+]
+
+{ #category : #accessing }
+MSEGenerator >> indeterminated [
+	^ indeterminated
+]
+
+{ #category : #accessing }
+MSEGenerator >> indeterminated: anObject [
+	indeterminated := anObject
 ]
 
 { #category : #initialization }
@@ -95,17 +114,16 @@ MSEGenerator >> initialExtent [
 
 { #category : #initialization }
 MSEGenerator >> initializePresenter [
-	javaSourcePresenter input
-		whenTextChangedDo: [ self verifyPaths ].
-	parserPresenter input
-		whenTextChangedDo: [ self verifyPaths ].
-	destinationPresenter input
-		whenTextChangedDo: [ self verifyPaths ].
+	javaSourcePresenter input whenTextChangedDo: [ self verifyPaths ].
+	parserPresenter input whenTextChangedDo: [ self verifyPaths ].
+	destinationPresenter input whenTextChangedDo: [ self verifyPaths ].
 	fileName input whenTextChangedDo: [ self verifyPaths ].
 	selectSourceButton action: [ self selectSource ].
 	selectParserButton action: [ self selectParser ].
 	selectDestinationButton action: [ self selectDestination ].
-	generateMSEButton action: [ self generateMSE ]
+	generateMSEButton
+		action: [ 
+			self generateMSE ]
 ]
 
 { #category : #initialization }
@@ -150,6 +168,7 @@ MSEGenerator >> initializeWidgets [
 	generateMSEButton := self newButton
 		label: 'Generate MSE file';
 		disable.
+	indeterminated := self newNullPresenter.
 	feedbackMessage := self
 		instantiate:
 			(SpTextPresenter new
