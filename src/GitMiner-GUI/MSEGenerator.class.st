@@ -10,7 +10,8 @@ Class {
 		'selectParserButton',
 		'selectDestinationButton',
 		'fileName',
-		'wizard'
+		'wizard',
+		'feedbackMessage'
 	],
 	#category : #'GitMiner-GUI'
 }
@@ -55,7 +56,11 @@ MSEGenerator class >> defaultSpec [
 						withConstraints: [ :constraints | constraints height: 25 ])
 					withConstraints: [ :constraints | constraints width: 30 ])
 			withConstraints: [ :constraints | constraints height: 40 ];
-		add: #generateMSEButton
+				add: #generateMSEButton
+				withConstraints: [ :constraints | 
+					constraints
+						height: 40; width: 150 ];
+		add: #feedbackMessage
 			withConstraints: [ :constraints | constraints height: 40 ];
 		yourself
 ]
@@ -68,6 +73,7 @@ self new openWithSpec
 
 { #category : #action }
 MSEGenerator >> generateMSE [
+	feedbackMessage text: ''.
 	wizard := GMMSEGeneratorWizard new.
 	wizard
 		javaSourcePath: javaSourcePresenter input text asFileReference;
@@ -75,13 +81,16 @@ MSEGenerator >> generateMSE [
 		mseDestinationPath:
 			destinationPresenter input text asFileReference / fileName input text
 				, 'mse'.
+	feedbackMessage text: 'Generating MSE file... Please wait...'.
 	wizard generateMSE.
-	self assert: wizard mseDestinationPath asFileReference exists
+	wizard mseDestinationPath asFileReference exists
+		ifTrue: [ feedbackMessage text: 'MSE file successfully generated!' ]
+		ifFalse: [ feedbackMessage text: 'MSE file NOT generated.' ]
 ]
 
 { #category : #initialization }
 MSEGenerator >> initialExtent [
-	^ 600 @ 250
+	^ 600 @ 250 + 40 + 10
 ]
 
 { #category : #initialization }
@@ -105,40 +114,59 @@ MSEGenerator >> initializeWidgets [
 		instantiate:
 			(SpLabelledPresenter
 				label: 'Java source path: '
-				input: (self newTextInput autoAccept: true)).
+				input:
+					(self newTextInput
+						autoAccept: true;
+						placeholder: 'The path to a Java project for which to generate the MSE file')).
 	selectSourceButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
 	parserPresenter := self
 		instantiate:
 			(SpLabelledPresenter
 				label: 'Parser path: '
-				input: (self newTextInput autoAccept: true)).
+				input:
+					(self newTextInput
+						autoAccept: true;
+						placeholder: 'The path to a Java-to-MSE parser such as VerveineJ')).
+	parserPresenter
+		description:
+			'See https://github.com/NicolasAnquetil/VerveineJ (verveinej.sh) for a parser.'.
 	selectParserButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
 	destinationPresenter := self
 		instantiate:
 			(SpLabelledPresenter
 				label: 'Destination path: '
-				input: (self newTextInput autoAccept: true)).
+				input: (self newTextInput autoAccept: true;
+						placeholder: 'The path where the MSE file will be created')).
 	selectDestinationButton := self newButton
 		icon: (self iconNamed: 'glamorousOpen').
 	fileName := self
 		instantiate:
 			(SpLabelledPresenter
 				label: 'File name: '
-				input: (self newTextInput autoAccept: true)).
-	generateMSEButton := self newButton label: 'Generate MSE file' ;disable.
+				input: (self newTextInput autoAccept: true;
+						placeholder: 'The name of the MSE file (without the .mse extension)')).
+	generateMSEButton := self newButton
+		label: 'Generate MSE file';
+		disable.
+	feedbackMessage := self
+		instantiate:
+			(SpTextPresenter new
+				text: '';
+				disable).
 	self focusOrder
 		add: javaSourcePresenter;
 		add: parserPresenter;
-		add: destinationPresenter
+		add: destinationPresenter;
+		add: fileName
 ]
 
 { #category : #initialization }
 MSEGenerator >> initializeWindow: aWindowPresenter [
 	aWindowPresenter
 		title: self title;
-		initialExtent: self initialExtent.
+		initialExtent: self initialExtent
 ]
 
 { #category : #action }
@@ -201,23 +229,28 @@ MSEGenerator >> title [
 
 { #category : #'as yet unclassified' }
 MSEGenerator >> verifyPaths [
-	| green red |
-	green := Color red: 200 green: 255 blue: 200.
-	red := Color red: 255 green: 200 blue: 200.
+	| green red newFeedbackMsgText |
+	green := Color red: 240 green: 255 blue: 240.
+	red := Color red: 255 green: 240 blue: 240.
 	generateMSEButton enabled: self manageButton.
+	newFeedbackMsgText := ''.
 	javaSourcePresenter input
 		color:
 			(javaSourcePresenter input text asFileReference exists
+				& javaSourcePresenter input text isNotEmpty
 				ifTrue: [ green ]
-				ifFalse: [ red ]).
-	parserPresenter  input
+				ifFalse: [ newFeedbackMsgText := newFeedbackMsgText , 'Java source path is invalid. '. red ]).
+	parserPresenter input
 		color:
-			(parserPresenter input text asFileReference exists
+			(parserPresenter input text asFileReference isFile
 				ifTrue: [ green ]
-				ifFalse: [ red ]).
-	destinationPresenter  input
+				ifFalse: [ newFeedbackMsgText := newFeedbackMsgText , 'Parser path is invalid. '. red ]).
+	destinationPresenter input
 		color:
 			(destinationPresenter input text asFileReference exists
+				& destinationPresenter input text isNotEmpty
 				ifTrue: [ green ]
-				ifFalse: [ red ])
+				ifFalse: [ newFeedbackMsgText := newFeedbackMsgText , 'Destination path is invalid. '. red ]).
+	feedbackMessage text: newFeedbackMsgText; color: (newFeedbackMsgText isEmpty ifTrue:[ Color white ] ifFalse:[ red]).
+
 ]
