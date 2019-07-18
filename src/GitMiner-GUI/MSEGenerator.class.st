@@ -87,12 +87,12 @@ MSEGenerator >> initialExtent [
 { #category : #initialization }
 MSEGenerator >> initializePresenter [
 	javaSourcePresenter input
-		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+		whenTextChangedDo: [ self verifyPaths ].
 	parserPresenter input
-		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+		whenTextChangedDo: [ self verifyPaths ].
 	destinationPresenter input
-		whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
-	fileName input whenTextChangedDo: [ generateMSEButton enabled: self manageButton ].
+		whenTextChangedDo: [ self verifyPaths ].
+	fileName input whenTextChangedDo: [ self verifyPaths ].
 	selectSourceButton action: [ self selectSource ].
 	selectParserButton action: [ self selectParser ].
 	selectDestinationButton action: [ self selectDestination ].
@@ -197,4 +197,27 @@ MSEGenerator >> selectSource [
 { #category : #api }
 MSEGenerator >> title [
 ^'MSE File Generator'
+]
+
+{ #category : #'as yet unclassified' }
+MSEGenerator >> verifyPaths [
+	| green red |
+	green := Color red: 200 green: 255 blue: 200.
+	red := Color red: 255 green: 200 blue: 200.
+	generateMSEButton enabled: self manageButton.
+	javaSourcePresenter input
+		color:
+			(javaSourcePresenter input text asFileReference exists
+				ifTrue: [ green ]
+				ifFalse: [ red ]).
+	parserPresenter  input
+		color:
+			(parserPresenter input text asFileReference exists
+				ifTrue: [ green ]
+				ifFalse: [ red ]).
+	destinationPresenter  input
+		color:
+			(destinationPresenter input text asFileReference exists
+				ifTrue: [ green ]
+				ifFalse: [ red ])
 ]
