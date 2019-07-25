@@ -33,39 +33,9 @@ GMAbstractMineTest >> setUp [
 
 	| testRepoURL testRepoLocation tmpRoot |
 	super setUp.
-	"The MSE string could be put into a test method and loaded that way so the tests can run in CI."
-	"mseFile := FileSystem disk workingDirectory / 'pharo-local'
-		/ 'iceberg' / 'fuhrmanator' / 'GitMiner' / 'tests'
-		/ 'FactoryVariants.mse'."
-	"Clone the test repo, pull changes if it already exists"
-	tmpRoot := FileLocator temp / 'GMTests'.
-	mseFile := tmpRoot / 'FactoryVariants.mse'.
-	testRepoURL := 'https://github.com/fuhrmanator/FactoryVariants'.
-	testRepoLocation := tmpRoot / 'FactoryVariants'.
-	"testRepoLocation deleteAll."
-	testRepoLocation exists
-		ifFalse: [ IceGitClone new
-				location: testRepoLocation;
-				url: testRepoURL;
-				execute.
-			"remove any MSE file as it's out of date"
-			mseFile ensureDelete ]
-		ifTrue:
-			[ "pull changes" self flag: 'do a fetch/pull to get latest updates from remote' ].
-	"regenerate the MSE if it doesn't exist"
-	mseFile exists
-		ifFalse: [ "regenerate the MSE, see GMUtility"
-			self flag: 'automatically regenerate the MSE'.
-			self
-				error:
-					'No MSE file found for ' , tmpRoot fullName
-						,
-							'. Please generate it again in a shell, e.g.: "cd /tmp/GMTests/FactoryVariants & /mnt/c/verveineJ/verveinej.sh -- -o ../FactoryVariants.mse -anchor assoc ."' ].
-	"mseFile
-		ensureDelete;
-		writeStreamDo: [ :stream | 
-			stream
-				nextPutAll: GMInterfaceMineTest mseFileFactoryVariantsHardCodedString ]."
+	"Load an MSE file into a MooseModel and point its rootfolder to the source"
+	mseFile := GMUtility resourcesFileReference / 'FactoryVariants.mse'.
+	testRepoLocation := GMUtility resourcesFileReference / 'FactoryVariants'.
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
 	"Hook the sources to the mooseModel"
@@ -143,7 +113,7 @@ GMAbstractMineTest >> testSourceFolder [
 	iMine := GMInterfaceMine fromMSE: mseFile.
 	iMine load.
 	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
-	self assert: iMine sourceFolder equals: '/tmp/GMTests/FactoryVariants_HEAD'.
+	self assert: iMine sourceFolder equals: (GMUtility resourcesFileReference / 'FactoryVariants') pathString.
 
 ]
 
@@ -154,7 +124,7 @@ GMAbstractMineTest >> testSourceFolderIsUseful [
 	iMine := GMInterfaceMine fromMSE: mseFile.
 	iMine load.
 	iMine sourceFolder: (mseFile parent / mseFile basenameWithoutExtension) fullName.
-	self assert: iMine sourceFolder equals: '/tmp/GMTests/FactoryVariants'.
+	self assert: iMine sourceFolder equals: (GMUtility resourcesFileReference / 'FactoryVariants') pathString.
 	"see if source text is OK for the first implementation "
 	self deny: iMine interfaces anyOne sourceText equals: ''.
 ]

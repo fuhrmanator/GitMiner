@@ -16,15 +16,15 @@ GMClientImplementationPairTest >> setUp [
 
 	| mseFile mseStream |
 	super setUp.
-	mseFile := FileSystem disk workingDirectory / 'pharo-local'
-		/ 'iceberg' / 'fuhrmanator' / 'GitMiner' / 'tests'
-		/ 'FactoryVariants.mse'.
+	mseFile := GMUtility resourcesFileReference / 'FactoryVariants.mse'.
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
 	classes := mooseModel allWithSubTypesOf: FamixTClass.
-	aClient := (classes select: [:c | c mooseName = '<Default Package>::ClientNoFactoryMain']) first.
-	anImplementation := (classes select: [:c | c mooseName = 'no_factory::ProductA' ]) first.
-
+	aClient := (classes
+		select: [ :c | c mooseName = '<Default Package>::ClientNoFactoryMain' ])
+		first.
+	anImplementation := (classes
+		select: [ :c | c mooseName = 'no_factory::ProductA' ]) first
 ]
 
 { #category : #tests }
