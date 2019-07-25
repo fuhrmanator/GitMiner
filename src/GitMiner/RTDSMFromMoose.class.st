@@ -23,6 +23,26 @@ Class {
 	#category : #GitMiner
 }
 
+{ #category : #examples }
+RTDSMFromMoose class >> example1 [
+	<example>
+	| mooseModel dependencyMatrix dsm |
+	[ mooseModel := MooseModel root first ]
+		on: SubscriptOutOfBounds
+		do: [ :ex | 
+			Warning
+				signal:
+					'You must first load a Model into MoosePanel before trying this example.'.
+			Error signal: 'You cannot continue' ].
+	dependencyMatrix := GMUtility
+		dependencyMatrixFromMooseModel: mooseModel.
+	dsm := RTDSMFromMoose new.
+	dsm objects: dependencyMatrix classes.
+	dsm clients: [ :class | class clientTypes reject: #isStub ].
+	dsm rotation: 270.
+	dsm inspect
+]
+
 { #category : #UI }
 RTDSMFromMoose >> addLabelsTop [
 	"Override this method from RTAbstractDSM to make horizontal labels be left-aligned when rotated -90 (hack)"

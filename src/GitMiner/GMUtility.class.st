@@ -559,6 +559,35 @@ GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand name
 ]
 
 { #category : #pipeline }
+GMUtility class >> dependencyMatrixFromMooseModel: aMooseModel [
+	"Create a dependency matrix D where D(i,j)=1 means that i depends on j, and D(i,j)=0 is independence."
+
+ 	"There is a dependency between classes i and j if 
+	  1) i extends or implements j,
+	  2) i uses j as member or variable,
+	  3) i references members or calls a method of j."
+
+ 	| d classes |
+	classes := self mooseClassesForDependencyMining: aMooseModel.
+	d := PMMatrix zerosRows: classes size cols: classes size.
+	"d := Array2D rows: classes size columns: classes size."
+	classes
+		doWithIndex: [ :classJ :j | 
+			| classJClients |
+			classJClients := classJ clientTypes reject: #isStub.
+			"clientTypes includes inheritance, so we can just put 1's in the array for each classJClient"
+			classJClients do: [ :classI |
+				| i |
+				"find index of classI in classes to find the column"
+				i := classes indexOf: classI.
+				self assert: (i ~= 0).
+				d at: i at: j put: 1.
+				 ]
+		].
+	^ GMDependencyMatrix new matrix: d; classes: classes
+]
+
+{ #category : #pipeline }
 GMUtility class >> ensureTmpDirectoryCreation [
 	(FileLocator workingDirectory / 'tmp') ensureCreateDirectory.
 	(FileLocator workingDirectory / 'tmp' / 'data_mining')
