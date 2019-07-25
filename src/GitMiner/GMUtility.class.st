@@ -380,6 +380,28 @@ GMUtility class >> calculateCouplingIntersectionsFor: project withPairsFile: com
 ]
 
 { #category : #'as yet unclassified' }
+GMUtility class >> changeHistoryMatrixFromTransactions: transactions classes: classes [
+	| histMatrix |
+	histMatrix := PMMatrix
+		zerosRows: classes size
+		cols: transactions size.
+	transactions
+		doWithIndex: [ :t :j | 
+			"t is a GMCommitTransaction"
+			t committedFileNames
+				do: [ :classFileName | 
+					| i |
+					i := self
+						classIndexFromFileName: classFileName
+						InMooseClasses: classes.
+					"self assert: (i ~= 0)."
+					"i = 0 means that a class was not found (deleted, renamed?)"
+					i > 0
+						ifTrue: [ histMatrix at: i at: j put: 1 ] ] ].
+	^ histMatrix
+]
+
+{ #category : #'as yet unclassified' }
 GMUtility class >> checkoutRepo: repoPath at: oid to: checkoutDest [
 	"Check out the code from a repo into a working directory (outside the repo directory)"
 
@@ -500,6 +522,11 @@ GMUtility class >> cloneRoot [
 { #category : #accessing }
 GMUtility class >> cloneRoot: anObject [
 	cloneRoot := anObject
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> cochangeMatrixFromChangeHistory: aChangeHistoryMatrix forClasses: classes [
+	^ GMCochangeMatrix with: aChangeHistoryMatrix classes: classes
 ]
 
 { #category : #'as yet unclassified' }
@@ -1449,6 +1476,19 @@ GMUtility class >> removeUnrelatedClassesFromTransactions: project withTransacti
 			 ]
 		].
 	^self writeCommitTransactions: cTransactions  to: file basenameWithoutExtension , '_only_clients_and_imps.csv'
+]
+
+{ #category : #'as yet unclassified' }
+GMUtility class >> resourcesFileReference [
+	"Find the resources directory relative to the Iceberg repo, useful for testing and samples"
+	| repo |
+	repo := (IceRepository registry
+		detect: [ :each | each includesPackageNamed: 'GitMiner' ]
+		ifNone: [ self
+				error:
+					'Please add a clone of this project to Iceberg to access to the resources' ])
+		location.
+	^ repo / 'resources'
 ]
 
 { #category : #'file service' }

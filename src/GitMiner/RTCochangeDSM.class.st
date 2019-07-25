@@ -33,6 +33,32 @@ Class {
 	#category : #GitMiner
 }
 
+{ #category : #examples }
+RTCochangeDSM class >> example1 [
+	<example>
+	| mooseModel mseFileRef commitTransactions transactionsFileRef classes changeHistoryMatrix cochangeMatrix dsm |
+	mseFileRef := GMUtility resourcesFileReference
+		/ 'FactoryVariants_HEAD.mse'.
+	mooseModel := GMUtility loadMooseModelFromMSE: mseFileRef.
+	transactionsFileRef := GMUtility resourcesFileReference
+		/
+			'FactoryVariants_9f09084-END_WithMiningMetadata_selected_selected_TR.csv'.
+	commitTransactions := GMUtility
+		loadCommitTransactions: transactionsFileRef asFileReference.
+	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
+	changeHistoryMatrix := GMUtility
+		changeHistoryMatrixFromTransactions: commitTransactions
+		classes: classes.
+	cochangeMatrix := GMUtility
+		cochangeMatrixFromChangeHistory: changeHistoryMatrix
+		forClasses: classes.
+	dsm := RTCochangeDSM new.
+	dsm objects: classes.
+	dsm cochangeMatrix: cochangeMatrix.
+	dsm rotation: 270.
+	dsm inspect
+]
+
 { #category : #UI }
 RTCochangeDSM >> addLabelsTop [
 	"Override this method from RTAbstractDSM to make horizontal labels be left-aligned when rotated -90 (hack)"
