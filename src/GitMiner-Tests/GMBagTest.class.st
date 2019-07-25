@@ -1,7 +1,7 @@
 Class {
 	#name : #GMBagTest,
 	#superclass : #TestCase,
-	#category : #GitMiner
+	#category : #'GitMiner-Tests'
 }
 
 { #category : #tests }
