@@ -15,20 +15,34 @@ BaselineOfGitMiner >> baseline: spec [
 		do:
 			[ "Don't load Moose finally, it's heavy. Recommend users to start with CI image."
 			spec
-				baseline: 'NeoCSV'
-					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];
+				baseline: 'NeoJSON'
+					with: [ spec repository: 'github://svenvc/NeoJSON/repository' ];
+				baseline: 'Carrefour'
+					with: [ spec repository: 'github://badetitou/Carrefour/src' ];
+				"Moose already has NeoCSV"
+				"baseline: 'NeoCSV'
+					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];"
 				baseline: 'PolyMath'
 					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ].
 			spec preLoadDoIt: #verifyMooseInstalled.
 			spec postLoadDoIt: #launchVerifications.
 			"Packages"
 			spec
-				package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];
-				package: 'GitMiner' with: [ spec requires: #('PolyMath') ] ]
+				package: 'GitMiner' with: [ spec requires: #('NeoJSON') ];
+				package: 'GitMiner' with: [ spec requires: #('Carrefour') ];
+				package: 'TinyLogger'
+					with: [ spec repository: 'github://jecisc/TinyLogger:v1.x.x/src' ];
+				"Moose already has NeoCSV"
+					"package: 'GitMiner' with: [ spec requires: #('NeoCSV') ];"
+					package: 'GitMiner' with: [ spec requires: #('PolyMath') ];
+				package: 'GitMiner-Tests' with: [ spec requires: #('GitMiner') ] ]
 ]
 
 { #category : #baselines }
 BaselineOfGitMiner >> launchVerifications [
+	"Reset the metamodel in after Carrefour is loaded (else parsing doesn't work well)"
+	FASTJavaMetamodelGenerator resetMetamodel.
+	
 	"Make sure RScript is in the path?"
 
 	self class environment

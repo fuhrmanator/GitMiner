@@ -4,7 +4,7 @@ I am a class that tries to help with selecting commits for data mining.
 Class {
 	#name : #GMCommitFilter,
 	#superclass : #Object,
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #'as yet unclassified' }

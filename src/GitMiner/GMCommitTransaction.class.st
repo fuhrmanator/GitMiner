@@ -14,7 +14,7 @@ Class {
 		'uid',
 		'committedFileNames'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #initialization }

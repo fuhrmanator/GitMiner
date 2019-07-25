@@ -17,7 +17,7 @@ Class {
 		'unprotectedClientDictionary',
 		'protectedClientDictionary'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Headless-mining'
 }
 
 { #category : #accessing }
