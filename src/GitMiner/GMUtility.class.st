@@ -1441,8 +1441,13 @@ GMUtility class >> rewriteSelectedCommits: selectedCommits file: fileName [
 { #category : #'as yet unclassified' }
 GMUtility class >> shortOID: oidString [
 	"Take the traditional (github) 7 characters of an OID string, but don't chop it if it's shorter (e.g., HEAD)"
+
+	| maxLength |
+	maxLength := 7.
 	self flag: 'Should make this smarter to handle commit-ish'.
-	^ oidString truncate: 7 ellipsis: ''
+	^ oidString size <= maxLength
+		ifTrue: [ oidString ]
+		ifFalse: [ oidString copyFrom: 1 to: maxLength ]
 ]
 
 { #category : #'file service' }
