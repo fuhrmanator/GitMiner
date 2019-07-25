@@ -45,7 +45,7 @@ Class {
 	#instVars : [
 		'token'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-GitHub-Queries'
 }
 
 { #category : #example }

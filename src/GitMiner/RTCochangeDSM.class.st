@@ -30,7 +30,7 @@ Class {
 	#instVars : [
 		'cochangeMatrix'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Change-modeling'
 }
 
 { #category : #examples }

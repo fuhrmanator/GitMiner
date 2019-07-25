@@ -5,7 +5,7 @@ Class {
 		'classes',
 		'cochangeMatrix'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Change-modeling'
 }
 
 { #category : #initializing }

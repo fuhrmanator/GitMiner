@@ -7,7 +7,7 @@ Class {
 		'interfaces',
 		'isLoaded'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #'as yet unclassified' }

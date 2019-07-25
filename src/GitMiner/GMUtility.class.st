@@ -114,7 +114,7 @@ Class {
 	#classInstVars : [
 		'cloneRoot'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #'as yet unclassified' }

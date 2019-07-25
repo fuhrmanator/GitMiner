@@ -8,7 +8,7 @@ Class {
 		'implementations',
 		'listOfResults'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #'as yet unclassified' }

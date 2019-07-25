@@ -20,7 +20,7 @@ Class {
 	#instVars : [
 		'clients'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Change-modeling'
 }
 
 { #category : #examples }

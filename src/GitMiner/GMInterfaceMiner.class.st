@@ -8,7 +8,7 @@ This class is based originally on scripts from Playground experiments.
 Class {
 	#name : #GMInterfaceMiner,
 	#superclass : #Object,
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #'client implementation analysis' }

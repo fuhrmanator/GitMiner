@@ -5,7 +5,7 @@ Class {
 		'classes',
 		'matrix'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Change-modeling'
 }
 
 { #category : #accessing }

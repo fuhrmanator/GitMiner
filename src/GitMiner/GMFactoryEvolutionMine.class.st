@@ -9,7 +9,7 @@ Class {
 		'implementationInstantiationsWithInterface',
 		'factoryMethodCalls'
 	],
-	#category : #GitMiner
+	#category : #'GitMiner-Mining'
 }
 
 { #category : #queries }
