@@ -45,7 +45,7 @@ RTCochangeDSM class >> example1 [
 			'FactoryVariants_9f09084-END_WithMiningMetadata_selected_selected_TR.csv'.
 	commitTransactions := GMUtility
 		loadCommitTransactions: transactionsFileRef asFileReference.
-	classes := GMUtility mooseClassesForDependencyMining: mooseModel.
+	classes := (GMUtility mooseClassesForDependencyMining: mooseModel) reject: [:c | c mooseName beginsWith: 'headfirst'].
 	changeHistoryMatrix := GMUtility
 		changeHistoryMatrixFromTransactions: commitTransactions
 		classes: classes.
@@ -53,7 +53,12 @@ RTCochangeDSM class >> example1 [
 		cochangeMatrixFromChangeHistory: changeHistoryMatrix
 		forClasses: classes.
 	dsm := RTCochangeDSM new.
-	dsm objects: classes.
+	dsm
+		objects: (classes asSortedCollection: [ :a :b | a mooseName < b mooseName ]).
+	"Change the default label from asString which is very long"
+	dsm labelShapeX label text: #mooseName.
+	dsm labelShapeY label text: #mooseName.
+	"Moose Query equivalent to #dependentClasses for a Pharo class"
 	dsm cochangeMatrix: cochangeMatrix.
 	dsm rotation: 270.
 	dsm inspect
@@ -62,16 +67,13 @@ RTCochangeDSM class >> example1 [
 { #category : #UI }
 RTCochangeDSM >> addLabelsTop [
 	"Override this method from RTAbstractDSM to make horizontal labels be left-aligned when rotated -90 (hack)"
-	| es theModel lbl labels deltaY |
+	| es theModel lbl |
 	es := self rowAt: 1.
-	labels := OrderedCollection new.
-	deltaY := Float fmax.
 	es
 		do:
 			[ :e | 
 			theModel := e model value.
 			lbl := self labelShapeX elementOn: theModel.
-			labels add: lbl.
 			xinteraction setUpElement: lbl.
 			view add: lbl.
 			lbl rotateByDegrees: rotation.
@@ -82,9 +84,7 @@ RTCochangeDSM >> addLabelsTop [
 				middle;
 				top;
 				move.
-			deltaY := deltaY min: lbl position y ].
-	"labels do: [ :l | 
-		l translateTo: l position x @ deltaY ]."
+			 ].
 ]
 
 { #category : #testing }
@@ -119,6 +119,14 @@ RTCochangeDSM >> initialize [
 						, (self assocChanges: assoc) asString , ')' ]).
 	self shape
 		if: [ :assoc | (self assocChanges: assoc) > 0 ]
-		fillColor: Color red
-	"put a red box if there's a client association (opposite of dependency)"
+		fillColor: (Color red alphaMixed: 0.4 with: Color white);
+		if: [ :assoc | (self assocChanges: assoc) > 1 ]
+		fillColor: (Color red alphaMixed: 0.7 with: Color white);
+		if: [ :assoc | (self assocChanges: assoc) > 2 ]
+		fillColor: (Color red alphaMixed: 0.8 with: Color white);
+		if: [ :assoc | (self assocChanges: assoc) > 5 ]
+		fillColor: (Color red alphaMixed: 0.9 with: Color white);
+		if: [ :assoc | (self assocChanges: assoc) > 10 ]
+		fillColor: (Color red alphaMixed: 1.0 with: Color white)
+		
 ]

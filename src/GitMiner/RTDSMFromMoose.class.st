@@ -43,19 +43,42 @@ RTDSMFromMoose class >> example1 [
 	dsm inspect
 ]
 
+{ #category : #examples }
+RTDSMFromMoose class >> example2 [
+	| dsm classes |
+	dsm := RTDSM new.
+	dsm shape
+		if: [ :assoc | dsm isAssocDependent: assoc ]
+		fillColor: Color blue.
+	classes := (MooseModel root first allModelClasses
+		select: [ :c | 
+			c mooseName
+				beginsWith: 'headfirst::designpatterns::combining::decorator' ])
+		reject: #isAnonymousClass.
+	dsm objects: classes.
+	dsm
+		dependency: [ :aClass | 
+			aClass queryOutgoingDependencies
+				atScope: FAMIXClass
+				withNonMatchingEntitiesDo:
+					[ :entities :res | entities ifNotNil: [ res addAll: entities asCollection ] ] ].
+	dsm rotation: 270.
+	dsm inspect.
+]
+
 { #category : #UI }
 RTDSMFromMoose >> addLabelsTop [
 	"Override this method from RTAbstractDSM to make horizontal labels be left-aligned when rotated -90 (hack)"
-	| es theModel lbl labels deltaY |
+	| es theModel lbl "labels" "deltaY" |
 	es := self rowAt: 1.
-	labels := OrderedCollection new.
-	deltaY := Float fmax.
+	"labels := OrderedCollection new."
+	"deltaY := Float fmax."
 	es
 		do:
 			[ :e | 
 			theModel := e model value.
 			lbl := self labelShapeX elementOn: theModel.
-			labels add: lbl.
+			"labels add: lbl."
 			xinteraction setUpElement: lbl.
 			view add: lbl.
 			lbl rotateByDegrees: rotation.
@@ -66,7 +89,7 @@ RTDSMFromMoose >> addLabelsTop [
 				middle;
 				top;
 				move.
-			deltaY := deltaY min: lbl position y ].
+			"deltaY := deltaY min: lbl position y" ].
 	"labels do: [ :l | 
 		l translateTo: l position x @ deltaY ]."
 ]

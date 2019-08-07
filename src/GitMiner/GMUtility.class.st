@@ -560,6 +560,29 @@ GMUtility class >> commitswithoutInterfaces: commitsFile project: project start:
 		file: commitsFile
 ]
 
+{ #category : #pipeline }
+GMUtility class >> createDependencyMatrix: classes [
+	| d |
+	d := PMMatrix zerosRows: classes size cols: classes size.
+	"d := Array2D rows: classes size columns: classes size."
+	classes
+		doWithIndex: [ :classJ :j | 
+			| classJClients |
+			classJClients := (classJ clientTypes reject: #isStub)
+				reject: #isAnonymousClass.
+			"clientTypes includes inheritance, so we can just put 1's in the array for each classJClient"
+			classJClients
+				do: [ :classI | 
+					| i |
+					"find index of classI in classes to find the column"
+					i := classes indexOf: classI.
+					self assert: i ~= 0.
+					d at: i at: j put: 1 ] ].
+	^ GMDependencyMatrix new
+		matrix: d;
+		classes: classes
+]
+
 { #category : #'as yet unclassified' }
 GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand named: mseFileName [
 	"create an MSE file from the source code in revPath using the Java parser"
@@ -589,29 +612,17 @@ GMUtility class >> createJavaMSEOn: revPath using: pathToJavaToFamixCommand name
 GMUtility class >> dependencyMatrixFromMooseModel: aMooseModel [
 	"Create a dependency matrix D where D(i,j)=1 means that i depends on j, and D(i,j)=0 is independence."
 
- 	"There is a dependency between classes i and j if 
+	"There is a dependency between classes i and j if 
 	  1) i extends or implements j,
 	  2) i uses j as member or variable,
 	  3) i references members or calls a method of j."
 
- 	| d classes |
-	classes := self mooseClassesForDependencyMining: aMooseModel.
-	d := PMMatrix zerosRows: classes size cols: classes size.
+	| classes |
 	"d := Array2D rows: classes size columns: classes size."
-	classes
-		doWithIndex: [ :classJ :j | 
-			| classJClients |
-			classJClients := classJ clientTypes reject: #isStub.
-			"clientTypes includes inheritance, so we can just put 1's in the array for each classJClient"
-			classJClients do: [ :classI |
-				| i |
-				"find index of classI in classes to find the column"
-				i := classes indexOf: classI.
-				self assert: (i ~= 0).
-				d at: i at: j put: 1.
-				 ]
-		].
-	^ GMDependencyMatrix new matrix: d; classes: classes
+	"clientTypes includes inheritance, so we can just put 1's in the array for each classJClient"
+	"find index of classI in classes to find the column"
+	classes := self mooseClassesForDependencyMining: aMooseModel.
+	^ self createDependencyMatrix: classes
 ]
 
 { #category : #pipeline }
