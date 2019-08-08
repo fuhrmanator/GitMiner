@@ -3,7 +3,6 @@ Class {
 	#superclass : #TestCase,
 	#instVars : [
 		'mseFile',
-		'mseStream',
 		'mooseModel',
 		'classes'
 	],
@@ -31,17 +30,19 @@ GMAbstractMineTest >> performTest [
 GMAbstractMineTest >> setUp [
 	"Hooks that subclasses may override to define the fixture of test."
 
-	| testRepoURL testRepoLocation tmpRoot |
+	|  testRepoLocation |
 	super setUp.
 	"Load an MSE file into a MooseModel and point its rootfolder to the source"
 	mseFile := GMUtility resourcesFileReference / 'FactoryVariants.mse'.
-	testRepoLocation := GMUtility resourcesFileReference / 'FactoryVariants'.
-	mseStream := mseFile readStream.
-	mooseModel := MooseModel importFromMSEStream: mseStream.
+	testRepoLocation := GMUtility resourcesFileReference
+		/ 'FactoryVariants'.
+	mseFile
+		readStreamDo:
+			[ :mseStream | mooseModel := MooseModel importFromMSEStream: mseStream ].
 	"Hook the sources to the mooseModel"
 	mooseModel rootFolder: testRepoLocation fullName.
-	classes := ((mooseModel allWithSubTypesOf: FamixTClass)
-		reject: #isStub) reject: #isAnonymousClass
+	classes := ((mooseModel allUsing: FamixTClass) reject: #isStub)
+		reject: #isAnonymousClass
 ]
 
 { #category : #tests }

@@ -19,7 +19,7 @@ GMClientImplementationPairTest >> setUp [
 	mseFile := GMUtility resourcesFileReference / 'FactoryVariants.mse'.
 	mseStream := mseFile readStream.
 	mooseModel := MooseModel importFromMSEStream: mseStream.
-	classes := mooseModel allWithSubTypesOf: FamixTClass.
+	classes := mooseModel allUsing: FamixTClass.
 	aClient := (classes
 		select: [ :c | c mooseName = '<Default Package>::ClientNoFactoryMain' ])
 		first.

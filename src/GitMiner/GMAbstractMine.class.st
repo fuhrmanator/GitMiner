@@ -73,7 +73,7 @@ GMAbstractMine >> load [
 { #category : #'as yet unclassified' }
 GMAbstractMine >> mooseClassesForDependencyMining: aMooseModel [ 
 	"Cyril F. helped immensely with crafting the class selection so as not to have strangeness in classes"
-	^((aMooseModel allWithSubTypesOf: FamixTClass) reject: #isStub) reject: #isAnonymousClass
+	^((aMooseModel allUsing: FamixTClass) reject: #isStub) reject: #isAnonymousClass
 ]
 
 { #category : #accessing }
