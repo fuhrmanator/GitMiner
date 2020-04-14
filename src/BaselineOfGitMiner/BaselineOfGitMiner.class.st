@@ -18,7 +18,7 @@ BaselineOfGitMiner >> baseline: spec [
 				baseline: 'NeoJSON'
 					with: [ spec repository: 'github://svenvc/NeoJSON/repository' ];
 				baseline: 'Carrefour'
-					with: [ spec repository: 'github://badetitou/Carrefour/src' ];
+					with: [ spec repository: 'github://badetitou/Carrefour:v1.0.0/src' ];
 				"Moose already has NeoCSV"
 				"baseline: 'NeoCSV'
 					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];"
@@ -29,7 +29,8 @@ BaselineOfGitMiner >> baseline: spec [
 			"Packages"
 			spec
 				package: 'GitMiner' with: [ spec requires: #('NeoJSON') ];
-				package: 'GitMiner' with: [ spec requires: #('Carrefour') ];
+				package: 'GitMiner' 
+					with: [ spec requires: #('Carrefour') ];
 				package: 'TinyLogger'
 					with: [ spec repository: 'github://jecisc/TinyLogger:v1.x.x/src' ];
 				"Moose already has NeoCSV"
