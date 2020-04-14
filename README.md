@@ -24,7 +24,7 @@ Since this project uses `LibC system command` to run external tools, the baselin
 For now, most of the functions are in the `GMUtility` class (the code is unstable). To mine interface client changes In a Playground, execute:
 
 ```Smalltalk
-GMUtility mineClientChanges: 'cassandra' url: 'https://github.com/apache/cassandra' from: 'HEAD' to: 'bfbc5274f2b3a5af2cbbe9679f0e78f1066ef638'.
+GMUtility mineClientChangesNoARules: 'cassandra' url: 'https://github.com/apache/cassandra' from: 'HEAD' to: 'bfbc5274f2b3a5af2cbbe9679f0e78f1066ef638'.
 ```
 
 ![Example Pipeline](http://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/fuhrmanator/GitMiner/master/doc/pipelineExample.puml?cacheChangeCount=0)
