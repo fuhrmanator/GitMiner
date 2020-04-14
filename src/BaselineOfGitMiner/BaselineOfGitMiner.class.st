@@ -17,13 +17,13 @@ BaselineOfGitMiner >> baseline: spec [
 			spec
 				baseline: 'NeoJSON'
 					with: [ spec repository: 'github://svenvc/NeoJSON/repository' ];
-				baseline: 'Carrefour'
-					with: [ spec repository: 'github://badetitou/Carrefour:v1.0.0/src' ];
 				"Moose already has NeoCSV"
 				"baseline: 'NeoCSV'
 					with: [ spec repository: 'github://svenvc/NeoCSV/repository' ];"
 				baseline: 'PolyMath'
-					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ].
+					with: [ spec repository: 'github://PolyMathOrg/PolyMath:master/src' ];
+				baseline: 'Carrefour'
+					with: [ spec repository: 'github://badetitou/Carrefour:v1.0.0/src' ].
 			spec preLoadDoIt: #verifyMooseInstalled.
 			spec postLoadDoIt: #launchVerifications.
 			"Packages"
